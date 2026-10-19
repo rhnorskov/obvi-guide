@@ -55,7 +55,9 @@ end
 function Engine.IsVisible(goal)
 	if not Conditions.Eval(goal.cond) then return false end
 	if goal.quest and (goal.kind == "objective" or goal.kind == "kill" or (goal.kind == "collect" and goal.objective)) then
-		return C_QuestLog.IsOnQuest(goal.quest)
+		-- hidden for a quest you haven't got; one already turned in still counts (as done), so its step is a step
+		-- you can go back to rather than one that "doesn't apply"
+		return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest)
 	end
 	if goal.kind == "turnin" then
 		return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest)
@@ -137,9 +139,18 @@ local function Changed()
 	ns:Fire("ANYGUIDE_STEP")
 end
 
+-- Going back pauses auto-advance, as Zygor does: it stays paused until the step you're on is not done (from then
+-- on finishing it moves on as usual), so a finished step you went back to stays put.
+local paused = false
+
 --- Moves forward past steps that don't apply or are done.
 function Engine.Advance()
 	if not guide then return end
+	if paused then
+		local applies, done = Engine.StepState(guide.steps[index])
+		if applies and not done then paused = false end
+		return
+	end
 	local start = index
 	while index <= #guide.steps do
 		local applies, done = Engine.StepState(guide.steps[index])
@@ -165,19 +176,54 @@ function Engine.Load(title, step)
 	local g = ns.FindGuide(title)
 	if not g then ns.Print("no guide called '%s'", title) return end
 	guide, index = g, math.max(1, math.min(step or 1, #g.steps))
+	paused = false
 	Changed()
 	Engine.Advance()
 end
 
---- Steps the player moves to by hand (the window's arrows): only steps that apply to this character.
+--- One step by hand (the window's arrows, the keybinds): the next or previous step meant for this character (its
+--- condition holds), done or not. It pauses auto-advance (see Advance), so a finished step stays put; finishing an
+--- unfinished one moves on as usual.
 ---@param dir integer  1 or -1
 function Engine.Step(dir)
 	if not guide then return end
 	local i = index + dir
 	while guide.steps[i] do
-		if (Engine.StepState(guide.steps[i])) then index = i Changed() return end
+		if Conditions.Eval(guide.steps[i].cond) then
+			index = i
+			paused = true
+			Changed()
+			return
+		end
 		i = i + dir
 	end
+end
+
+--- Fast forward or back (right-click on the arrows, as in Zygor): forward to the next unfinished step, back to the
+--- nearest earlier unfinished one (or the first step).
+---@param dir integer  1 or -1
+function Engine.Jump(dir)
+	if not guide then return end
+	if dir > 0 then
+		paused = false
+		local start = index
+		index = math.min(index + 1, #guide.steps)
+		Engine.Advance()
+		if index ~= start then Changed() end
+		return
+	end
+	local target
+	for i = index - 1, 1, -1 do
+		local applies, done = Engine.StepState(guide.steps[i])
+		if applies and not done then target = i break end
+	end
+	if not target then
+		for i = 1, index - 1 do if Conditions.Eval(guide.steps[i].cond) then target = i break end end
+	end
+	if not target then return end
+	index = target
+	paused = true
+	Changed()
 end
 
 --- Ticks off a 'confirm' goal (or any goal the window lets the player click).

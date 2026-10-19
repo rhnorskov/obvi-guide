@@ -344,14 +344,30 @@ local function ParseStep(header, lines)
 		for _, g in ipairs(step.goals) do
 			if g.kind == "accept" or g.kind == "turnin" or g.kind == "learn" or g.kind == "home" then
 				local talk = { kind = "talk", id = step.talk.id, text = "Talk to |cff00ff25" .. step.talk.name .. "|r" }
+				-- it takes the place of RestedXP's own "Talk to X." line (first if there is none)
+				local pos
 				for i = #step.goals, 1, -1 do
 					local t = step.goals[i]
 					if t.kind == "text" and not t.cond and Plain(t.text):find("^Talk to") then
 						table.remove(step.goals, i)
 						Moved(step, t, talk)
+						pos = i
 					end
 				end
-				table.insert(step.goals, 1, talk)
+				-- ... which some steps write as a note ("*Talk to X."): the notes after it follow the talk line
+				for ti = #step.tips, 1, -1 do
+					local tip = step.tips[ti]
+					if Plain(tip.text):find("^Talk to") then
+						local anchor = tip.after
+						for k = ti + 1, #step.tips do if step.tips[k].after == anchor then step.tips[k].after = talk end end
+						table.remove(step.tips, ti)
+						if not pos then
+							pos = 1
+							for k, g2 in ipairs(step.goals) do if g2 == anchor then pos = k + 1 end end
+						end
+					end
+				end
+				table.insert(step.goals, pos or 1, talk)
 				break
 			end
 		end
@@ -478,10 +494,25 @@ local function Assemble(steps)
 		if s.sideOf then
 			if not absorbed[i] then
 				local side = {}
+				-- the box's notes come along as text lines, each after the line it follows (side boxes have no notes)
+				local placed = {}
+				local function NotesAfter(goal)
+					for _, tip in ipairs(s.tips) do
+						if tip.after == goal and not placed[tip] then
+							placed[tip] = true
+							table.insert(side, { kind = "text", text = "|cffd0b070" .. tip.text .. "|r", cond = s.cond })
+						end
+					end
+				end
+				NotesAfter(nil)
 				for _, g in ipairs(s.goals) do
 					local copy = setmetatable({}, { __index = g })
 					copy.cond = Conditions.All(s.cond, g.cond)
 					table.insert(side, copy)
+					NotesAfter(g)
+				end
+				for _, tip in ipairs(s.tips) do
+					if not placed[tip] then table.insert(side, { kind = "text", text = "|cffd0b070" .. tip.text .. "|r", cond = s.cond }) end
 				end
 				if #side > 0 then table.insert(active, { goals = side, last = ends[i], keys = ObjectivesOf(s) }) end
 			end

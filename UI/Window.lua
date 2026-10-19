@@ -37,7 +37,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field collapsed boolean
 local frame
 
----@class AnyGuideLine : Button
+---@class AnyGuideLine : Frame
 ---@field text FontString
 ---@field icon Texture
 ---@field dash FontString   the quest tracker's "- " in front of objectives, in the icon column
@@ -46,22 +46,23 @@ local frame
 ---@field dim? boolean      a previewed step: no action
 ---@field side? boolean     a side task: the step's own NPC/target is not its target
 
+---@class AnyGuideClick : Button
+---@field line? AnyGuideLine   the line it lies over
+
 local lines = {} ---@type AnyGuideLine[]
 local used = 0
 
 local function Width() return frame:GetWidth() end
 
---- A line: an icon (dash, check, quest mark) and wrapped text. Each line is a secure action button, so clicking it
---- can do what the line says: target the mob or NPC, use the item, cast the spell (see LineAction). Lines that are
---- ticked off by hand, and travel lines, are handled after the click (PostClick).
+--- A line: an icon (dash, check, quest mark) and wrapped text, as plain frames, so the window can lay itself out
+--- at any time, in combat too. Clicking is done by secure buttons on a layer of their own laid over the lines
+--- (see SyncClicks).
 ---@return AnyGuideLine
 local function Line()
 	used = used + 1
 	local line = lines[used]
 	if not line then
-		line = CreateFrame("Button", nil, frame.Body, "SecureActionButtonTemplate") --[[@as AnyGuideLine]]
-		-- secure actions fire on key-down when the "cast on key down" setting is on (the default), else on key-up
-		line:RegisterForClicks("AnyDown", "AnyUp")
+		line = CreateFrame("Frame", nil, frame.Body) --[[@as AnyGuideLine]]
 		line.icon = line:CreateTexture(nil, "ARTWORK")
 		line.text = line:CreateFontString(nil, "ARTWORK", LINE_FONT)
 		-- centred on the first row of the text, whatever the icon's size
@@ -75,49 +76,105 @@ local function Line()
 		line.text:SetJustifyH("LEFT")
 		line.text:SetWordWrap(true)
 		line.text:SetSpacing(LEADING)
-		local hl = line:CreateTexture(nil, "HIGHLIGHT")
-		hl:SetPoint("TOPLEFT", -4, 2)
-		hl:SetPoint("BOTTOMRIGHT", 2, -2)
-		hl:SetColorTexture(1, 1, 1, 0.06)
-		line:SetScript("PostClick", function(self, _, down)
-			local g = self.goal
-			if down or not g or self.dim then return end   -- once per click: on the mouse-up
-			if g.kind == "confirm" then Engine.Tick(g)
-			elseif g.kind == "goto" then local _, step = Engine.Current() ns.Travel.Show(step) end
-		end)
 		lines[used] = line
 	end
-	line.goal, line.step, line.dim = nil, nil, nil
+	line.goal, line.step, line.dim, line.side = nil, nil, nil, nil
 	line:Show()
 	return line
 end
 
---- What clicking a line does, as secure attributes. Only out of combat: the game locks secure buttons in a fight.
+-- The click layer: invisible secure action buttons, one over each line that does something when clicked (target
+-- the mob or NPC, use the item, cast the spell, tick off, show the way). It lives outside the window, so the window
+-- itself is never locked in combat. The game won't let addons move or change secure buttons in a fight, so the
+-- whole layer is hidden in combat by the game's own rule (a state driver), and laid over the lines again after it.
+local clickLayer = CreateFrame("Frame", "AnyGuideClickLayer", UIParent)
+clickLayer:SetFrameStrata("MEDIUM")
+_G["RegisterStateDriver"](clickLayer, "visibility", "[combat] hide; show")   -- a FrameXML global
+local clicks = {} ---@type AnyGuideClick[]
+local clicksDirty = false   -- the lines changed in combat; lay the buttons over them again when it ends
+
+--- What clicking a line does, as secure attributes; returns whether the click does anything.
+---@param b AnyGuideClick
 ---@param line AnyGuideLine
-local function LineAction(line)
-	if InCombatLockdown() then return end
-	line:SetAttribute("type", nil)
-	line:SetAttribute("item", nil)
-	line:SetAttribute("spell", nil)
-	line:SetAttribute("macrotext", nil)
-	local g, step = line.goal, line.step
-	if not g or line.dim or not step then return end
+---@return boolean
+local function ClickAction(b, line)
+	b:SetAttribute("type", nil)
+	b:SetAttribute("item", nil)
+	b:SetAttribute("spell", nil)
+	b:SetAttribute("macrotext", nil)
+	local g = line.goal
+	if not g or line.dim or not line.step then return false end
 	local k = g.kind
 	local target, enemy = g.target and g.target.name, g.target and g.target.enemy
 	if (k == "use" or k == "equip" or k == "hearth") and g.id then
-		line:SetAttribute("type", "item")
-		line:SetAttribute("item", "item:" .. g.id)
+		b:SetAttribute("type", "item")
+		b:SetAttribute("item", "item:" .. g.id)
 	elseif k == "cast" and g.id then
-		line:SetAttribute("type", "spell")
-		line:SetAttribute("spell", g.id)
+		b:SetAttribute("type", "spell")
+		b:SetAttribute("spell", g.id)
 	elseif target then
-		line:SetAttribute("type", "macro")
-		line:SetAttribute("macrotext", ns.TargetMacro(target, enemy))
+		b:SetAttribute("type", "macro")
+		b:SetAttribute("macrotext", ns.TargetMacro(target, enemy))
 	end
-	if line:GetAttribute("type") then
-		ns.Debug("line '%s': %s %s", g.text, line:GetAttribute("type"),
-			tostring(line:GetAttribute("macrotext") or line:GetAttribute("item") or line:GetAttribute("spell")))
+	if b:GetAttribute("type") then
+		ns.Debug("line '%s': %s %s", g.text, b:GetAttribute("type"),
+			tostring(b:GetAttribute("macrotext") or b:GetAttribute("item") or b:GetAttribute("spell")))
 	end
+	-- ticking off and showing the way happen after the click (PostClick), with or without a secure action
+	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.kind == "goto"
+end
+
+---@return AnyGuideClick
+local function NewClick()
+	local b = CreateFrame("Button", nil, clickLayer, "SecureActionButtonTemplate") --[[@as AnyGuideClick]]
+	-- secure actions fire on key-down when the "cast on key down" setting is on (the default), else on key-up
+	b:RegisterForClicks("AnyDown", "AnyUp")
+	local hl = b:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetPoint("TOPLEFT", 0, 0)
+	hl:SetPoint("BOTTOMRIGHT", 0, 0)
+	hl:SetColorTexture(1, 1, 1, 0.06)
+	b:SetScript("PostClick", function(self, _, down)
+		local g = self.line and self.line.goal
+		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
+		if g.kind == "confirm" then Engine.Tick(g)
+		elseif g.kind == "goto" then local _, step = Engine.Current() ns.Travel.Show(step) end
+	end)
+	return b
+end
+
+--- Lays the click buttons over the lines the window shows now. Out of combat only; in combat the layer is hidden
+--- and this waits for the fight to end.
+local function SyncClicks()
+	if InCombatLockdown() then clicksDirty = true return end
+	clicksDirty = false
+	local showing = frame and frame:IsShown() and not frame.collapsed
+	if showing then clickLayer:SetFrameLevel(frame:GetFrameLevel() + 20) end
+	local n = 0
+	for i = 1, (showing and used or 0) do
+		local line = lines[i]
+		local left, top = line:GetLeft(), line:GetTop()
+		if left and top then
+			n = n + 1
+			local b = clicks[n] or NewClick()
+			clicks[n] = b
+			b.line = line
+			if ClickAction(b, line) then
+				b:ClearAllPoints()
+				b:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left - 4, top + 2)
+				b:SetSize(line:GetWidth() + 6, line:GetHeight() + 4)
+				b:Show()
+			else
+				b:Hide()
+			end
+		end
+	end
+	for k = n + 1, #clicks do clicks[k]:Hide() clicks[k].line = nil end
+end
+
+--- Hides the click buttons while the window moves (they'd be left behind); SyncClicks puts them back.
+local function HideClicks()
+	if InCombatLockdown() then clicksDirty = true return end
+	for _, b in ipairs(clicks) do b:Hide() end
 end
 
 --- Text-height icons inside a guide's text ("|Tpath:0|t"), moved to the middle of the letters.
@@ -155,7 +212,7 @@ local function Place(line, y, indent)
 	return y + h + LINE_GAP
 end
 
---- Text, colour and icon of a goal line from the game's state. Safe in combat (it changes no layout).
+--- Text, colour and icon of a goal line from the game's state.
 ---@param line AnyGuideLine
 local function RenderLine(line)
 	local g, step, dim = line.goal, line.step, line.dim
@@ -181,7 +238,6 @@ local function Tip(tip, y)
 	line.text:SetText(Inline("|cffd0b070" .. tip.text .. "|r"))
 	line.text:SetTextColor(1, 1, 1)
 	Icon(line, nil, false)
-	LineAction(line)
 	return Place(line, y, 0)   -- no extra indent: its text lines up with the text of the lines around it
 end
 
@@ -203,7 +259,6 @@ local function Goals(step, goals, y, dim, side, tips)
 			local line = Line()
 			line.goal, line.step, line.dim, line.side = g, step, dim, side
 			RenderLine(line)
-			LineAction(line)
 			y = Place(line, y, 0)
 		end
 		TipsAfter(g)
@@ -246,29 +301,22 @@ local function Finish(y)
 	for k = used + 1, #lines do lines[k]:Hide() end
 	for k = sepUsed + 1, #separators do separators[k]:Hide() end
 	frame:SetHeight(HEADER + y + 10)
+	SyncClicks()
 end
 
-local relayout = false   -- a full refresh is waiting for combat to end
-
+--- Lays the window out for the current step. Works in combat too: only the click buttons wait for the fight to end.
 function Window.Refresh()
 	if not frame or not frame:IsShown() then return end
 	local guide, step = Engine.Current()
 	frame.Title:SetText(guide and guide.title or "AnyGuide")
 	frame.StepText:SetText(guide and step and ("%d/%d"):format(step.index, #guide.steps) or "")
-	if InCombatLockdown() then
-		-- the lines are secure buttons, which can't be moved, shown or hidden in a fight: update their texts in place
-		-- and lay the window out again when combat ends
-		for i = 1, used do RenderLine(lines[i]) end
-		relayout = true
-		return
-	end
-	relayout = false
 	used, sepUsed = 0, 0
 	frame.SideHeader:Hide()
 	if frame.collapsed then
 		frame.Body:Hide()
 		for k = 1, #lines do lines[k]:Hide() end
 		frame:SetHeight(HEADER)
+		SyncClicks()
 		return
 	end
 	frame.Body:Show()
@@ -381,8 +429,8 @@ local function Build()
 	header:SetHeight(HEADER)
 	header:EnableMouse(true)
 	header:RegisterForDrag("LeftButton")
-	header:SetScript("OnDragStart", function() frame:StartMoving() end)
-	header:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() end)
+	header:SetScript("OnDragStart", function() HideClicks() frame:StartMoving() end)
+	header:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() SyncClicks() end)
 	local bar = header:CreateTexture(nil, "BACKGROUND")
 	bar:SetAtlas("ui-damagemeters-header-bar")
 	bar:SetAllPoints()
@@ -401,8 +449,8 @@ local function Build()
 	titleClick:SetAllPoints(frame.Title)
 	titleClick:SetScript("OnClick", function() picker:OpenMenu() end)
 	titleClick:RegisterForDrag("LeftButton")
-	titleClick:SetScript("OnDragStart", function() frame:StartMoving() end)
-	titleClick:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() end)
+	titleClick:SetScript("OnDragStart", function() HideClicks() frame:StartMoving() end)
+	titleClick:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() SyncClicks() end)
 
 	-- right side: collapse (the tracker's button, as the damage meter uses it), the gear menu, step arrows, counter
 	local collapse = CreateFrame("Button", nil, header)
@@ -412,7 +460,6 @@ local function Build()
 	collapse:SetPushedAtlas("ui-questtrackerbutton-collapse-all-pressed")
 	collapse:SetHighlightAtlas("ui-questtrackerbutton-red-highlight", "ADD")
 	collapse:SetScript("OnClick", function(self)
-		if InCombatLockdown() then ns.Print("can't collapse during combat (the step lines are secure buttons)") return end
 		frame.collapsed = not frame.collapsed
 		self:SetNormalAtlas(frame.collapsed and "ui-questtrackerbutton-expand-all" or "ui-questtrackerbutton-collapse-all")
 		self:SetPushedAtlas(frame.collapsed and "ui-questtrackerbutton-expand-all-pressed" or "ui-questtrackerbutton-collapse-all-pressed")
@@ -439,8 +486,15 @@ local function Build()
 		b:SetPoint("RIGHT", anchor, "LEFT", -2, anchor == gear and 3 or 0)   -- the damage meter puts its session text 3 above the gear
 		b:SetNormalAtlas(atlas)
 		b:SetHighlightAtlas(atlas, "ADD")
-		b:SetScript("OnClick", function() Engine.Step(dir) end)
-		b:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_TOP") GameTooltip:SetText(tip) GameTooltip:Show() end)
+		-- left-click: one step; right-click: fast forward / back to an unfinished step (as Zygor's arrows do)
+		b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		b:SetScript("OnClick", function(_, button) if button == "RightButton" then Engine.Jump(dir) else Engine.Step(dir) end end)
+		b:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(tip)
+			GameTooltip:AddLine(dir > 0 and "Right-click: next unfinished step" or "Right-click: back to an unfinished step", 1, 1, 1)
+			GameTooltip:Show()
+		end)
 		b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		return b
 	end
@@ -488,6 +542,7 @@ local function Build()
 	end)
 	frame:SetScript("OnSizeChanged", function() if frame.Resize:GetButtonState() == "PUSHED" then Window.Refresh() end end)
 	frame:SetScript("OnShow", Window.Refresh)
+	frame:SetScript("OnHide", HideClicks)
 
 	local saved = ns.db and ns.db.window
 	if saved then
@@ -509,7 +564,7 @@ function Window.Show()
 	Window.Refresh()
 end
 
-ns:On("PLAYER_REGEN_ENABLED", function() if relayout then Window.Refresh() end end)
+ns:On("PLAYER_REGEN_ENABLED", function() if clicksDirty then SyncClicks() end end)
 ns:On("ANYGUIDE_STEP", function() Window.Refresh() end)
 ns:On("ANYGUIDE_UPDATE", function() Window.Refresh() end)
 ns:On("ANYGUIDE_GUIDES_ADDED", function() Window.Refresh() end)
