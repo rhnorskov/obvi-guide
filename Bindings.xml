@@ -1,0 +1,12 @@
+<Bindings>
+	<!-- the step actions (Action.lua): use an item, cast a spell, or target an NPC/mob; once targeted, the same key
+	     interacts (talk / attack). Action 1 is the step's main action, 2-4 its other targets and the side tasks.
+	     category = the section name in Key Bindings. -->
+	<Binding name="CLICK AnyGuideActionButton:LeftButton" category="AnyGuide"/>
+	<Binding name="CLICK AnyGuideActionButton2:LeftButton" category="AnyGuide"/>
+	<Binding name="CLICK AnyGuideActionButton3:LeftButton" category="AnyGuide"/>
+	<Binding name="CLICK AnyGuideActionButton4:LeftButton" category="AnyGuide"/>
+	<Binding name="ANYGUIDE_NEXTSTEP" category="AnyGuide">AnyGuide.NextStep()</Binding>
+	<Binding name="ANYGUIDE_PREVSTEP" category="AnyGuide">AnyGuide.PrevStep()</Binding>
+	<Binding name="ANYGUIDE_TOGGLE" category="AnyGuide">AnyGuide.Toggle()</Binding>
+</Bindings>
