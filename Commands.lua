@@ -1,5 +1,5 @@
 -- Slash commands: /anyguide or /ag toggles the window; "/ag list" lists the loaded guides; "/ag debug";
--- "/ag names" tests looking up creature and item names by id.
+-- "/ag names" tests looking up creature and item names by id; "/ag cleanup" cleans up the quest log.
 local _, ns = ...
 ---@cast ns AnyGuideNS
 
@@ -100,6 +100,12 @@ slashCmdList.ANYGUIDE = function(msg)
 	elseif cmd == "debug" then
 		ns.debug = not ns.debug
 		ns.Print("debug %s", ns.debug and "on" or "off")
+		-- what the readers could not translate when the guides were added (before debug was on)
+		if ns.debug and #ns.warnings > 0 then ns.Copy("AnyGuide: guide warnings", table.concat(ns.warnings, "\n")) end
+	elseif cmd == "pins" then
+		ns.MinimapPins.Debug()
+	elseif cmd == "cleanup" then
+		ns.Cleanup()
 	elseif cmd == "names" then
 		TestNames()
 	else

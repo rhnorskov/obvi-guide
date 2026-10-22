@@ -6,7 +6,11 @@
 --   {"onquest", id}  {"ready", id}  {"done", id}       (quest in the log / ready to turn in / turned in)
 --   {"knows", spellID}  {"items>=", itemID, n}  {"items<", itemID, n}
 --   {"area", areaID}  {"map", uiMapID, ...}  {"nomap"}   (where the player is)
---   {"aura", spellID}                                   (a buff or debuff on the player)
+--   {"aura", spellID, stacks?}  {"auraicon", fileID}    (a buff or debuff on the player, by spell or by its icon)
+--   {"subzone", name}  {"zone", name}  {"indoors"}  {"dead"}   (the subzone, or the zone or instance, by its English
+--                                                        name, as Zygor guides test them; indoors; dead or a ghost)
+--   {"equipped", itemID}  {"money", copper}             (wearing the item; at least that much money)
+--   {"rep", factionID or name, reaction}                (at least that standing: 1 Hated .. 4 Neutral .. 8 Exalted)
 local _, ns = ...
 ---@cast ns AnyGuideNS
 
@@ -32,6 +36,21 @@ end
 local function Race()
 	local name, file = UnitRace("player")
 	return (name or ""):gsub("%s", ""):lower(), (file or ""):lower()
+end
+
+-- faction names -> ids, for factions a reader only knows by name: every faction id is looked at once, the first time
+local factionIDs ---@type table<string, integer>?
+---@param name string
+---@return integer?
+local function FactionID(name)
+	if not factionIDs then
+		factionIDs = {}
+		for id = 1, 3000 do
+			local ok, data = pcall(C_Reputation.GetFactionDataByID, id)
+			if ok and data and data.name and not factionIDs[data.name] then factionIDs[data.name] = id end
+		end
+	end
+	return factionIDs[name]
 end
 
 local eval
@@ -64,10 +83,43 @@ local tests = {
 		return false
 	end,
 	nomap = function() return C_Map.GetBestMapForUnit("player") == nil end,
-	-- guarded: the call errors on some aura ids, and a condition must never break the window
+	-- by name: Zygor guides name subzones in English, so this holds only on English clients
+	subzone = function(c) return GetSubZoneText() == c[2] or GetMinimapZoneText() == c[2] end,
+	indoors = function() return IsIndoors() end,
+	dead = function() return UnitIsDeadOrGhost("player") end,
+	zone = function(c) return GetRealZoneText() == c[2] or GetInstanceInfo() == c[2] end,
+	-- guarded: the call errors on some aura ids, auras can be secret in combat, and a condition must never break
+	-- the window
 	aura = function(c)
-		local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, c[2])
-		return ok and aura ~= nil
+		local ok, has = pcall(function()
+			local aura = C_UnitAuras.GetPlayerAuraBySpellID(c[2])
+			return aura ~= nil and math.max(aura.applications or 0, 1) >= (c[3] or 1)
+		end)
+		return ok and has
+	end,
+	auraicon = function(c)
+		local ok, has = pcall(function()
+			for _, filter in ipairs({ "HELPFUL", "HARMFUL" }) do
+				for i = 1, 40 do
+					local aura = C_UnitAuras.GetAuraDataByIndex("player", i, filter)
+					if not aura then break end
+					if aura.icon == c[2] then return true end
+				end
+			end
+			return false
+		end)
+		return ok and has
+	end,
+	equipped = function(c) return C_Item.IsEquippedItem(c[2]) == true end,
+	money = function(c) return GetMoney() >= c[2] end,
+	rep = function(c)
+		local ok, has = pcall(function()
+			local id = type(c[2]) == "string" and FactionID(c[2]) or c[2]
+			local data = id and C_Reputation.GetFactionDataByID(id)
+			-- a faction the character hasn't met is neutral
+			return ((data and data.reaction) or 4) >= c[3]
+		end)
+		return ok and has
 	end,
 }
 

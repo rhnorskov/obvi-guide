@@ -17,7 +17,7 @@ local COUNT = 4
 ---@class AnyGuideActionInfo
 ---@field kind "item"|"spell"|"target"
 ---@field goal? AnyGuideGoal   the line the action belongs to (for the key hint)
----@field value string|integer
+---@field value string|integer|string[]   a target: one name, or several (any of them)
 ---@field enemy? boolean       a target to attack (else to talk to)
 
 ---@class AnyGuideActionSlot
@@ -50,12 +50,18 @@ local function Pick()
 	if not step then return {} end
 	local list, seen = {}, {}
 	local function add(kind, value, goal, enemy)
-		local key = kind .. ":" .. tostring(value)
+		local key = kind .. ":" .. (type(value) == "table" and table.concat(value, ",") or tostring(value))
 		if seen[key] or #list >= COUNT then return end
 		seen[key] = true
+		-- a mob already in an action for several mobs gets no second action of its own (e.g. a "collect" line
+		-- whose target is one of the mobs a kill line names)
+		if type(value) == "table" then for _, n in ipairs(value) do seen[kind .. ":" .. n] = true end end
 		table.insert(list, { kind = kind, value = value, goal = goal, enemy = enemy })
 	end
 	local function open(g) return Engine.IsVisible(g) and not Engine.IsComplete(g, step) end
+	-- a line's targets: an action for each when it names several mobs ("Kill Raging Reef Crawler, Encrusted Tide
+	-- Crawler"), as Zygor's action buttons do; the window shows each key after its mob's name
+	local function targets(g) return g.targets or { g.target } end
 	for _, g in ipairs(step.goals) do
 		if g.id and Engine.IsVisible(g) and (g.kind == "use" or (g.kind == "hearth" and not Engine.IsComplete(g, step))) then
 			add("item", g.id, g)
@@ -69,19 +75,34 @@ local function Pick()
 	end
 	-- the step's own target first (its NPC, or what it kills), then the other things its lines target
 	if step.target then
-		local line
+		local line, finished = nil, false
 		for _, g in ipairs(step.goals) do
-			if g.target and g.target.name == step.target.name and Engine.IsVisible(g) then line = g break end
+			if g.target and g.target.name == step.target.name and Engine.IsVisible(g) then
+				-- a line that's done needs no action any more (its key goes to what's left)
+				if open(g) then line = g break end
+				finished = true
+			end
 		end
-		add("target", step.target.name, line, step.target.enemy)
+		if finished and not line then
+			-- (nothing: the step's target was its line's, and that line is done)
+		elseif line and line.targets and #line.targets > 1 then
+			-- its line names several mobs: their actions in the line's order (so the first mob isn't added twice)
+			for _, t in ipairs(targets(line)) do add("target", t.name, line, t.enemy) end
+		else
+			add("target", step.target.name, line, step.target.enemy)
+		end
 	end
 	for _, g in ipairs(step.goals) do
-		if g.target and open(g) then add("target", g.target.name, g, g.target.enemy) end
+		if g.target and open(g) then
+			for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy) end
+		end
 	end
 	-- then the side tasks
 	for _, g in ipairs(step.side) do
 		if g.kind == "use" and g.id and Engine.IsVisible(g) then add("item", g.id, g)
-		elseif g.target and open(g) then add("target", g.target.name, g, g.target.enemy) end
+		elseif g.target and open(g) then
+			for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy) end
+		end
 	end
 	return list
 end
@@ -105,7 +126,8 @@ local function Apply()
 			b:SetAttribute("spell", a.value)
 		elseif a then
 			b:SetAttribute("type", "macro")
-			b:SetAttribute("macrotext", ns.TargetMacro(tostring(a.value), a.enemy))
+			local v = a.value
+			b:SetAttribute("macrotext", ns.TargetMacro(type(v) == "table" and v or tostring(v), a.enemy))
 		end
 	end
 end
@@ -118,7 +140,14 @@ local function TargetIsOurs(slot)
 	local a = slot.current
 	if not (a and a.kind == "target") then return false end
 	local ok, same = pcall(function()
-		return UnitExists("target") and not UnitIsDead("target") and UnitName("target") == a.value
+		if not UnitExists("target") or UnitIsDead("target") then return false end
+		local name = UnitName("target")
+		local v = a.value
+		if type(v) == "table" then   -- one action for several mobs: any of them
+			for _, n in ipairs(v) do if n == name then return true end end
+			return false
+		end
+		return name == a.value
 	end)
 	return ok and same or false
 end
@@ -152,14 +181,26 @@ end
 ---@param goal AnyGuideGoal
 ---@return string?
 function Action.Hint(goal)
+	local hints = Action.Hints(goal)
+	return hints[1] and hints[1].hint
+end
+
+--- Every action key that belongs to a line, with the target it's for (a line naming several mobs has one each).
+---@param goal AnyGuideGoal
+---@return {name?: string, hint: string}[]
+function Action.Hints(goal)
+	local out = {}
 	for i, slot in ipairs(slots) do
-		if slot.current and slot.current.goal == goal then
-			local key = Action.Key(i)
-			if not key then return nil end
-			if slot.interacting then return key .. ": " .. (slot.current.enemy and "attack" or "talk") end
-			return key
+		local a = slot.current
+		local key = a and a.goal == goal and Action.Key(i)
+		if a and key then
+			local hint = slot.interacting and (key .. ": " .. (a.enemy and "attack" or "talk")) or key
+			-- a target's key goes after its name in the line's text (several mobs: one key after each)
+			local v = a.value
+			table.insert(out, { name = a.kind == "target" and type(v) ~= "table" and tostring(v) or nil, hint = hint })
 		end
 	end
+	return out
 end
 
 ns:On("ANYGUIDE_STEP", function() Apply() Action.Rebind() end)

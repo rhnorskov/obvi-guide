@@ -16,7 +16,8 @@ guide text in another format:
 
 ```lua
 AnyGuide.Add("rxp", [[ ...RestedXP guide text... ]])     -- translated into the calls below
-AnyGuide.Add("zygor", [[ ...Zygor guide text... ]])      -- later
+AnyGuide.Add("zygor", [[ ...Zygor guide text... ]], { title = "...", header = {...} })  -- one guide, with its
+                                                          -- title and header (see Parsers/Zygor.lua)
 ```
 
 ## A guide

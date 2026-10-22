@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: AnyGuide
-## Notes: A guide viewer that reads guides in RestedXP format (Zygor and its own format to follow). Ships no guides: add your own guide packs. /ag opens it.
+## Notes: A guide viewer that reads guides in RestedXP and Zygor format, and its own. Ships no guides: add your own guide packs. /ag opens it.
 ## Version: 0.1.0-dev
 ## Author: rhnorskov
 ## X-License: GPL-3.0-or-later
@@ -12,9 +12,14 @@ Core.lua
 Conditions.lua
 Builder.lua
 Parsers\RestedXP.lua
+Parsers\Zygor.lua
 Engine.lua
 Travel.lua
 Action.lua
+Quests.lua
 UI\Window.lua
+UI\Minimap.lua
 UI\Copy.lua
+UI\Cleanup.lua
+UI\Options.lua
 Commands.lua

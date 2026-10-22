@@ -29,6 +29,24 @@ local function ClearPin()
 	ourPin = nil
 end
 
+--- Shows the way to one point the player picked (a line's own spot, clicked in the window): Shortest Path's
+--- journey, else the game's map pin, as for a step's destination.
+---@param p AnyGuidePoint
+---@param title? string
+function Travel.To(p, title)
+	title = title and title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
+	local api = SPF()
+	if api then
+		api.NavigateRoute(OWNER, { { map = p.map, x = p.x, y = p.y, title = title, hold = true, radius = p.radius } })
+		return
+	end
+	ClearPin()
+	if not C_Map.CanSetUserWaypointOnMap(p.map) then return end
+	ourPin = UiMapPoint.CreateFromCoordinates(p.map, p.x, p.y)
+	C_Map.SetUserWaypoint(ourPin)
+	C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+end
+
 --- Shows the way to a step's destination, or clears ours when the step has none.
 ---@param step? AnyGuideStep
 function Travel.Show(step)

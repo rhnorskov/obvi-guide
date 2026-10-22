@@ -15,7 +15,7 @@ local HEADER = 32
 local MIN_WIDTH, MAX_WIDTH, DEFAULT_WIDTH = 220, 600, 300
 -- background opacity: the damage meter's default (Edit Mode "Background" 50%), which stays the same on hover
 local BG_ALPHA, BG_ALPHA_HOVER = 0.5, 0.5
-local DEFAULT_PREVIEW = 0   -- upcoming steps shown dimmed (none by default; the gear menu changes it)
+local DEFAULT_PREVIEW = 0   -- upcoming steps shown dimmed (none by default; the Options page changes it)
 local LINE_FONT = "ObjectiveTrackerFont12"   -- the step lines (the header keeps the damage meter's font)
 local ICON = 12
 local LINE_GAP = 8    -- pixels between the goal lines of a step (about what Zygor uses)
@@ -33,6 +33,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field Background Texture
 ---@field Body Frame
 ---@field SideHeader Frame
+---@field Continue Button|{text: FontString}   the guide end's "Continue with ..." button
 ---@field Resize Button
 ---@field collapsed boolean
 local frame
@@ -105,7 +106,12 @@ local function ClickAction(b, line)
 	local g = line.goal
 	if not g or line.dim or not line.step then return false end
 	local k = g.kind
-	local target, enemy = g.target and g.target.name, g.target and g.target.enemy
+	-- the line's target, or all of them when it names several mobs (the macro takes the first one found)
+	local target, enemy = g.target and g.target.name, g.target and g.target.enemy ---@type string|string[]|nil, boolean?
+	if g.targets and #g.targets > 1 then
+		target = {}
+		for _, t in ipairs(g.targets) do table.insert(target, t.name) end
+	end
 	if (k == "use" or k == "equip" or k == "hearth") and g.id then
 		b:SetAttribute("type", "item")
 		b:SetAttribute("item", "item:" .. g.id)
@@ -121,7 +127,14 @@ local function ClickAction(b, line)
 			tostring(b:GetAttribute("macrotext") or b:GetAttribute("item") or b:GetAttribute("spell")))
 	end
 	-- ticking off and showing the way happen after the click (PostClick), with or without a secure action
-	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.kind == "goto"
+	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.kind == "goto" or g.point ~= nil
+end
+
+--- "Darkshore 39.0, 86.0" for a point.
+---@param p AnyGuidePoint
+local function PlaceName(p)
+	local info = C_Map.GetMapInfo(p.map)
+	return ("%s %.1f, %.1f"):format(info and info.name or "?", p.x * 100, p.y * 100)
 end
 
 ---@return AnyGuideClick
@@ -136,9 +149,20 @@ local function NewClick()
 	b:SetScript("PostClick", function(self, _, down)
 		local g = self.line and self.line.goal
 		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
-		if g.kind == "confirm" then Engine.Tick(g)
+		if g.kind == "confirm" then Engine.Tick(g) end
+		-- a line with its own spot sets the waypoint there (as Zygor does); a "go to" line without one, the step's
+		if g.point then ns.Travel.To(g.point, g.text)
 		elseif g.kind == "goto" then local _, step = Engine.Current() ns.Travel.Show(step) end
 	end)
+	-- hovering a line with its own spot says where clicking it sends you
+	b:SetScript("OnEnter", function(self)
+		local g = self.line and self.line.goal
+		if not (g and g.point) or self.line.dim then return end
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:SetText("|cffffd100Click|r to set waypoint: |cffffd100" .. PlaceName(g.point) .. "|r")
+		GameTooltip:Show()
+	end)
+	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	return b
 end
 
@@ -189,6 +213,7 @@ local function Icon(line, goal, done)
 	local tex = line.icon
 	line.dash:Hide()
 	tex:SetTexture(nil)
+	tex:SetTexCoord(0, 1, 0, 1)
 	tex:SetVertexColor(1, 1, 1)
 	tex:SetSize(ICON, ICON)
 	if done then tex:SetAtlas("ui-questtracker-tracker-check") return end
@@ -197,6 +222,13 @@ local function Icon(line, goal, done)
 	elseif k == "turnin" then tex:SetAtlas("QuestTurnin")
 	elseif k == "talk" then tex:SetTexture("Interface\\GossipFrame\\GossipGossipIcon")
 	elseif k == "hearth" and goal.id then tex:SetTexture(C_Item.GetItemIconByID(goal.id))
+	-- kill lines: the attack cursor's sword (also a kill line without a quest, a text line with an enemy to target)
+	elseif k == "kill" or (k == "text" and goal.target and goal.target.enemy) then
+		tex:SetTexture("Interface\\Cursor\\Crosshair\\Attack")
+		tex:SetSize(ICON - 2, ICON - 2)   -- the sword fills its whole square, so it looks bigger than the others
+	-- collect lines: the loot cursor's pouch (the same pouch Questie draws on its maps)
+	elseif k == "collect" then
+		tex:SetTexture("Interface\\Cursor\\Crosshair\\LootAll")
 	elseif k == "text" or k == nil then tex:SetTexture(nil)
 	else line.dash:SetTextColor(line.text:GetTextColor()) line.dash:Show() end
 end
@@ -224,8 +256,18 @@ local function RenderLine(line)
 	local counted = progress and g.what and (progress .. " " .. g.what) or progress or g.what
 	if counted then text = text .. " |cffaaaaaa(" .. counted .. ")|r" end
 	-- the action key, next to the line it acts on
-	local hint = not dim and ns.Action.Hint(g)
-	if hint then text = text .. "  |cff4fc3f7[" .. hint .. "]|r" end
+	-- (a line naming several mobs has a key for each: shown right after that mob's name)
+	for _, h in ipairs(dim and {} or ns.Action.Hints(g)) do
+		local tag = " |cff4fc3f7[" .. h.hint .. "]|r"
+		local s, e = nil, nil
+		if h.name then s, e = text:find(h.name, 1, true) end
+		if s and e then
+			if text:sub(e + 1, e + 2) == "|r" then e = e + 2 end   -- after the name's colour ends
+			text = text:sub(1, e) .. tag .. text:sub(e + 1)
+		else
+			text = text .. " " .. tag
+		end
+	end
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
 	line.text:SetText(Inline(text))
 	line.text:SetTextColor((dim and DIM or done and DONE or TODO):GetRGB())
@@ -320,6 +362,32 @@ function Window.Refresh()
 		return
 	end
 	frame.Body:Show()
+	-- the guide's end: a line saying so, and a button on to the guide that follows (when we have it)
+	local ended, nextTitle = Engine.Ended()
+	frame.Continue:Hide()
+	if guide and ended then
+		frame.StepText:SetText("end")
+		local line = Line()
+		line.text:SetText(("You've reached the end of |cffffd100%s|r."):format(guide.title))
+		line.text:SetTextColor(TODO:GetRGB())
+		Icon(line, nil, false)
+		local y = Place(line, 6, 0)
+		if nextTitle then
+			frame.Continue.text:SetText(("Continue with |cffffd100%s|r"):format(nextTitle))
+			frame.Continue:ClearAllPoints()
+			frame.Continue:SetPoint("TOPLEFT", frame.Body, "TOPLEFT", 10 + ICON + 4, -y)
+			frame.Continue:SetSize(Width() - 24 - ICON, frame.Continue.text:GetStringHeight() + 6)
+			frame.Continue:Show()
+			y = y + frame.Continue:GetHeight() + LINE_GAP
+		else
+			local hint = Line()
+			hint.text:SetText("|cff888888No guide follows it here: pick the next one from the title above.|r")
+			Icon(hint, nil, false)
+			y = Place(hint, y, 0)
+		end
+		Finish(y)
+		return
+	end
 	if not guide or not step then
 		local line = Line()
 		line.text:SetText(#ns.guides == 0 and "No guides loaded. Add a guide pack." or "Pick a guide: click the title above.")
@@ -391,14 +459,10 @@ local function SavePosition()
 end
 
 local function SetupSettingsMenu(_, root)
-	root:CreateButton("Previous step", function() Engine.Step(-1) end)
-	root:CreateButton("Next step", function() Engine.Step(1) end)
+	-- the settings live on AnyGuide's page in the game's Options
+	root:CreateButton("Settings", function() ns.Options.Open() end)
 	root:CreateDivider()
-	local upcoming = root:CreateButton("Upcoming steps")
-	local function IsCount(n) return (ns.db and ns.db.previewSteps or DEFAULT_PREVIEW) == n end
-	local function SetCount(n) if ns.db then ns.db.previewSteps = n end Window.Refresh() end
-	for n = 0, 3 do upcoming:CreateRadio(n == 0 and "None" or tostring(n), IsCount, SetCount, n) end
-	root:CreateCheckbox("Debug messages", function() return ns.debug end, function() ns.debug = not ns.debug end)
+	root:CreateButton("Quest Cleanup", function() ns.Cleanup() end)
 	root:CreateButton("Hide (/ag shows it again)", function() frame:Hide() end)
 end
 
@@ -518,6 +582,19 @@ local function Build()
 	sideLine:SetPoint("LEFT", 9, 0)    -- tuned by eye against the steps' divider line
 	sideLine:SetPoint("RIGHT", -8, 0)
 	frame.SideHeader:Hide()
+
+	-- the guide end's "Continue with <next guide>" (a plain button: it works in combat too)
+	frame.Continue = CreateFrame("Button", nil, frame.Body) --[[@as Button|{text: FontString}]]
+	frame.Continue.text = frame.Continue:CreateFontString(nil, "ARTWORK", LINE_FONT)
+	frame.Continue.text:SetPoint("LEFT", 0, 0)
+	frame.Continue.text:SetPoint("RIGHT", 0, 0)
+	frame.Continue.text:SetJustifyH("LEFT")
+	local contHl = frame.Continue:CreateTexture(nil, "HIGHLIGHT")
+	contHl:SetPoint("TOPLEFT", -4, 2)
+	contHl:SetPoint("BOTTOMRIGHT", 2, -2)
+	contHl:SetColorTexture(1, 1, 1, 0.06)
+	frame.Continue:SetScript("OnClick", function() Engine.Continue() end)
+	frame.Continue:Hide()
 
 	-- the damage meter's resize handle, shown while the mouse is over the window; it changes the width
 	frame.Resize = CreateFrame("Button", nil, frame)

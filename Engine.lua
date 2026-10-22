@@ -69,6 +69,7 @@ end
 ---@param step AnyGuideStep
 ---@return boolean
 function Engine.IsComplete(goal, step)
+	if goal.done and Conditions.Eval(goal.done) then return true end
 	local k = goal.kind
 	if k == "accept" then return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
 	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
@@ -118,18 +119,50 @@ function Engine.StepState(step)
 	if not Conditions.Eval(step.cond) then return false, false end
 	if step.skip and Conditions.Eval(step.skip) then return true, true end
 	local any, done = false, true
+	-- alternatives (orGroup): how many more each group needs; once a group has enough, every alternative counts as
+	-- done (as Zygor has it)
+	local need, orOpen = {}, false
 	for _, g in ipairs(step.goals) do
 		if COMPLETABLE[g.kind] and Engine.IsVisible(g) then
 			any = true
-			if not Engine.IsComplete(g, step) then done = false end
+			local complete = Engine.IsComplete(g, step)
+			if complete and g.finishes then return true, true end
+			if g.orGroup then
+				need[g.orGroup] = (need[g.orGroup] or g.orCount or 1) - (complete and 1 or 0)
+				if not complete then orOpen = true end
+			elseif not complete then
+				done = false
+			end
 		end
+	end
+	if orOpen then
+		local met = false
+		for _, n in pairs(need) do if n < 1 then met = true end end
+		if not met then done = false end
 	end
 	return any, any and done
 end
 
+--- Where a step that is done (or has nothing left to do) goes on: the first open jump, or nil for the next step.
+---@param step AnyGuideStep
+---@return integer?
+function Engine.JumpOf(step)
+	for _, j in ipairs(step.jumps or {}) do
+		local g = j.goal
+		if Conditions.Eval(j.cond)
+			and (not g or (Engine.IsVisible(g) and (not COMPLETABLE[g.kind] or Engine.IsComplete(g, step)))) then
+			return j.to
+		end
+	end
+end
+
+-- the guide is finished: the window shows its end (and the next guide to continue with) instead of a step
+local ended = false
+
+--- The guide, and its current step (none once the guide has ended).
 ---@return AnyGuideGuide?, AnyGuideStep?
 function Engine.Current()
-	return guide, guide and guide.steps[index]
+	return guide, guide and not ended and guide.steps[index] or nil
 end
 
 local function Changed()
@@ -143,31 +176,54 @@ end
 -- on finishing it moves on as usual), so a finished step you went back to stays put.
 local paused = false
 
---- Moves forward past steps that don't apply or are done.
+--- Whether the guide is finished, and the title of the guide that follows it (when we have it).
+---@return boolean ended, string? nextTitle
+function Engine.Ended()
+	local nxt = ended and guide and guide.next and ns.FindGuide(guide.next)
+	return ended, nxt and nxt.title or nil
+end
+
+--- Moves forward past steps that don't apply or are done. A step meant for this character that is done (or has
+--- nothing left to do) may jump elsewhere instead (Zygor's "|next"); the step it lands on starts afresh, without the
+--- ticks of an earlier visit, as Zygor has it (so a menu step you come back to asks again).
 function Engine.Advance()
-	if not guide then return end
+	if not guide or ended then return end
 	if paused then
 		local applies, done = Engine.StepState(guide.steps[index])
 		if applies and not done then paused = false end
 		return
 	end
 	local start = index
+	local landed = {}   -- each jump target once, so two done steps can't send us round in circles
 	while index <= #guide.steps do
-		local applies, done = Engine.StepState(guide.steps[index])
+		local step = guide.steps[index]
+		local applies, done = Engine.StepState(step)
 		if applies and not done then break end
-		index = index + 1
-	end
-	if index > #guide.steps then
-		index = #guide.steps
-		-- the guide is finished: continue with its next guide, if we have it
-		local _, done = Engine.StepState(guide.steps[index])
-		if done and guide.next and ns.FindGuide(guide.next) then
-			ns.Print("finished %s, continuing with %s", guide.title, guide.next)
-			Engine.Load(guide.next, 1)
-			return
+		local to = step.jumps and Conditions.Eval(step.cond) and Engine.JumpOf(step)
+		if to and guide.steps[to] and not landed[to] then
+			landed[to] = true
+			index = to
+			local marks, prefix = Marks(), to .. ":"
+			for key in pairs(marks) do if key:sub(1, #prefix) == prefix then marks[key] = nil end end
+		else
+			index = index + 1
 		end
 	end
+	if index > #guide.steps then
+		-- the guide is finished: its end is shown, with the next guide to continue with (not loaded on its own, so
+		-- the player sees the guide ended rather than another one starting)
+		index = #guide.steps
+		ended = true
+		Changed()
+		return
+	end
 	if index ~= start then Changed() end
+end
+
+--- From a finished guide on to the one that follows it (the end's button, or the next arrow).
+function Engine.Continue()
+	local _, nextTitle = Engine.Ended()
+	if nextTitle then Engine.Load(nextTitle, 1) end
 end
 
 ---@param title string
@@ -176,7 +232,7 @@ function Engine.Load(title, step)
 	local g = ns.FindGuide(title)
 	if not g then ns.Print("no guide called '%s'", title) return end
 	guide, index = g, math.max(1, math.min(step or 1, #g.steps))
-	paused = false
+	paused, ended = false, false
 	Changed()
 	Engine.Advance()
 end
@@ -187,9 +243,17 @@ end
 ---@param dir integer  1 or -1
 function Engine.Step(dir)
 	if not guide then return end
+	-- at the guide's end: back shows its last step again, next goes on to the following guide
+	if ended then
+		if dir > 0 then Engine.Continue() return end
+		ended, paused = false, true
+		Changed()
+		return
+	end
 	local i = index + dir
 	while guide.steps[i] do
-		if Conditions.Eval(guide.steps[i].cond) then
+		-- (a step with no lines only jumps elsewhere)
+		if Conditions.Eval(guide.steps[i].cond) and #guide.steps[i].goals > 0 then
 			index = i
 			paused = true
 			Changed()
@@ -197,6 +261,8 @@ function Engine.Step(dir)
 		end
 		i = i + dir
 	end
+	-- next past the last step: the guide's end
+	if dir > 0 then ended = true Changed() end
 end
 
 --- Fast forward or back (right-click on the arrows, as in Zygor): forward to the next unfinished step, back to the
@@ -204,6 +270,7 @@ end
 ---@param dir integer  1 or -1
 function Engine.Jump(dir)
 	if not guide then return end
+	if ended then Engine.Step(dir) return end
 	if dir > 0 then
 		paused = false
 		local start = index
@@ -218,7 +285,9 @@ function Engine.Jump(dir)
 		if applies and not done then target = i break end
 	end
 	if not target then
-		for i = 1, index - 1 do if Conditions.Eval(guide.steps[i].cond) then target = i break end end
+		for i = 1, index - 1 do
+			if Conditions.Eval(guide.steps[i].cond) and #guide.steps[i].goals > 0 then target = i break end
+		end
 	end
 	if not target then return end
 	index = target
