@@ -4,6 +4,7 @@
 ## Version: @project-version@
 ## Author: rhnorskov
 ## X-License: GPL-3.0-or-later
+## X-Curse-Project-ID: 1772934
 ## OptionalDeps: ShortestPathForever
 ## SavedVariables: ObviGuideDB
 ## SavedVariablesPerCharacter: ObviGuideCharDB
