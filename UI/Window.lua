@@ -3,11 +3,11 @@
 -- is the game's own art by atlas name, so it looks like part of the UI. It shows the current step, its side tasks
 -- and a dimmed preview of the next steps.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Engine = ns.Engine
 
----@class AnyGuideWindow
+---@class ObviGuideWindow
 local Window = {}
 ns.Window = Window
 
@@ -27,7 +27,7 @@ local DONE = CreateColor(0.6, 0.6, 0.6)
 local TODO = CreateColor(1, 1, 1)
 local DIM = CreateColor(0.55, 0.55, 0.55)
 
----@class AnyGuideFrame : Frame
+---@class ObviGuideFrame : Frame
 ---@field Title FontString
 ---@field StepText FontString
 ---@field Background Texture
@@ -38,19 +38,19 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field collapsed boolean
 local frame
 
----@class AnyGuideLine : Frame
+---@class ObviGuideLine : Frame
 ---@field text FontString
 ---@field icon Texture
 ---@field dash FontString   the quest tracker's "- " in front of objectives, in the icon column
----@field goal? AnyGuideGoal
----@field step? AnyGuideStep
+---@field goal? ObviGuideGoal
+---@field step? ObviGuideStep
 ---@field dim? boolean      a previewed step: no action
 ---@field side? boolean     a side task: the step's own NPC/target is not its target
 
----@class AnyGuideClick : Button
----@field line? AnyGuideLine   the line it lies over
+---@class ObviGuideClick : Button
+---@field line? ObviGuideLine   the line it lies over
 
-local lines = {} ---@type AnyGuideLine[]
+local lines = {} ---@type ObviGuideLine[]
 local used = 0
 
 local function Width() return frame:GetWidth() end
@@ -58,12 +58,12 @@ local function Width() return frame:GetWidth() end
 --- A line: an icon (dash, check, quest mark) and wrapped text, as plain frames, so the window can lay itself out
 --- at any time, in combat too. Clicking is done by secure buttons on a layer of their own laid over the lines
 --- (see SyncClicks).
----@return AnyGuideLine
+---@return ObviGuideLine
 local function Line()
 	used = used + 1
 	local line = lines[used]
 	if not line then
-		line = CreateFrame("Frame", nil, frame.Body) --[[@as AnyGuideLine]]
+		line = CreateFrame("Frame", nil, frame.Body) --[[@as ObviGuideLine]]
 		line.icon = line:CreateTexture(nil, "ARTWORK")
 		line.text = line:CreateFontString(nil, "ARTWORK", LINE_FONT)
 		-- centred on the first row of the text, whatever the icon's size
@@ -88,15 +88,15 @@ end
 -- the mob or NPC, use the item, cast the spell, tick off, show the way). It lives outside the window, so the window
 -- itself is never locked in combat. The game won't let addons move or change secure buttons in a fight, so the
 -- whole layer is hidden in combat by the game's own rule (a state driver), and laid over the lines again after it.
-local clickLayer = CreateFrame("Frame", "AnyGuideClickLayer", UIParent)
+local clickLayer = CreateFrame("Frame", "ObviGuideClickLayer", UIParent)
 clickLayer:SetFrameStrata("MEDIUM")
 _G["RegisterStateDriver"](clickLayer, "visibility", "[combat] hide; show")   -- a FrameXML global
-local clicks = {} ---@type AnyGuideClick[]
+local clicks = {} ---@type ObviGuideClick[]
 local clicksDirty = false   -- the lines changed in combat; lay the buttons over them again when it ends
 
 --- What clicking a line does, as secure attributes; returns whether the click does anything.
----@param b AnyGuideClick
----@param line AnyGuideLine
+---@param b ObviGuideClick
+---@param line ObviGuideLine
 ---@return boolean
 local function ClickAction(b, line)
 	b:SetAttribute("type", nil)
@@ -131,15 +131,15 @@ local function ClickAction(b, line)
 end
 
 --- "Darkshore 39.0, 86.0" for a point.
----@param p AnyGuidePoint
+---@param p ObviGuidePoint
 local function PlaceName(p)
 	local info = C_Map.GetMapInfo(p.map)
 	return ("%s %.1f, %.1f"):format(info and info.name or "?", p.x * 100, p.y * 100)
 end
 
----@return AnyGuideClick
+---@return ObviGuideClick
 local function NewClick()
-	local b = CreateFrame("Button", nil, clickLayer, "SecureActionButtonTemplate") --[[@as AnyGuideClick]]
+	local b = CreateFrame("Button", nil, clickLayer, "SecureActionButtonTemplate") --[[@as ObviGuideClick]]
 	-- secure actions fire on key-down when the "cast on key down" setting is on (the default), else on key-up
 	b:RegisterForClicks("AnyDown", "AnyUp")
 	local hl = b:CreateTexture(nil, "HIGHLIGHT")
@@ -208,7 +208,7 @@ local function Inline(s)
 	return (s:gsub("|T([^:|]+):0|t", "|T%1:0:0:0:" .. INLINE_ICON_Y .. "|t"))
 end
 
----@param line AnyGuideLine
+---@param line ObviGuideLine
 local function Icon(line, goal, done)
 	local tex = line.icon
 	line.dash:Hide()
@@ -245,7 +245,7 @@ local function Place(line, y, indent)
 end
 
 --- Text, colour and icon of a goal line from the game's state.
----@param line AnyGuideLine
+---@param line ObviGuideLine
 local function RenderLine(line)
 	local g, step, dim = line.goal, line.step, line.dim
 	if not (g and step) then return end
@@ -274,7 +274,7 @@ local function RenderLine(line)
 	Icon(line, g, done)
 end
 
----@param tip AnyGuideTip
+---@param tip ObviGuideTip
 local function Tip(tip, y)
 	local line = Line()
 	line.text:SetText(Inline("|cffd0b070" .. tip.text .. "|r"))
@@ -284,12 +284,12 @@ local function Tip(tip, y)
 end
 
 --- The goal lines, with the step's notes (if given) each right after the line it follows in the guide.
----@param step AnyGuideStep
----@param goals AnyGuideGoal[]
----@param tips? AnyGuideTip[]
+---@param step ObviGuideStep
+---@param goals ObviGuideGoal[]
+---@param tips? ObviGuideTip[]
 local function Goals(step, goals, y, dim, side, tips)
 	tips = tips or {}
-	local shown = {} ---@type table<AnyGuideTip, boolean>
+	local shown = {} ---@type table<ObviGuideTip, boolean>
 	local function TipsAfter(goal)
 		for _, tip in ipairs(tips) do
 			if tip.after == goal then y = Tip(tip, y) shown[tip] = true end
@@ -350,7 +350,7 @@ end
 function Window.Refresh()
 	if not frame or not frame:IsShown() then return end
 	local guide, step = Engine.Current()
-	frame.Title:SetText(guide and guide.title or "AnyGuide")
+	frame.Title:SetText(guide and guide.title or "Obvi Guide")
 	frame.StepText:SetText(guide and step and ("%d/%d"):format(step.index, #guide.steps) or "")
 	used, sepUsed = 0, 0
 	frame.SideHeader:Hide()
@@ -459,15 +459,15 @@ local function SavePosition()
 end
 
 local function SetupSettingsMenu(_, root)
-	-- the settings live on AnyGuide's page in the game's Options
+	-- the settings live on ObviGuide's page in the game's Options
 	root:CreateButton("Settings", function() ns.Options.Open() end)
 	root:CreateDivider()
 	root:CreateButton("Quest Cleanup", function() ns.Cleanup() end)
-	root:CreateButton("Hide (/ag shows it again)", function() frame:Hide() end)
+	root:CreateButton("Hide (/og shows it again)", function() frame:Hide() end)
 end
 
 local function Build()
-	frame = CreateFrame("Frame", "AnyGuideFrame", UIParent) --[[@as AnyGuideFrame]]
+	frame = CreateFrame("Frame", "ObviGuideFrame", UIParent) --[[@as ObviGuideFrame]]
 	frame:SetSize(DEFAULT_WIDTH, 120)
 	frame:SetPoint("RIGHT", UIParent, "RIGHT", -260, 80)
 	frame:SetMovable(true)
@@ -642,7 +642,7 @@ function Window.Show()
 end
 
 ns:On("PLAYER_REGEN_ENABLED", function() if clicksDirty then SyncClicks() end end)
-ns:On("ANYGUIDE_STEP", function() Window.Refresh() end)
-ns:On("ANYGUIDE_UPDATE", function() Window.Refresh() end)
-ns:On("ANYGUIDE_GUIDES_ADDED", function() Window.Refresh() end)
+ns:On("OBVIGUIDE_STEP", function() Window.Refresh() end)
+ns:On("OBVIGUIDE_UPDATE", function() Window.Refresh() end)
+ns:On("OBVIGUIDE_GUIDES_ADDED", function() Window.Refresh() end)
 ns:On("PLAYER_LOGIN", function() Window.Show() end)

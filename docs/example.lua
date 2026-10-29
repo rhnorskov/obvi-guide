@@ -1,5 +1,5 @@
--- An example guide in AnyGuide's own form (not loaded by the game; see FORMAT.md).
-AnyGuide.Guide(function(g)
+-- An example guide in ObviGuide's own form (not loaded by the game; see FORMAT.md).
+ObviGuide.Guide(function(g)
 	g.title = "9-13 Skyborne"
 	g.group = "My guides"
 	g.next  = "13-15 Lowlands"

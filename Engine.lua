@@ -5,15 +5,15 @@
 -- A step applies when its condition holds and it has at least one visible goal that can complete; it is done when
 -- all of those are complete. Text and "talk to" lines only describe.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Conditions = ns.Conditions
 
----@class AnyGuideEngine
+---@class ObviGuideEngine
 local Engine = {}
 ns.Engine = Engine
 
-local guide ---@type AnyGuideGuide?
+local guide ---@type ObviGuideGuide?
 local index = 1
 
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
@@ -37,7 +37,7 @@ local function Objective(goal)
 end
 
 --- Yards between the player and a point, or nil when they are not on the same continent.
----@param p AnyGuidePoint
+---@param p ObviGuidePoint
 local function Distance(p)
 	local here = C_Map.GetBestMapForUnit("player")
 	if not here then return nil end
@@ -50,7 +50,7 @@ local function Distance(p)
 	return math.sqrt(dx * dx + dy * dy)
 end
 
----@param goal AnyGuideGoal
+---@param goal ObviGuideGoal
 ---@return boolean
 function Engine.IsVisible(goal)
 	if not Conditions.Eval(goal.cond) then return false end
@@ -65,8 +65,8 @@ function Engine.IsVisible(goal)
 	return true
 end
 
----@param goal AnyGuideGoal
----@param step AnyGuideStep
+---@param goal ObviGuideGoal
+---@param step ObviGuideStep
 ---@return boolean
 function Engine.IsComplete(goal, step)
 	if goal.done and Conditions.Eval(goal.done) then return true end
@@ -102,7 +102,7 @@ function Engine.IsComplete(goal, step)
 end
 
 --- "3/8" for goals with a count, or nil.
----@param goal AnyGuideGoal
+---@param goal ObviGuideGoal
 ---@return string?
 function Engine.Progress(goal)
 	if goal.kind == "objective" or goal.kind == "kill" or (goal.kind == "collect" and goal.objective) then
@@ -113,7 +113,7 @@ function Engine.Progress(goal)
 	end
 end
 
----@param step AnyGuideStep
+---@param step ObviGuideStep
 ---@return boolean applies, boolean done
 function Engine.StepState(step)
 	if not Conditions.Eval(step.cond) then return false, false end
@@ -144,7 +144,7 @@ function Engine.StepState(step)
 end
 
 --- Where a step that is done (or has nothing left to do) goes on: the first open jump, or nil for the next step.
----@param step AnyGuideStep
+---@param step ObviGuideStep
 ---@return integer?
 function Engine.JumpOf(step)
 	for _, j in ipairs(step.jumps or {}) do
@@ -160,7 +160,7 @@ end
 local ended = false
 
 --- The guide, and its current step (none once the guide has ended).
----@return AnyGuideGuide?, AnyGuideStep?
+---@return ObviGuideGuide?, ObviGuideStep?
 function Engine.Current()
 	return guide, guide and not ended and guide.steps[index] or nil
 end
@@ -169,7 +169,7 @@ local function Changed()
 	if ns.charDB and guide then ns.charDB.guide, ns.charDB.step = guide.title, index end
 	local _, step = Engine.Current()
 	ns.Travel.Show(step)
-	ns:Fire("ANYGUIDE_STEP")
+	ns:Fire("OBVIGUIDE_STEP")
 end
 
 -- Going back pauses auto-advance, as Zygor does: it stays paused until the step you're on is not done (from then
@@ -296,7 +296,7 @@ function Engine.Jump(dir)
 end
 
 --- Ticks off a 'confirm' goal (or any goal the window lets the player click).
----@param goal AnyGuideGoal
+---@param goal ObviGuideGoal
 function Engine.Tick(goal)
 	local _, step = Engine.Current()
 	local key = step and MarkKey(step, goal)
@@ -306,7 +306,7 @@ end
 
 function Engine.Update()
 	Engine.Advance()
-	ns:Fire("ANYGUIDE_UPDATE")
+	ns:Fire("OBVIGUIDE_UPDATE")
 end
 
 -- reached waypoints of 'goto' goals are marked as the player arrives

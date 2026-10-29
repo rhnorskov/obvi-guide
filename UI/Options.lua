@@ -1,9 +1,9 @@
--- AnyGuide's page in the game's Options (Options > AddOns > AnyGuide): the settings. The window's gear menu keeps the
+-- Obvi Guide's page in the game's Options (Options > AddOns > Obvi Guide): the settings. The window's gear menu keeps the
 -- actions (steps, Quest Cleanup, hide) and opens this page.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
----@class AnyGuideOptions
+---@class ObviGuideOptions
 local Options = {}
 ns.Options = Options
 
@@ -15,7 +15,7 @@ local category ---@type table?
 
 --- A checkbox for a saved value; `default` is what nil means; `changed` runs after a change.
 local function Checkbox(name, key, default, tooltip, changed)
-	local setting = Settings.RegisterProxySetting(category, "AnyGuide_" .. key, Settings.VarType.Boolean, name, default,
+	local setting = Settings.RegisterProxySetting(category, "ObviGuide_" .. key, Settings.VarType.Boolean, name, default,
 		function()
 			local v = ns.db and ns.db[key]
 			if v == nil then return default end
@@ -32,11 +32,11 @@ end
 
 local function Build()
 	local layout
-	category, layout = Settings.RegisterVerticalLayoutCategory("AnyGuide")
+	category, layout = Settings.RegisterVerticalLayoutCategory("Obvi Guide")
 	local function Header(text) if layout and SectionHeader then layout:AddInitializer(SectionHeader(text)) end end
 
 	Header("Window")
-	local upcoming = Settings.RegisterProxySetting(category, "AnyGuide_previewSteps", Settings.VarType.Number,
+	local upcoming = Settings.RegisterProxySetting(category, "ObviGuide_previewSteps", Settings.VarType.Number,
 		"Upcoming steps", 0,
 		function() return ns.db and ns.db.previewSteps or 0 end,
 		function(value)
@@ -60,20 +60,20 @@ local function Build()
 		"Turns in the quests the current step turns in. A choice of rewards is left to you. Hold Shift to skip it.")
 
 	Header("Troubleshooting")
-	local debug = Settings.RegisterProxySetting(category, "AnyGuide_debug", Settings.VarType.Boolean, "Debug messages",
+	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",
 		false, function() return ns.debug end, function(value) ns.debug = value end)
 	Settings.CreateCheckbox(category, debug, "Extra messages in chat (for this session).")
 
 	Settings.RegisterAddOnCategory(category)
 end
 
---- Opens AnyGuide's page in the game's Options.
+--- Opens ObviGuide's page in the game's Options.
 function Options.Open()
 	if category then Settings.OpenToCategory(category:GetID()) end
 end
 
 ns:On("ADDON_LOADED", function(_, name)
-	if name ~= "AnyGuide" or category then return end
+	if name ~= "ObviGuide" or category then return end
 	local ok, err = pcall(Build)
 	if not ok then ns.Print("couldn't add the options page: %s", tostring(err)) end
 end)

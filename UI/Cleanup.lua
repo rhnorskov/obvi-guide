@@ -1,8 +1,8 @@
 -- Quest log cleanup: lists the quests in your log that the loaded guide doesn't need (no line from the current step
 -- to the end of the guide accepts, works on or turns them in), all ticked; untick the ones to keep, and
--- the button abandons the rest. "/ag cleanup" or the gear menu opens it.
+-- the button abandons the rest. "/og cleanup" or the gear menu opens it.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Engine = ns.Engine
 
@@ -179,7 +179,7 @@ end
 
 local function Build()
 	-- the game's standard panel (Forever's own frame art), without the portrait, like the copy window
-	local f = CreateFrame("Frame", "AnyGuideCleanupFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
+	local f = CreateFrame("Frame", "ObviGuideCleanupFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
 	_G["ButtonFrameTemplate_HidePortrait"](f)
 	if f["SetTitle"] then f["SetTitle"](f, "Quest Cleanup") end
 	f:SetSize(380, 440)
@@ -190,7 +190,7 @@ local function Build()
 	f:RegisterForDrag("LeftButton")
 	f:SetScript("OnDragStart", f.StartMoving)
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
-	table.insert(_G["UISpecialFrames"], "AnyGuideCleanupFrame")   -- Escape closes it
+	table.insert(_G["UISpecialFrames"], "ObviGuideCleanupFrame")   -- Escape closes it
 
 	local intro = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	intro:SetPoint("TOPLEFT", 16, -32)

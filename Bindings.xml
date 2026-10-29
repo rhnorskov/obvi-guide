@@ -2,11 +2,11 @@
 	<!-- the step actions (Action.lua): use an item, cast a spell, or target an NPC/mob; once targeted, the same key
 	     interacts (talk / attack). Action 1 is the step's main action, 2-4 its other targets and the side tasks.
 	     category = the section name in Key Bindings. -->
-	<Binding name="CLICK AnyGuideActionButton:LeftButton" category="AnyGuide"/>
-	<Binding name="CLICK AnyGuideActionButton2:LeftButton" category="AnyGuide"/>
-	<Binding name="CLICK AnyGuideActionButton3:LeftButton" category="AnyGuide"/>
-	<Binding name="CLICK AnyGuideActionButton4:LeftButton" category="AnyGuide"/>
-	<Binding name="ANYGUIDE_NEXTSTEP" category="AnyGuide">AnyGuide.NextStep()</Binding>
-	<Binding name="ANYGUIDE_PREVSTEP" category="AnyGuide">AnyGuide.PrevStep()</Binding>
-	<Binding name="ANYGUIDE_TOGGLE" category="AnyGuide">AnyGuide.Toggle()</Binding>
+	<Binding name="CLICK ObviGuideActionButton:LeftButton" category="Obvi Guide"/>
+	<Binding name="CLICK ObviGuideActionButton2:LeftButton" category="Obvi Guide"/>
+	<Binding name="CLICK ObviGuideActionButton3:LeftButton" category="Obvi Guide"/>
+	<Binding name="CLICK ObviGuideActionButton4:LeftButton" category="Obvi Guide"/>
+	<Binding name="OBVIGUIDE_NEXTSTEP" category="Obvi Guide">ObviGuide.NextStep()</Binding>
+	<Binding name="OBVIGUIDE_PREVSTEP" category="Obvi Guide">ObviGuide.PrevStep()</Binding>
+	<Binding name="OBVIGUIDE_TOGGLE" category="Obvi Guide">ObviGuide.Toggle()</Binding>
 </Bindings>

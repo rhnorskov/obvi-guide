@@ -1,14 +1,14 @@
 -- Copy window: text in a selectable box, for things to copy out of the game (chat can't be copied). The text comes
 -- up selected, so Ctrl+C copies it all. Escape or the close button hides it.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local frame ---@type Frame?
 local box ---@type EditBox
 
 local function Build()
 	-- the game's standard panel (Forever's own frame art), without the portrait
-	local f = CreateFrame("Frame", "AnyGuideCopyFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
+	local f = CreateFrame("Frame", "ObviGuideCopyFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
 	_G["ButtonFrameTemplate_HidePortrait"](f)
 	f:SetSize(560, 420)
 	f:SetPoint("CENTER")
@@ -18,7 +18,7 @@ local function Build()
 	f:RegisterForDrag("LeftButton")
 	f:SetScript("OnDragStart", f.StartMoving)
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
-	table.insert(_G["UISpecialFrames"], "AnyGuideCopyFrame")   -- Escape closes it
+	table.insert(_G["UISpecialFrames"], "ObviGuideCopyFrame")   -- Escape closes it
 
 	local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", 14, -32)

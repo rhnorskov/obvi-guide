@@ -1,4 +1,4 @@
-# Type-check AnyGuide with the Lua language server, as CI does (.github/workflows/check.yml).
+# Type-check ObviGuide with the Lua language server, as CI does (.github/workflows/check.yml).
 # First run fetches Ketho's WoW API annotations into .types/ (git-ignored, not shipped).
 # Needs git and lua-language-server on PATH:  winget install LuaLS.lua-language-server
 $ErrorActionPreference = "Stop"
@@ -14,5 +14,5 @@ if (-not (Test-Path (Join-Path $types "Annotations/Core"))) {
     git -C $types checkout -q FETCH_HEAD
 }
 
-lua-language-server --check="$root" --checklevel=Warning --check_format=pretty --logpath="$env:TEMP\anyguide-luals"
+lua-language-server --check="$root" --checklevel=Warning --check_format=pretty --logpath="$env:TEMP\obviguide-luals"
 exit $LASTEXITCODE

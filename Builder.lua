@@ -1,8 +1,8 @@
--- Builder: AnyGuide's own guide format. A guide pack calls AnyGuide.Guide(function(g) ... end) and fills the guide in
+-- Builder: ObviGuide's own guide format. A guide pack calls ObviGuide.Guide(function(g) ... end) and fills the guide in
 -- with Lua calls (docs/api.lua has the API, docs/FORMAT.md what it means). The calls are recorded as written, then
 -- turned into the same neutral model the RestedXP reader makes, so guides in either format show and behave alike.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Conditions = ns.Conditions
 local Colors = ns.Colors
@@ -35,7 +35,7 @@ end
 
 --- A condition string as a condition tree, or nil and what is wrong with it.
 ---@param s string
----@return AnyGuideCond?, string?
+---@return ObviGuideCond?, string?
 local function Compile(s)
 	local toks, err = Tokens(s)
 	if not toks then return nil, err end
@@ -103,14 +103,14 @@ local function Compile(s)
 	return res
 end
 
----@class AnyGuideBuildContext
+---@class ObviGuideBuildContext
 ---@field title string
 ---@field reported table<string, boolean>   bad condition strings already reported
 
 --- A condition from the guide; a bad one is reported (once) and then ignored, so it never hides anything.
 ---@param s any
----@param ctx AnyGuideBuildContext
----@return AnyGuideCond?
+---@param ctx ObviGuideBuildContext
+---@return ObviGuideCond?
 local function Cond(s, ctx)
 	if s == nil or s == "" then return nil end
 	local c, err
@@ -128,7 +128,7 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- Markers: what a word in the text is (an NPC, an item...), drawn in the colours RestedXP guides use
 
----@class AnyGuideMarkerImpl
+---@class ObviGuideMarkerImpl
 ---@field kind "npc"|"mob"|"item"|"spell"|"object"|"warn"|"buy"
 ---@field name string
 ---@field id? integer
@@ -141,7 +141,7 @@ local Marker = {}
 
 local function IsMarker(v) return getmetatable(v) == Marker end
 
----@param m AnyGuideMarkerImpl
+---@param m ObviGuideMarkerImpl
 ---@return string
 local function Render(m)
 	local color = MARKER_COLOR[m.kind]
@@ -164,19 +164,19 @@ local function Render(m)
 end
 Marker.__tostring = Render
 
----@return AnyGuideMarkerImpl
+---@return ObviGuideMarkerImpl
 local function NewMarker(kind, name, id)
 	if type(name) ~= "string" then error(("a %s needs a name"):format(kind), 3) end
 	return setmetatable({ kind = kind, name = name, id = tonumber(id) }, Marker)
 end
 
----@return AnyGuideMarkerImpl
+---@return ObviGuideMarkerImpl
 local function TextMarker(kind, ...)
 	return setmetatable({ kind = kind, name = "", parts = { ... } }, Marker)
 end
 
 --- Text arguments joined, and the first enemy they name (a line about it targets it).
----@return string text, AnyGuideMarkerImpl? mob
+---@return string text, ObviGuideMarkerImpl? mob
 local function Text(...)
 	local out, mob = {}, nil
 	local function walk(n, ...)
@@ -199,7 +199,7 @@ local function Text(...)
 end
 
 --- The marker a line needs (g.Npc(...) for Talk...); a plain name will do too.
----@return AnyGuideMarkerImpl
+---@return ObviGuideMarkerImpl
 local function Need(v, kind, line)
 	if IsMarker(v) then return v end
 	if type(v) == "string" then return NewMarker(kind, v) end
@@ -209,12 +209,12 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- The builders guide packs fill in. Lines are only recorded here; Finish turns them into the model.
 
----@class AnyGuideLineImpl
+---@class ObviGuideLineImpl
 ---@field op string          the method that made it ("Goto", "Talk", ...)
 ---@field only? any          its condition, as written
 ---@field text? string
----@field mob? AnyGuideMarkerImpl
----@field marker? AnyGuideMarkerImpl
+---@field mob? ObviGuideMarkerImpl
+---@field marker? ObviGuideMarkerImpl
 ---@field [string] any
 
 local LineMT = { __index = {} }
@@ -223,17 +223,17 @@ function LineMT.__index:Only(cond)
 	return self
 end
 
----@class AnyGuideLinesImpl
+---@class ObviGuideLinesImpl
 ---@field only? any
 ---@field label? string
 ---@field skip? any
----@field _lines AnyGuideLineImpl[]
+---@field _lines ObviGuideLineImpl[]
 
 local Lines = {}
 local LinesMT = { __index = Lines }
 
----@param self AnyGuideLinesImpl
----@return AnyGuideLineImpl
+---@param self ObviGuideLinesImpl
+---@return ObviGuideLineImpl
 local function Add(self, line)
 	table.insert(self._lines, setmetatable(line, LineMT))
 	return line
@@ -266,13 +266,13 @@ function Lines:Do(...) local text, mob = Text(...) return Add(self, { op = "Do",
 function Lines:Say(...) local text, mob = Text(...) return Add(self, { op = "Say", text = text, mob = mob }) end
 function Lines:Note(...) local text, mob = Text(...) return Add(self, { op = "Note", text = text, mob = mob }) end
 
----@class AnyGuideGuideImpl
+---@class ObviGuideGuideImpl
 ---@field title? string
 ---@field group? string
 ---@field next? string
 ---@field id? string
 ---@field only? any
----@field _items {lines: AnyGuideLinesImpl, untilStep?: string}[]   steps and side boxes, in order
+---@field _items {lines: ObviGuideLinesImpl, untilStep?: string}[]   steps and side boxes, in order
 
 local Guide = {}
 local GuideMT = { __index = Guide }
@@ -305,17 +305,17 @@ function Guide.Buy(...) return TextMarker("buy", ...) end
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
 	cast = true, learn = true, level = true, home = true, hearth = true, confirm = true }
 
----@param m AnyGuideMarkerImpl
+---@param m ObviGuideMarkerImpl
 ---@param enemy? boolean
 local function TargetOf(m, enemy)
 	return { name = m.name, id = m.id, enemy = enemy or nil }
 end
 
 --- One line -> a goal (nil for goto, path and note lines, which the step handles itself).
----@param l AnyGuideLineImpl
----@return AnyGuideGoal?
+---@param l ObviGuideLineImpl
+---@return ObviGuideGoal?
 local function Goal(l)
-	local op, m = l.op, l.marker --[[@as AnyGuideMarkerImpl]]   -- the lines that use it always have one
+	local op, m = l.op, l.marker --[[@as ObviGuideMarkerImpl]]   -- the lines that use it always have one
 	if op == "Talk" then
 		return { kind = "talk", id = m.id, text = "Talk to " .. Render(m), target = TargetOf(m) }
 	elseif op == "Accept" or op == "Turnin" then
@@ -360,16 +360,16 @@ local function Goal(l)
 	end
 end
 
----@class AnyGuideBuiltStep : AnyGuideStep
+---@class ObviGuideBuiltStep : ObviGuideStep
 ---@field untilStep? string   for a side box: the label of the step it lasts until ("next": the next step)
 
 --- A step's (or side box's) lines -> a step.
----@param lines AnyGuideLinesImpl
+---@param lines ObviGuideLinesImpl
 ---@param untilStep? string
----@param ctx AnyGuideBuildContext
----@return AnyGuideBuiltStep
+---@param ctx ObviGuideBuildContext
+---@return ObviGuideBuiltStep
 local function BuildStep(lines, untilStep, ctx)
-	---@type AnyGuideBuiltStep
+	---@type ObviGuideBuiltStep
 	local step = { index = 0, goals = {}, side = {}, tips = {}, path = {}, label = lines.label, untilStep = untilStep }
 	local hasCompletable = false
 	local last          -- the line a note follows: the last goal, or a goto line's stand-in (its goal comes below)
@@ -453,7 +453,7 @@ end
 
 --- What a step works on, as keys: quest objectives ("quest/objective") and the quests it accepts or turns in
 --- ("accept:quest", "turnin:quest"), so a side box that repeats a step's own talk/turn-in isn't shown with it.
----@param step AnyGuideStep
+---@param step ObviGuideStep
 local function ObjectivesOf(step)
 	local keys = {}
 	for _, g in ipairs(step.goals) do
@@ -472,9 +472,9 @@ local function Shares(a, b)
 end
 
 --- Side boxes go into the steps they accompany: from the next step up to and including their untilStep.
----@param steps AnyGuideBuiltStep[]
----@param ctx AnyGuideBuildContext
----@return AnyGuideStep[]
+---@param steps ObviGuideBuiltStep[]
+---@param ctx ObviGuideBuildContext
+---@return ObviGuideStep[]
 local function Assemble(steps, ctx)
 	local function lastOf(i, untilStep)
 		local nextReal
@@ -514,9 +514,9 @@ local function Assemble(steps, ctx)
 	return out
 end
 
----@param g AnyGuideGuideImpl
+---@param g ObviGuideGuideImpl
 ---@param source string
----@return AnyGuideGuide
+---@return ObviGuideGuide
 local function Finish(g, source)
 	if type(g.title) ~= "string" or g.title == "" then error("the guide has no title (g.title)", 0) end
 	local ctx = { title = g.title, reported = {} }
@@ -527,10 +527,10 @@ local function Finish(g, source)
 	return {
 		title = g.title,
 		name = g.id,
-		group = g.group or "AnyGuide format",
+		group = g.group or "Obvi Guide",
 		next = g.next,
 		cond = Cond(g.only, ctx),
-		format = "anyguide",
+		format = "obviguide",
 		source = source,
 		steps = steps,
 	}
@@ -539,12 +539,12 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- The public API. docs/api.lua declares it for the editor (the types pack authors see), hence the second definition.
 
----@param build fun(g: AnyGuideGuideBuilder)
+---@param build fun(g: ObviGuideGuideBuilder)
 ---@diagnostic disable-next-line: duplicate-set-field
-function AnyGuide.Guide(build)
+function ObviGuide.Guide(build)
 	local source = (debugstack(2, 1, 0) or ""):match("AddOns[\\/]([^\\/]+)") or "?"
 	local g = setmetatable({ _items = {} }, GuideMT)
-	local ok, res = pcall(build, g --[[@as AnyGuideGuideBuilder]])
+	local ok, res = pcall(build, g --[[@as ObviGuideGuideBuilder]])
 	if ok then ok, res = pcall(Finish, g, source) end
 	if not ok then
 		local title = type(g.title) == "string" and (" '" .. g.title .. "'") or ""
@@ -552,5 +552,5 @@ function AnyGuide.Guide(build)
 		return
 	end
 	table.insert(ns.guides, res)
-	ns:Fire("ANYGUIDE_GUIDES_ADDED")
+	ns:Fire("OBVIGUIDE_GUIDES_ADDED")
 end

@@ -1,6 +1,6 @@
-# Writing AnyGuide guides (draft)
+# Writing ObviGuide guides (draft)
 
-AnyGuide guides are written in Lua, with a small set of functions. The full API, with types for your editor, is in
+ObviGuide guides are written in Lua, with a small set of functions. The full API, with types for your editor, is in
 [api.lua](api.lua): add the `docs` folder to your LuaLS workspace library and you get autocomplete, hover docs and
 warnings for typos and missing arguments while you write.
 
@@ -11,19 +11,19 @@ Status: draft for review. Builder.lua implements it; RestedXP guides still come 
 
 ## A guide pack
 
-A guide pack is a small addon with `## Dependencies: AnyGuide`. Its files either call the API below, or hand over
+A guide pack is a small addon with `## Dependencies: ObviGuide`. Its files either call the API below, or hand over
 guide text in another format:
 
 ```lua
-AnyGuide.Add("rxp", [[ ...RestedXP guide text... ]])     -- translated into the calls below
-AnyGuide.Add("zygor", [[ ...Zygor guide text... ]], { title = "...", header = {...} })  -- one guide, with its
+ObviGuide.Add("rxp", [[ ...RestedXP guide text... ]])     -- translated into the calls below
+ObviGuide.Add("zygor", [[ ...Zygor guide text... ]], { title = "...", header = {...} })  -- one guide, with its
                                                           -- title and header (see Parsers/Zygor.lua)
 ```
 
 ## A guide
 
 ```lua
-AnyGuide.Guide(function(g)
+ObviGuide.Guide(function(g)
 	g.title = "9-13 Skyborne"
 	g.group = "My guides"
 	g.next  = "13-15 Lowlands"
@@ -87,7 +87,7 @@ Inside text, markers say what a word is; the window draws each kind its own way,
 cast: `g.Npc(name, id?)`, `g.Mob(name, id?)`, `g.Item(name, id?)`, `g.Spell(name, id?)`, `g.Object(name)`,
 `g.Warn(text...)`, `g.Buy(text...)`.
 
-The name is required; the id is optional but recommended. With an id, AnyGuide uses the game's own name in the
+The name is required; the id is optional but recommended. With an id, ObviGuide uses the game's own name in the
 player's language once the game has it (always for spells, a moment after asking for items and creatures), and the
 written name until then. Tested in game on 2026-10-19 with all 176 creatures in the Skyborne guide: 116 known right
 away, 175 a few seconds after asking; the one left was not a creature. Items in the same guide: 39 of 59 right away,
@@ -124,4 +124,4 @@ Examples: `"Alliance and not Shaman"`, `"Horde/Shaman"`, `"done 92703 or area 16
 
 - Zygor features with no line type yet (e.g. `|only if`, `|n`, gossip choices) are mapped when the Zygor translator
   is written.
-- `/ag export` will print a guide (or the current step) in this form, to copy and edit.
+- `/og export` will print a guide (or the current step) in this form, to copy and edit.

@@ -1,7 +1,7 @@
--- Slash commands: /anyguide or /ag toggles the window; "/ag list" lists the loaded guides; "/ag debug";
--- "/ag names" tests looking up creature and item names by id; "/ag cleanup" cleans up the quest log.
+-- Slash commands: /obvi or /og (or /obviguide) toggles the window; "/og list" lists the loaded guides; "/og debug";
+-- "/og names" tests looking up creature and item names by id; "/og cleanup" cleans up the quest log.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 --- A creature's name from its id, through a tooltip for a made-up creature link (nil when the game doesn't know it).
 ---@param id integer
@@ -85,14 +85,14 @@ local function TestNames()
 	end
 	local out = {}
 	TestLookups("creatures", creatures, CreatureName, out, function()
-		TestLookups("items", items, ItemName, out, function() ns.Copy("AnyGuide: name lookups", table.concat(out, "\n")) end)
+		TestLookups("items", items, ItemName, out, function() ns.Copy("Obvi Guide: name lookups", table.concat(out, "\n")) end)
 	end)
 end
 
-SLASH_ANYGUIDE1, SLASH_ANYGUIDE2 = "/anyguide", "/ag"
+SLASH_OBVIGUIDE1, SLASH_OBVIGUIDE2, SLASH_OBVIGUIDE3 = "/obvi", "/og", "/obviguide"
 -- SlashCmdList is a FrameXML global the WoW annotations do not declare, hence the _G lookup.
 local slashCmdList = _G["SlashCmdList"] ---@type table<string, fun(msg: string)>
-slashCmdList.ANYGUIDE = function(msg)
+slashCmdList.OBVIGUIDE = function(msg)
 	local cmd = (msg or ""):lower():match("^%s*(%S*)")
 	if cmd == "list" then
 		if #ns.guides == 0 then ns.Print("no guides loaded; add a guide pack") return end
@@ -101,7 +101,7 @@ slashCmdList.ANYGUIDE = function(msg)
 		ns.debug = not ns.debug
 		ns.Print("debug %s", ns.debug and "on" or "off")
 		-- what the readers could not translate when the guides were added (before debug was on)
-		if ns.debug and #ns.warnings > 0 then ns.Copy("AnyGuide: guide warnings", table.concat(ns.warnings, "\n")) end
+		if ns.debug and #ns.warnings > 0 then ns.Copy("Obvi Guide: guide warnings", table.concat(ns.warnings, "\n")) end
 	elseif cmd == "pins" then
 		ns.MinimapPins.Debug()
 	elseif cmd == "cleanup" then

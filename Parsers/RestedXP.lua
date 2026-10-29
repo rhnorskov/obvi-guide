@@ -1,7 +1,7 @@
 -- Parser for RestedXP guide syntax (the format of RXPGuides guide files): text in, neutral guides out.
--- AnyGuide reads only text handed to AnyGuide.Add; it never looks at the RestedXP addon itself.
+-- ObviGuide reads only text handed to ObviGuide.Add; it never looks at the RestedXP addon itself.
 --
--- The format, as far as AnyGuide uses it:
+-- The format, as far as ObviGuide uses it:
 --   #name / #displayname / #group / #next lines (each may end in "<< condition")
 --   step [<< condition]       a step; the condition: '/' separates alternatives, words in one must all hold, '!' negates
 --     #label X                 a name other steps refer to
@@ -10,12 +10,12 @@
 --     .directive args >>text   a goal or a condition; "<< cond" and " --comment" may follow
 --     >>text                   a description line; *text a tip; +text a line the player ticks off
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Conditions = ns.Conditions
 local HEARTHSTONE = 6948   -- item id
 
----@class AnyGuideParser
+---@class ObviGuideParser
 local RXP = {}
 ns.Parsers.rxp = RXP
 
@@ -47,7 +47,7 @@ local RACES = Conditions.RACES
 
 --- An RXP condition string ("Alliance Hunter/Horde !Druid") as a condition tree.
 ---@param s string?
----@return AnyGuideCond?
+---@return ObviGuideCond?
 local function Cond(s)
 	if not s then return nil end
 	s = s:gsub("%-%-.*$", ""):gsub("^%s+", ""):gsub("%s+$", "")
@@ -82,7 +82,7 @@ local function Ids(s)
 end
 
 --- "map,x,y[,radius[,flag]]" -> point (or nil), flag. "map/continent,worldY,worldX" is in world yards.
----@return AnyGuidePoint?, string?
+---@return ObviGuidePoint?, string?
 local function Point(arg)
 	local f = {}
 	for part in (arg .. ","):gmatch("([^,]*),") do table.insert(f, (part:gsub("^%s+", ""):gsub("%s+$", ""))) end
@@ -103,7 +103,7 @@ local function Point(arg)
 	return { map = mapID, x = a / 100, y = b / 100, radius = radius }, flag
 end
 
----@class AnyGuideRXPStep : AnyGuideStep
+---@class ObviGuideRXPStep : ObviGuideStep
 ---@field sideOf? string          for a side box: the label of the step it ends with ("next" for the next step)
 ---@field hidden? boolean
 ---@field mobs table<string, integer>
@@ -115,7 +115,7 @@ end
 ---@param kind string
 ---@param ids integer[]
 ---@param negate? boolean
----@return AnyGuideCond
+---@return ObviGuideCond
 local function AnyId(kind, ids, negate)
 	local any = { "or" }
 	for _, id in ipairs(ids) do table.insert(any, negate and { "not", { kind, id } } or { kind, id }) end
@@ -123,9 +123,9 @@ local function AnyId(kind, ids, negate)
 end
 
 --- A goal folded into another or replaced: the notes that followed it now follow the new one.
----@param step AnyGuideStep
----@param from AnyGuideGoal
----@param to AnyGuideGoal
+---@param step ObviGuideStep
+---@param from ObviGuideGoal
+---@param to ObviGuideGoal
 local function Moved(step, from, to)
 	for _, tip in ipairs(step.tips) do if tip.after == from then tip.after = to end end
 end
@@ -133,14 +133,14 @@ end
 --- One step's lines -> a step.
 ---@param header string   the "step << cond" line
 ---@param lines string[]
----@return AnyGuideRXPStep
+---@return ObviGuideRXPStep
 local function ParseStep(header, lines)
 	local condText = header:match("^step%s*<<%s*(.-)%s*$") or ""
-	---@type AnyGuideRXPStep
+	---@type ObviGuideRXPStep
 	local step = { index = 0, goals = {}, side = {}, tips = {}, path = {}, mobs = {}, hasCompletable = false, condText = condText }
 	local conds = { Cond(condText) }
 	-- the line a note follows: the last goal, or a .goto line (its goal only exists once the step is read, see below)
-	local last ---@type AnyGuideGoal?
+	local last ---@type ObviGuideGoal?
 	local function addGoal(goal, completable)
 		table.insert(step.goals, goal)
 		last = goal
@@ -199,7 +199,7 @@ local function ParseStep(header, lines)
 					if p then
 						local pt = { p = p, flag = flag, text = cleanText, cond = lineCond, prev = last }
 						table.insert(points, pt)
-						last = pt --[[@as AnyGuideGoal]]   -- a stand-in for notes, swapped for the goal below
+						last = pt --[[@as ObviGuideGoal]]   -- a stand-in for notes, swapped for the goal below
 					end
 				elseif dir == "target" then
 					local n, id = arg:match("^(.-)::(%d+)")
@@ -290,9 +290,9 @@ local function ParseStep(header, lines)
 	if equipText then
 		-- each "+Equip the X" takes the .use line for that same item: a step can have one per class
 		-- ("Equip the Honed Greathammer << Paladin" ... ".use 257345 << Paladin -- Honed Greathammer")
-		local uses = {} ---@type AnyGuideGoal[]
+		local uses = {} ---@type ObviGuideGoal[]
 		for _, g in ipairs(step.goals) do if g.kind == "use" and g.id then table.insert(uses, g) end end
-		local folded = {} ---@type table<AnyGuideGoal, boolean>
+		local folded = {} ---@type table<ObviGuideGoal, boolean>
 		local function UseFor(text)
 			local plain = Plain(text)
 			for _, u in ipairs(uses) do
@@ -416,7 +416,7 @@ local function ParseStep(header, lines)
 		end
 	end
 	-- notes that followed a .goto line follow its goal, or (without one) the line before the .goto
-	for _, pt in ipairs(points) do Moved(step, pt --[[@as AnyGuideGoal]], gotoGoal or pt.prev) end
+	for _, pt in ipairs(points) do Moved(step, pt --[[@as ObviGuideGoal]], gotoGoal or pt.prev) end
 	if not step.hasCompletable and not step.sideOf then
 		addGoal({ kind = "confirm", text = "Continue when ready" }, true)
 	end
@@ -447,8 +447,8 @@ end
 --- Side boxes ("#completewith") go into the steps they accompany. RestedXP ends one at its target step, done or
 --- not, and so do we. A later box with the same objective and condition that starts while this one is still up (and
 --- before a real step on that objective) is the same box, running on to that box's own target.
----@param steps AnyGuideRXPStep[]
----@return AnyGuideStep[]
+---@param steps ObviGuideRXPStep[]
+---@return ObviGuideStep[]
 local function Assemble(steps)
 	local function nextReal(from)
 		for k = from, #steps do if not steps[k].sideOf then return k end end
@@ -550,7 +550,7 @@ local function HeaderValue(lines, key)
 end
 
 ---@param body string  one guide's text
----@return AnyGuideGuide?, string?
+---@return ObviGuideGuide?, string?
 local function ParseGuide(body, source)
 	body = body:gsub("\r", "")
 	local lines = {}

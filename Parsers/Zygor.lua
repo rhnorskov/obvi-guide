@@ -1,24 +1,24 @@
 -- Parser for Zygor guide syntax (the text inside Zygor's RegisterGuide calls): text in, neutral guides out.
--- AnyGuide reads only text handed to AnyGuide.Add; it never looks at the Zygor addon itself. The title and header of a
+-- ObviGuide reads only text handed to ObviGuide.Add; it never looks at the Zygor addon itself. The title and header of a
 -- guide are Lua in Zygor's files, so a pack hands them over as plain values:
---   AnyGuide.Add("zygor", [[ ...guide text... ]], { title = "Leveling Guides\\Westfall (13-15)", header = {...} })
+--   ObviGuide.Add("zygor", [[ ...guide text... ]], { title = "Leveling Guides\\Westfall (13-15)", header = {...} })
 -- header: next (a Zygor title), faction ("Alliance"/"Horde"), visible and hideif (Zygor's Lua expressions as text),
 -- trial (true for the free trial's copy of a guide).
 --
--- The format, as far as AnyGuide uses it (Zygor's own reader is Parser.lua, the line kinds are in Goal.lua):
+-- The format, as far as ObviGuide uses it (Zygor's own reader is Parser.lua, the line kinds are in Goal.lua):
 --   step                      a step; "label X" names it, "|only if <lua>" on a line of its own makes it conditional
 --   stickystart "X" / stickystop "X"   between steps: the step labelled X is shown alongside the following steps
 --   a line is chunks split by "|": the first is a command (talk Name##npc, accept Title##quest, kill 5 Mob##npc,
 --   collect 8 Item##item, ...) or plain text; the rest modify it (goto Zone x,y < dist, q 123/1, only if ...,
 --   tip text, future, c, n, noway, or (one of several lines), next "label" (jump there when the step is done), ...)
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Conditions = ns.Conditions
 local COLORS = ns.Colors
 local HEARTHSTONE = 6948   -- item id
 
----@class AnyGuideParser
+---@class ObviGuideParser
 local Zygor = {}
 ns.Parsers.zygor = Zygor
 
@@ -142,7 +142,7 @@ local TRUE, FALSE = { "true" }, { "false" }
 
 --- A race, class or faction word as a test, or nil.
 ---@param w string
----@return AnyGuideCond?
+---@return ObviGuideCond?
 local function Word(w)
 	local lw = w:lower()
 	if lw == "alliance" or lw == "horde" then return { "faction", lw == "alliance" and "Alliance" or "Horde" } end
@@ -151,8 +151,8 @@ local function Word(w)
 end
 
 -- the parts of an expression while it is read: a condition, a number, a numeric expression or something unknown
----@class AnyGuideZygorValue
----@field c? AnyGuideCond      a condition (TRUE/FALSE when known to be constant)
+---@class ObviGuideZygorValue
+---@field c? ObviGuideCond      a condition (TRUE/FALSE when known to be constant)
 ---@field n? number            a number
 ---@field s? string            a string
 ---@field num? string          a numeric expression: "level", "items", "rep" or "money"
@@ -162,8 +162,8 @@ end
 local function C(c) return { c = c } end
 local UNKNOWN = { u = true }
 
----@param v AnyGuideZygorValue
----@return AnyGuideZygorValue   as a condition (a number is true in Lua)
+---@param v ObviGuideZygorValue
+---@return ObviGuideZygorValue   as a condition (a number is true in Lua)
 local function Bool(v)
 	if v.c or v.u then return v end
 	if v.n or v.s or v.num then return C(TRUE) end
@@ -254,10 +254,10 @@ local WORDS = {
 for name, n in pairs(STANDINGS) do WORDS[name] = { n = n } end
 
 --- "level >= 10", "itemcount(123) < 5" as a test.
----@param l AnyGuideZygorValue
+---@param l ObviGuideZygorValue
 ---@param op string
----@param r AnyGuideZygorValue
----@return AnyGuideZygorValue
+---@param r ObviGuideZygorValue
+---@return ObviGuideZygorValue
 local function Compare(l, op, r)
 	if r.num and l.n then
 		local flip = { ["<"] = ">", [">"] = "<", ["<="] = ">=", [">="] = "<=" }
@@ -288,7 +288,7 @@ end
 
 --- Zygor's condition Lua as a condition tree. Returns the tree (nil: always) and whether a part was not understood.
 ---@param s string
----@return AnyGuideCond? cond, boolean partial
+---@return ObviGuideCond? cond, boolean partial
 local function Expr(s)
 	local toks, pos = {}, 1
 	while pos <= #s do
@@ -392,7 +392,7 @@ local function Expr(s)
 end
 
 --- "|only Human Warlock,Dwarf" (no "if"): any of the comma-separated race/class/faction words (all of them in one).
----@return AnyGuideCond?, boolean partial
+---@return ObviGuideCond?, boolean partial
 local function RaceClass(s)
 	local alts = {}
 	for alt in (s .. ","):gmatch("%s*(.-)%s*,") do
@@ -440,12 +440,12 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 	nomovieskip = true, nohearth = true, travelcfg = true, minizone = true, mapicon = true, required = true,
 	gotoontaxi = true, countexpr = true, updatescript = true, grouprole = true, orlogic = true, meta = true }
 
----@class AnyGuideZygorLine
+---@class ObviGuideZygorLine
 ---@field action? string
 ---@field params? string
 ---@field text? string          the line's own text (it replaces the generated one)
----@field cond? AnyGuideCond
----@field point? AnyGuidePoint
+---@field cond? ObviGuideCond
+---@field point? ObviGuidePoint
 ---@field noway? boolean
 ---@field quest? integer
 ---@field objective? integer
@@ -459,12 +459,12 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 ---@field quests? integer[]     "multiq": several quests
 ---@field tips string[]
 
----@class AnyGuideZygorCtx
+---@class ObviGuideZygorCtx
 ---@field map? integer        the map the last coordinates were on (lines may leave the zone out)
 ---@field counts table<string, integer>
 ---@field order string[]
 
----@param ctx AnyGuideZygorCtx
+---@param ctx ObviGuideZygorCtx
 ---@param msg string
 local function Warn(ctx, msg)
 	if not ctx.counts[msg] then ctx.counts[msg] = 0 table.insert(ctx.order, msg) end
@@ -473,8 +473,8 @@ end
 
 --- "Zone/0 45.20,42.40 < 20", "Zone 45.2,42.4", "45.2,42.4" -> point (nil when it can't be placed).
 ---@param s string
----@param ctx AnyGuideZygorCtx
----@return AnyGuidePoint?
+---@param ctx ObviGuideZygorCtx
+---@return ObviGuidePoint?
 local function Point(s, ctx)
 	s = s:gsub('%s*"[^"]*"%s*$', "")   -- a "title" after the coordinates
 	local mapText, x, y, rest = s:match("^%s*(.-)%s*,?%s*(%-?[%d%.]+)%s*,%s*(%-?[%d%.]+)%s*(.-)%s*$")
@@ -498,11 +498,11 @@ end
 
 --- One line -> its parts. Returns nil for an empty line; step-level parts (labels, conditions) go to `step` directly.
 ---@param line string
----@param step AnyGuideZygorStep
----@param ctx AnyGuideZygorCtx
----@return AnyGuideZygorLine?, boolean? dropped
+---@param step ObviGuideZygorStep
+---@param ctx ObviGuideZygorCtx
+---@return ObviGuideZygorLine?, boolean? dropped
 local function ReadLine(line, step, ctx)
-	---@type AnyGuideZygorLine
+	---@type ObviGuideZygorLine
 	local rec = { tips = {} }
 	local any, n = false, 0
 	line = line:gsub("\\|", "%%PIPE%%"):gsub("\\_", "%%UNDER%%")
@@ -588,15 +588,15 @@ local function ReadLine(line, step, ctx)
 	return (any or rec.next) and rec or nil
 end
 
----@class AnyGuideZygorStep : AnyGuideStep
----@field conds AnyGuideCond[]
+---@class ObviGuideZygorStep : ObviGuideStep
+---@field conds ObviGuideCond[]
 ---@field sticky string[]       the labels of the side boxes (sticky steps) open when the step began
 ---@field hasCompletable boolean
----@field nexts? {label: string, goal?: AnyGuideGoal, cond?: AnyGuideCond}[]   its |next jumps, by label until Assemble
+---@field nexts? {label: string, goal?: ObviGuideGoal, cond?: ObviGuideCond}[]   its |next jumps, by label until Assemble
 
 --- What `|q N` (without an objective) means on a line that isn't a quest objective: shown while the quest is in the
 --- log, or (with |future) until it is turned in. Once hidden, a step without other open lines is passed over.
----@param rec AnyGuideZygorLine
+---@param rec ObviGuideZygorLine
 local function QuestGate(rec)
 	if rec.quests then
 		-- |multiq: the same, for all of them
@@ -613,17 +613,17 @@ local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = tru
 	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true }
 
 --- A line -> a goal (nil when there's nothing to show).
----@param rec AnyGuideZygorLine
----@param step AnyGuideZygorStep
----@param ctx AnyGuideZygorCtx
----@return AnyGuideGoal?
+---@param rec ObviGuideZygorLine
+---@param step ObviGuideZygorStep
+---@param ctx ObviGuideZygorCtx
+---@return ObviGuideGoal?
 local function MakeGoal(rec, step, ctx)
 	local a, p = rec.action, rec.params or ""
 	local name, id, count, all, list = Thing(p)
-	local goal ---@type AnyGuideGoal?
+	local goal ---@type ObviGuideGoal?
 	local text = rec.text
 	-- lines done while a condition holds (Zygor checks them itself): the condition, when it can be read
-	local done ---@type AnyGuideCond?
+	local done ---@type ObviGuideCond?
 	if a == "havebuff" or a == "nobuff" then
 		-- "Name##spell", or a bare number: a spell id or (as in "|nobuff 136230") an aura's icon
 		local n = id or tonumber(name)
@@ -738,14 +738,14 @@ end
 --- One step's lines -> a step.
 ---@param lines string[]
 ---@param sticky string[]
----@param ctx AnyGuideZygorCtx
----@return AnyGuideZygorStep
+---@param ctx ObviGuideZygorCtx
+---@return ObviGuideZygorStep
 local function ParseStep(lines, sticky, ctx)
-	---@type AnyGuideZygorStep
+	---@type ObviGuideZygorStep
 	local step = { index = 0, goals = {}, side = {}, tips = {}, path = {}, conds = {}, sticky = sticky, hasCompletable = false,
 		nexts = {} }
-	local last ---@type AnyGuideGoal?
-	local points = {} ---@type {p: AnyGuidePoint, goal?: AnyGuideGoal, cond?: AnyGuideCond}[]
+	local last ---@type ObviGuideGoal?
+	local points = {} ---@type {p: ObviGuidePoint, goal?: ObviGuideGoal, cond?: ObviGuideCond}[]
 	local talk ---@type table?   the NPC of the last talk line, which accept and turn-in lines target
 	local skipTips = false
 	for _, raw in ipairs(lines) do
@@ -857,12 +857,12 @@ end
 --- Sticky steps go into the steps they accompany, as side boxes: each step gets the goals of the steps labelled with
 --- the stickies open when it began (Zygor shows the sticky step's lines alongside). The sticky step itself stays a
 --- step of its own, as in Zygor.
----@param steps AnyGuideZygorStep[]
----@return AnyGuideStep[]
+---@param steps ObviGuideZygorStep[]
+---@return ObviGuideStep[]
 local function Assemble(steps)
-	local byLabel = {} ---@type table<string, AnyGuideZygorStep>
+	local byLabel = {} ---@type table<string, ObviGuideZygorStep>
 	for _, s in ipairs(steps) do if s.label and not byLabel[s.label] then byLabel[s.label] = s end end
-	local copies = {} ---@type table<AnyGuideZygorStep, AnyGuideGoal[]>
+	local copies = {} ---@type table<ObviGuideZygorStep, ObviGuideGoal[]>
 	local function Copies(s)
 		if copies[s] then return copies[s] end
 		local list = {}
@@ -901,8 +901,8 @@ end
 ---@param text string
 ---@param source string
 ---@param meta table
----@param ctx AnyGuideZygorCtx
----@return AnyGuideGuide?, string?
+---@param ctx ObviGuideZygorCtx
+---@return ObviGuideGuide?, string?
 local function ParseGuide(text, source, meta, ctx)
 	local header = type(meta.header) == "table" and meta.header or {}
 	local full = type(meta.title) == "string" and meta.title or "Zygor guide"
@@ -911,7 +911,7 @@ local function ParseGuide(text, source, meta, ctx)
 		local c = Expr(header.visible)
 		if c == FALSE then return nil, ("'%s' is not a guide to follow (Zygor hides it); left out"):format(full) end
 	end
-	local hide ---@type AnyGuideCond?
+	local hide ---@type ObviGuideCond?
 	if header.hideif then
 		local partial
 		hide, partial = Expr(header.hideif)
@@ -998,7 +998,7 @@ local function ParseGuide(text, source, meta, ctx)
 	local path, title = full:match("^(.*)\\([^\\]+)$")
 	title = title or full
 	local group = "Zygor" .. (header.trial and " (trial)" or "") .. (path and (": " .. path) or "")
-	local cond = header.faction and { "faction", header.faction } or nil ---@type AnyGuideCond?
+	local cond = header.faction and { "faction", header.faction } or nil ---@type ObviGuideCond?
 	if header.visible then
 		local c, partial = Expr(header.visible)
 		if partial then Warn(ctx, ('can\'t read who the guide is for: "%s"'):format(header.visible)) end
@@ -1019,7 +1019,7 @@ end
 
 --- One guide's text, with its title and header in `meta` (see the top of this file).
 function Zygor.Parse(text, source, meta)
-	local ctx = { counts = {}, order = {} } ---@type AnyGuideZygorCtx
+	local ctx = { counts = {}, order = {} } ---@type ObviGuideZygorCtx
 	local g, why = ParseGuide(text, source, type(meta) == "table" and meta or {}, ctx)
 	local warnings = {}
 	if why then table.insert(warnings, why) end

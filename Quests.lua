@@ -2,7 +2,7 @@
 -- side tasks) accepts or turns in. A choice of rewards is left to the player. Holding Shift while talking to an NPC
 -- leaves that conversation alone.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Engine = ns.Engine
 -- the greeting's pickers take the quest's index (the annotations say they take nothing)

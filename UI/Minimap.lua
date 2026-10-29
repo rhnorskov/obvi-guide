@@ -2,9 +2,9 @@
 -- and its destination a gold pin. The destination stays on the minimap's edge when it is farther away, so it shows
 -- the way to go. Points on another continent (or anywhere while the player is in an instance) are not shown.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
----@class AnyGuideMinimapPins
+---@class ObviGuideMinimapPins
 local Pins = {}
 ns.MinimapPins = Pins
 
@@ -55,21 +55,21 @@ end
 
 -- Everything below needs the game.
 
----@class AnyGuidePin : Frame
+---@class ObviGuidePin : Frame
 ---@field tex Texture
 ---@field continent? integer      where the point is, in world coordinates (set for the current step)
 ---@field world? Vector2DMixin
 
-local dots = {} ---@type AnyGuidePin[]   the path dots, reused from step to step
+local dots = {} ---@type ObviGuidePin[]   the path dots, reused from step to step
 local used = 0                           -- how many of them the current step shows
-local dest ---@type AnyGuidePin?
-local step ---@type AnyGuideStep?
+local dest ---@type ObviGuidePin?
+local step ---@type ObviGuideStep?
 local driver = CreateFrame("Frame")      -- runs the updates while there are pins
 driver:Hide()
 
 --- A pin's art: the first of the game's atlases that exists, or else a tinted circle (a white square with a round
 --- mask), so a missing atlas never shows as a green box.
----@param pin AnyGuidePin
+---@param pin ObviGuidePin
 ---@param atlases string[]
 ---@param color number[]
 ---@param tint boolean   tint the atlas too (a white blip), or keep its own colours
@@ -92,9 +92,9 @@ end
 
 ---@param size number
 ---@param level integer   above the minimap's own blips
----@return AnyGuidePin
+---@return ObviGuidePin
 local function NewPin(size, level)
-	local pin = CreateFrame("Frame", nil, Minimap) --[[@as AnyGuidePin]]
+	local pin = CreateFrame("Frame", nil, Minimap) --[[@as ObviGuidePin]]
 	pin:SetSize(size, size)
 	pin:SetFrameLevel(Minimap:GetFrameLevel() + level)
 	pin.tex = pin:CreateTexture(nil, "OVERLAY")
@@ -107,11 +107,11 @@ end
 local function ShowTooltip(self)
 	local goal = step and step.goals[1]
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	GameTooltip:SetText(goal and goal.text or (step and step.label) or "AnyGuide", 1, 1, 1, 1, true)
+	GameTooltip:SetText(goal and goal.text or (step and step.label) or "Obvi Guide", 1, 1, 1, 1, true)
 	GameTooltip:Show()
 end
 
----@return AnyGuidePin
+---@return ObviGuidePin
 local function Dest()
 	if not dest then
 		dest = NewPin(DEST, 30)
@@ -124,7 +124,7 @@ local function Dest()
 end
 
 --- A filled circle: a plain colour with a round mask (crisp at any size, unlike blip art with empty margins).
----@param pin AnyGuidePin
+---@param pin ObviGuidePin
 ---@param layer DrawLayer
 ---@param size number
 ---@param r number
@@ -145,7 +145,7 @@ local function Circle(pin, layer, size, r, g, b, a)
 	return tex
 end
 
----@return AnyGuidePin
+---@return ObviGuidePin
 local function Dot()
 	used = used + 1
 	if not dots[used] then
@@ -159,8 +159,8 @@ local function Dot()
 	return dots[used]
 end
 
----@param pin AnyGuidePin
----@param p? AnyGuidePoint
+---@param pin ObviGuidePin
+---@param p? ObviGuidePoint
 local function Place(pin, p)
 	if p then
 		pin.continent, pin.world = C_Map.GetWorldPosFromMapPos(p.map, CreateVector2D(p.x, p.y))
@@ -192,7 +192,7 @@ local function Update()
 	local facing = GetCVar("rotateMinimap") == "1" and GetPlayerFacing() or nil
 	local shape = _G["GetMinimapShape"] ---@type (fun(): string)?   set by minimap addons that make it square
 	local square = shape ~= nil and shape() == "SQUARE"
-	---@param pin AnyGuidePin
+	---@param pin ObviGuidePin
 	local function Show(pin, clamp)
 		local w = pin.world
 		-- in an instance (no position) or on another continent: hidden
@@ -224,7 +224,7 @@ function Pins.Refresh()
 	if any then Update() end
 end
 
---- "/ag pins": what the pins are built from, step by step, to see where they get lost (in the copy window).
+--- "/og pins": what the pins are built from, step by step, to see where they get lost (in the copy window).
 function Pins.Debug()
 	Pins.Refresh()
 	local out = {}
@@ -251,7 +251,7 @@ function Pins.Debug()
 			tostring(dest:IsVisible()), rel and ("%.1f"):format(x) or "-", rel and ("%.1f"):format(y) or "-",
 			dest:GetEffectiveAlpha(), dest:GetFrameLevel(), Minimap:GetFrameLevel())
 	end
-	ns.Copy("AnyGuide: minimap pins", table.concat(out, "\n"))
+	ns.Copy("Obvi Guide: minimap pins", table.concat(out, "\n"))
 end
 
 local elapsed = 0
@@ -262,5 +262,5 @@ driver:SetScript("OnUpdate", function(_, dt)
 	Update()
 end)
 
-ns:On("ANYGUIDE_STEP", function() Pins.Refresh() end)
-ns:On("ANYGUIDE_UPDATE", function() Pins.Refresh() end)
+ns:On("OBVIGUIDE_STEP", function() Pins.Refresh() end)
+ns:On("OBVIGUIDE_UPDATE", function() Pins.Refresh() end)

@@ -1,13 +1,13 @@
 -- Travel: the current step's destination goes to Shortest Path Forever when it is installed (it plans the way there:
 -- walking paths, flights, boats, portals). Without it, the game's own map pin and its compass arrow are used.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
----@class AnyGuideTravel
+---@class ObviGuideTravel
 local Travel = {}
 ns.Travel = Travel
 
-local OWNER = "AnyGuide"   -- Shortest Path keeps one journey per owner
+local OWNER = "ObviGuide"   -- Shortest Path keeps one journey per owner
 local ourPin               -- the user waypoint we set (fallback only), so we never clear someone else's
 
 -- Shortest Path Forever's public API (an optional dependency, so looked up at run time)
@@ -31,7 +31,7 @@ end
 
 --- Shows the way to one point the player picked (a line's own spot, clicked in the window): Shortest Path's
 --- journey, else the game's map pin, as for a step's destination.
----@param p AnyGuidePoint
+---@param p ObviGuidePoint
 ---@param title? string
 function Travel.To(p, title)
 	title = title and title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
@@ -48,7 +48,7 @@ function Travel.To(p, title)
 end
 
 --- Shows the way to a step's destination, or clears ours when the step has none.
----@param step? AnyGuideStep
+---@param step? ObviGuideStep
 function Travel.Show(step)
 	local dest = step and step.dest
 	local api = SPF()

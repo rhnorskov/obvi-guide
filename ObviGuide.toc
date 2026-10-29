@@ -1,12 +1,12 @@
 ## Interface: 16001
-## Title: AnyGuide
-## Notes: A guide viewer that reads guides in RestedXP and Zygor format, and its own. Ships no guides: add your own guide packs. /ag opens it.
+## Title: Obvi Guide
+## Notes: Follow guides in your own format, and RestedXP or Zygor guides you have. Ships no guides: add your own guide packs. /og opens it.
 ## Version: 0.1.0-dev
 ## Author: rhnorskov
 ## X-License: GPL-3.0-or-later
 ## OptionalDeps: ShortestPathForever
-## SavedVariables: AnyGuideDB
-## SavedVariablesPerCharacter: AnyGuideCharDB
+## SavedVariables: ObviGuideDB
+## SavedVariablesPerCharacter: ObviGuideCharDB
 
 Core.lua
 Conditions.lua

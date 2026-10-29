@@ -1,35 +1,35 @@
 -- Actions: keybindable actions for the current step, like Zygor's action buttons but without a bar. Hidden secure
 -- buttons each do one thing the step (or its side tasks) needs: use an item, cast a spell, or target an NPC or mob.
 -- Action 1 is the step's main action; actions 2-4 take the step's other targets and items, then the side tasks.
--- Bind them in Key Bindings > AnyGuide. Secure buttons can't change in combat, so a step change during a fight takes
+-- Bind them in Key Bindings > ObviGuide. Secure buttons can't change in combat, so a step change during a fight takes
 -- effect when combat ends.
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
 local Engine = ns.Engine
 
----@class AnyGuideAction
+---@class ObviGuideAction
 local Action = {}
 ns.Action = Action
 
 local COUNT = 4
 
----@class AnyGuideActionInfo
+---@class ObviGuideActionInfo
 ---@field kind "item"|"spell"|"target"
----@field goal? AnyGuideGoal   the line the action belongs to (for the key hint)
+---@field goal? ObviGuideGoal   the line the action belongs to (for the key hint)
 ---@field value string|integer|string[]   a target: one name, or several (any of them)
 ---@field enemy? boolean       a target to attack (else to talk to)
 
----@class AnyGuideActionSlot
+---@class ObviGuideActionSlot
 ---@field button Button
 ---@field binding string
----@field current? AnyGuideActionInfo
+---@field current? ObviGuideActionInfo
 ---@field interacting boolean  the key is "Interact with Target" now
 
-local slots = {} ---@type AnyGuideActionSlot[]
+local slots = {} ---@type ObviGuideActionSlot[]
 for i = 1, COUNT do
 	-- action 1 keeps its first name, so a key bound before there were more stays bound
-	local name = i == 1 and "AnyGuideActionButton" or "AnyGuideActionButton" .. i
+	local name = i == 1 and "ObviGuideActionButton" or "ObviGuideActionButton" .. i
 	local button = CreateFrame("Button", name, UIParent, "SecureActionButtonTemplate") --[[@as Button]]
 	button:SetSize(1, 1)
 	button:SetAlpha(0)
@@ -44,7 +44,7 @@ end
 local pending = false
 
 --- The step's actions, most important first: its items, equipment, spells and targets, then its side tasks'.
----@return AnyGuideActionInfo[]
+---@return ObviGuideActionInfo[]
 local function Pick()
 	local _, step = Engine.Current()
 	if not step then return {} end
@@ -135,7 +135,7 @@ end
 -- The "magic key" part (as Zygor does it): once an action's NPC or mob is targeted, that action's key becomes the
 -- game's own "Interact with Target", so the next press talks to the NPC or attacks the mob. Override bindings can't
 -- change in combat either; the switch then waits for combat to end.
----@param slot AnyGuideActionSlot
+---@param slot ObviGuideActionSlot
 local function TargetIsOurs(slot)
 	local a = slot.current
 	if not (a and a.kind == "target") then return false end
@@ -166,7 +166,7 @@ function Action.Rebind()
 			changed = true
 		end
 	end
-	if changed then ns:Fire("ANYGUIDE_UPDATE") end
+	if changed then ns:Fire("OBVIGUIDE_UPDATE") end
 end
 
 --- The key bound to an action, if any.
@@ -178,7 +178,7 @@ function Action.Key(i)
 end
 
 --- The window's hint next to a line: the key of the action that belongs to it, and what pressing it does now.
----@param goal AnyGuideGoal
+---@param goal ObviGuideGoal
 ---@return string?
 function Action.Hint(goal)
 	local hints = Action.Hints(goal)
@@ -186,7 +186,7 @@ function Action.Hint(goal)
 end
 
 --- Every action key that belongs to a line, with the target it's for (a line naming several mobs has one each).
----@param goal AnyGuideGoal
+---@param goal ObviGuideGoal
 ---@return {name?: string, hint: string}[]
 function Action.Hints(goal)
 	local out = {}
@@ -203,10 +203,10 @@ function Action.Hints(goal)
 	return out
 end
 
-ns:On("ANYGUIDE_STEP", function() Apply() Action.Rebind() end)
-ns:On("ANYGUIDE_UPDATE", function() Apply() Action.Rebind() end)
+ns:On("OBVIGUIDE_STEP", function() Apply() Action.Rebind() end)
+ns:On("OBVIGUIDE_UPDATE", function() Apply() Action.Rebind() end)
 ns:On("PLAYER_TARGET_CHANGED", function() Action.Rebind() end)
-ns:On("PLAYER_REGEN_ENABLED", function() if pending then Apply() Action.Rebind() ns:Fire("ANYGUIDE_UPDATE") end end)
+ns:On("PLAYER_REGEN_ENABLED", function() if pending then Apply() Action.Rebind() ns:Fire("OBVIGUIDE_UPDATE") end end)
 ns:On("UPDATE_BINDINGS", function()
 	-- the player changed their keys: the interact overrides must follow the new keys
 	if not InCombatLockdown() then
@@ -214,13 +214,13 @@ ns:On("UPDATE_BINDINGS", function()
 			if slot.interacting then ClearOverrideBindings(slot.button) slot.interacting = false end
 		end
 	end
-	ns:Fire("ANYGUIDE_UPDATE")
+	ns:Fire("OBVIGUIDE_UPDATE")
 end)
 
--- the other key bindings (Key Bindings > AnyGuide)
-_G["BINDING_NAME_ANYGUIDE_NEXTSTEP"] = "Next step"
-_G["BINDING_NAME_ANYGUIDE_PREVSTEP"] = "Previous step"
-_G["BINDING_NAME_ANYGUIDE_TOGGLE"] = "Show/hide window"
-function AnyGuide.NextStep() Engine.Step(1) end
-function AnyGuide.PrevStep() Engine.Step(-1) end
-function AnyGuide.Toggle() ns.Window.Toggle() end
+-- the other key bindings (Key Bindings > ObviGuide)
+_G["BINDING_NAME_OBVIGUIDE_NEXTSTEP"] = "Next step"
+_G["BINDING_NAME_OBVIGUIDE_PREVSTEP"] = "Previous step"
+_G["BINDING_NAME_OBVIGUIDE_TOGGLE"] = "Show/hide window"
+function ObviGuide.NextStep() Engine.Step(1) end
+function ObviGuide.PrevStep() Engine.Step(-1) end
+function ObviGuide.Toggle() ns.Window.Toggle() end

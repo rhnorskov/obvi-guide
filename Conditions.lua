@@ -12,9 +12,9 @@
 --   {"equipped", itemID}  {"money", copper}             (wearing the item; at least that much money)
 --   {"rep", factionID or name, reaction}                (at least that standing: 1 Hated .. 4 Neutral .. 8 Exalted)
 local _, ns = ...
----@cast ns AnyGuideNS
+---@cast ns ObviGuideNS
 
----@class AnyGuideConditions
+---@class ObviGuideConditions
 local Conditions = {}
 ns.Conditions = Conditions
 
@@ -123,7 +123,7 @@ local tests = {
 	end,
 }
 
----@param c AnyGuideCond?
+---@param c ObviGuideCond?
 ---@return boolean
 eval = function(c)
 	if not c then return true end
@@ -134,8 +134,8 @@ end
 Conditions.Eval = eval
 
 --- Combines conditions with "and", dropping empty ones.
----@param ... AnyGuideCond?
----@return AnyGuideCond?
+---@param ... ObviGuideCond?
+---@return ObviGuideCond?
 function Conditions.All(...)
 	local parts = {}
 	for i = 1, select("#", ...) do
