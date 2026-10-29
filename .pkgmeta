@@ -1,0 +1,9 @@
+# What the BigWigs packager puts in the release zip (see .github/workflows/release.yml).
+package-as: ObviGuide
+
+# development files stay out of the addon zip (the docs are for guide writers, on GitHub)
+ignore:
+  - docs
+  - tools
+  - .luarc.json
+  - .gitattributes

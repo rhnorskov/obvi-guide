@@ -1,0 +1,24 @@
+# Builds Obvi Guide and publishes it when a version tag is pushed (git tag v0.1.0 && git push origin v0.1.0):
+# the zip goes to CurseForge (and Wago, once set up) and to a GitHub release. Uses the BigWigs packager, which reads
+# .pkgmeta and the project ids in ObviGuide.toc.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # the GitHub release
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}           # CurseForge API token (repository secret)
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}   # Wago token (optional; skipped when unset)
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the packager builds the changelog from the history
+      - uses: BigWigsMods/packager@v2
