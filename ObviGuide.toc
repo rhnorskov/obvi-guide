@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 16001, 120105
 ## Title: Obvi Guide
 ## Notes: Follow guides in your own format, and RestedXP or Zygor guides you have. Ships no guides: add your own guide packs. /og opens it.
 ## Version: 0.1.0-dev
