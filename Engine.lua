@@ -166,7 +166,8 @@ function Engine.Current()
 end
 
 local function Changed()
-	if ns.charDB and guide then ns.charDB.guide, ns.charDB.step = guide.title, index end
+	-- by name where the guide has one: titles may repeat across groups (Zygor's are the last part of its path)
+	if ns.charDB and guide then ns.charDB.guide, ns.charDB.step = guide.name or guide.title, index end
 	local _, step = Engine.Current()
 	ns.Travel.Show(step)
 	ns:Fire("OBVIGUIDE_STEP")
@@ -343,10 +344,15 @@ ns:On("UNIT_SPELLCAST_SUCCEEDED", function(_, unit, _, spellID)
 	Engine.Update()
 end)
 
-ns:On("PLAYER_ENTERING_WORLD", function()
-	if guide then return end
+-- the guide this character followed is picked up again once in the world, or when its pack adds it later (a pack
+-- that hands over guides only after another addon has loaded its own)
+local inWorld = false
+local function Restore()
+	if guide or not inWorld then return end
 	local saved = ns.charDB and ns.charDB.guide
 	if saved and ns.FindGuide(saved) then Engine.Load(saved, ns.charDB.step) end
-end)
+end
+ns:On("PLAYER_ENTERING_WORLD", function() inWorld = true Restore() end)
+ns:On("OBVIGUIDE_GUIDES_ADDED", Restore)
 
 C_Timer.NewTicker(0.5, CheckArrival)

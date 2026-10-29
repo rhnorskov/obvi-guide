@@ -25,6 +25,7 @@ local ADDON, ns = ...
 ---@field Print fun(fmt: string, ...: any)
 ---@field Debug fun(fmt: string, ...: any)
 ---@field FindGuide fun(title: string): ObviGuideGuide?
+---@field Ready fun(g: ObviGuideGuide): ObviGuideGuide?
 ---@field TargetMacro fun(name: string|string[], enemy?: boolean): string
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
@@ -44,6 +45,8 @@ local ADDON, ns = ...
 
 ---@class ObviGuideParser
 ---@field Parse fun(text: string, source: string, meta?: table): ObviGuideGuide[], string[]   guides, and warnings for the chat
+---@field Head? fun(source: string, meta: table): ObviGuideGuide?, string[]   one guide as the list shows it, from meta
+---                                    alone (no steps); a format with Head is read only when a guide is first opened
 
 -- The neutral guide model every parser produces and the engine and window read.
 ---@class ObviGuideGuide
@@ -54,7 +57,12 @@ local ADDON, ns = ...
 ---@field cond? ObviGuideCond     listed only for characters this holds for
 ---@field format string          the format it came in ("rxp", "zygor")
 ---@field source string          which pack added it
----@field steps ObviGuideStep[]
+---@field steps ObviGuideStep[]   (empty while the guide is still pending)
+---@field pending? ObviGuidePending   its text, not read yet (see ns.Ready)
+
+---@class ObviGuidePending
+---@field text string|(fun(): string)
+---@field meta table
 
 ---@class ObviGuideStep
 ---@field index integer
@@ -172,23 +180,75 @@ end)
 ---@class ObviGuideAPI
 ObviGuide = ObviGuide or {}
 
+---@param source string
+---@param warnings? string[]
+local function Warnings(source, warnings)
+	for _, w in ipairs(warnings or {}) do
+		table.insert(ns.warnings, source .. ": " .. w)
+		ns.Debug("%s: %s", source, w)
+	end
+end
+
+-- a pack may add thousands of guides in one go: the list is told once, on the next frame
+local announced = false
+local function Announce()
+	if announced then return end
+	announced = true
+	C_Timer.After(0, function() announced = false ns:Fire("OBVIGUIDE_GUIDES_ADDED") end)
+end
+
+--- Adds guides. A format that can list a guide from its meta alone (Zygor) keeps the text and reads it when the guide
+--- is first opened; the text may then also be a function that returns it, called at that moment.
 ---@param format string   "rxp" (RestedXP guide syntax) or "zygor" (Zygor guide syntax)
----@param text string     the guide text (one or more guides)
+---@param text string|(fun(): string)   the guide text (one or more guides)
 ---@param meta? table     what the format needs besides the text (Zygor: the title and header)
 ---@return integer added  how many guides were added
 function ObviGuide.Add(format, text, meta)
 	local parser = ns.Parsers[format]
 	local source = (debugstack(2, 1, 0) or ""):match("AddOns[\\/]([^\\/]+)") or "?"
 	if not parser then ns.Print("unknown guide format '%s' (from %s)", tostring(format), source) return 0 end
-	local ok, guides, warnings = pcall(parser.Parse, text, source, meta)
-	if not ok then ns.Print("could not read a %s guide from %s: %s", format, source, tostring(guides)) return 0 end
-	for _, w in ipairs(warnings or {}) do
-		table.insert(ns.warnings, source .. ": " .. w)
-		ns.Debug("%s: %s", source, w)
+	if parser.Head and type(meta) == "table" then
+		local ok, g, warnings = pcall(parser.Head, source, meta)
+		if not ok then ns.Print("could not read a %s guide from %s: %s", format, source, tostring(g)) return 0 end
+		Warnings(source, warnings)
+		if not g then return 0 end
+		g.pending = { text = text, meta = meta }
+		table.insert(ns.guides, g)
+		Announce()
+		return 1
 	end
+	local ok, guides, warnings = pcall(function()
+		return parser.Parse(type(text) == "function" and text() or text --[[@as string]], source, meta)
+	end)
+	if not ok then ns.Print("could not read a %s guide from %s: %s", format, source, tostring(guides)) return 0 end
+	Warnings(source, warnings)
 	for _, g in ipairs(guides) do table.insert(ns.guides, g) end
-	ns:Fire("OBVIGUIDE_GUIDES_ADDED")
+	Announce()
 	return #guides
+end
+
+--- Reads a pending guide's text now (its first use). Returns the guide, or nil when it turns out unreadable: then it
+--- is taken off the list.
+---@param g ObviGuideGuide
+---@return ObviGuideGuide?
+function ns.Ready(g)
+	local p = g.pending
+	if not p then return g end
+	g.pending = nil
+	local text, meta = p.text, p.meta
+	local ok, guides, warnings = pcall(function()
+		return ns.Parsers[g.format].Parse(type(text) == "function" and text() or text --[[@as string]], g.source, meta)
+	end)
+	local full = ok and guides[1]
+	if full then
+		g.steps = full.steps
+		Warnings(g.source, warnings)
+		return g
+	end
+	for i, other in ipairs(ns.guides) do if other == g then table.remove(ns.guides, i) break end end
+	ns.Print("could not read the guide '%s' from %s: %s", g.title, g.source,
+		ok and tostring(warnings and warnings[1] or "no steps") or tostring(guides))
+	Announce()
 end
 
 --- The macro that targets someone by name and puts a raid marker on them (skull for enemies, star for NPCs), like
@@ -223,8 +283,9 @@ function ns.TargetMacro(name, enemy)
 	return target .. ("/tm [@target,exists] 0\n/tm [@target,exists] %d"):format(mark)
 end
 
+--- The guide with this title or name, read and ready to follow.
 ---@param title string
 ---@return ObviGuideGuide?
 function ns.FindGuide(title)
-	for _, g in ipairs(ns.guides) do if g.title == title or g.name == title then return g end end
+	for _, g in ipairs(ns.guides) do if g.title == title or g.name == title then return ns.Ready(g) end end
 end

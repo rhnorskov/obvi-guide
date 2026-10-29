@@ -11,6 +11,8 @@
 --                                                        name, as Zygor guides test them; indoors; dead or a ghost)
 --   {"equipped", itemID}  {"money", copper}             (wearing the item; at least that much money)
 --   {"rep", factionID or name, reaction}                (at least that standing: 1 Hated .. 4 Neutral .. 8 Exalted)
+--   {"vehicle"}  {"achieved", achievementID, criteria?}  (in a vehicle; the achievement, or one of its criteria by
+--                                                        number or id, done)
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -20,7 +22,10 @@ ns.Conditions = Conditions
 
 -- race names guides use, lower case without spaces ("undead" is the game's "scourge")
 Conditions.RACES = { skyborne = true, human = true, dwarf = true, nightelf = true, gnome = true, orc = true, troll = true,
-	tauren = true, undead = true, scourge = true, draenei = true, bloodelf = true, worgen = true, goblin = true, pandaren = true }
+	tauren = true, undead = true, scourge = true, draenei = true, bloodelf = true, worgen = true, goblin = true, pandaren = true,
+	-- retail's allied races
+	voidelf = true, lightforgeddraenei = true, darkirondwarf = true, kultiran = true, mechagnome = true, nightborne = true,
+	highmountaintauren = true, magharorc = true, zandalaritroll = true, vulpera = true, dracthyr = true, earthen = true }
 
 local CLASS_TOKENS = {}   -- "hunter" -> "HUNTER", "deathknight" -> "DEATHKNIGHT"
 -- LOCALIZED_CLASS_NAMES_MALE is a FrameXML global the annotations do not declare
@@ -120,6 +125,16 @@ local tests = {
 			return ((data and data.reaction) or 4) >= c[3]
 		end)
 		return ok and has
+	end,
+	vehicle = function() return UnitInVehicle("player") == true end,
+	-- guarded: Forever may not have achievements, and a criterion number can be out of range
+	achieved = function(c)
+		local ok, done = pcall(function()
+			if not c[3] then return select(4, GetAchievementInfo(c[2])) end
+			if c[3] <= GetAchievementNumCriteria(c[2]) then return select(3, GetAchievementCriteriaInfo(c[2], c[3])) end
+			return select(3, GetAchievementCriteriaInfoByID(c[2], c[3]))
+		end)
+		return ok and done
 	end,
 }
 

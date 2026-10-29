@@ -424,22 +424,22 @@ function Window.Refresh()
 	Finish(y)
 end
 
--- the guide list, grouped as the guides name their groups; the current guide is ticked
+-- the guide list, grouped as the guides name their groups; the current guide is ticked. A group with backslashes
+-- ("Zygor: Leveling Guides\Starter Guides") is a submenu per part, as Zygor's own list has them.
 local function SetupGuideMenu(_, root)
 	if #ns.guides == 0 then root:CreateTitle("No guides loaded") return end
-	local groups, order = {}, {}
+	local function IsSelected(g) local cur = Engine.Current() return cur == g end
+	local function Select(g) Engine.Load(g.name or g.title, 1) end
+	local menus = {}
+	local function Menu(path)
+		if menus[path] then return menus[path] end
+		local parent, last = path:match("^(.*)\\([^\\]+)$")
+		menus[path] = (parent and Menu(parent) or root):CreateButton(last or path)
+		return menus[path]
+	end
 	for _, g in ipairs(ns.guides) do
 		-- a guide for other characters (its "only" doesn't hold) is not listed
-		if ns.Conditions.Eval(g.cond) then
-			if not groups[g.group] then groups[g.group] = {} table.insert(order, g.group) end
-			table.insert(groups[g.group], g)
-		end
-	end
-	local function IsSelected(g) local cur = Engine.Current() return cur == g end
-	local function Select(g) Engine.Load(g.title, 1) end
-	for _, group in ipairs(order) do
-		local sub = root:CreateButton(group)
-		for _, g in ipairs(groups[group]) do sub:CreateRadio(g.title, IsSelected, Select, g) end
+		if ns.Conditions.Eval(g.cond) then Menu(g.group):CreateRadio(g.title, IsSelected, Select, g) end
 	end
 end
 

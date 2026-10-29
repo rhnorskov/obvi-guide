@@ -68,7 +68,8 @@ local function Plain(s)
 	return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
---- Test: can every creature and item in the loaded guides be named from its id?
+--- Test: can every creature and item in the loaded guides be named from its id? (Guides not opened yet aren't read,
+--- so they have no steps to test.)
 local function TestNames()
 	local creatures, items = {}, {} ---@type table<integer, string>, table<integer, string>
 	local function creature(t) if t and t.id and not creatures[t.id] then creatures[t.id] = t.name end end
@@ -96,7 +97,11 @@ slashCmdList.OBVIGUIDE = function(msg)
 	local cmd = (msg or ""):lower():match("^%s*(%S*)")
 	if cmd == "list" then
 		if #ns.guides == 0 then ns.Print("no guides loaded; add a guide pack") return end
-		for _, g in ipairs(ns.guides) do ns.Print("%s |cff888888(%s, %d steps, from %s)|r", g.title, g.group, #g.steps, g.source) end
+		for _, g in ipairs(ns.guides) do
+			-- (a guide not opened yet isn't read, so its steps aren't counted)
+			local steps = g.pending and "not read yet" or (#g.steps .. " steps")
+			ns.Print("%s |cff888888(%s, %s, from %s)|r", g.title, g.group, steps, g.source)
+		end
 	elseif cmd == "debug" then
 		ns.debug = not ns.debug
 		ns.Print("debug %s", ns.debug and "on" or "off")

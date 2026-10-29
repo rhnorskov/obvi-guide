@@ -2,8 +2,10 @@
 -- ObviGuide reads only text handed to ObviGuide.Add; it never looks at the Zygor addon itself. The title and header of a
 -- guide are Lua in Zygor's files, so a pack hands them over as plain values:
 --   ObviGuide.Add("zygor", [[ ...guide text... ]], { title = "Leveling Guides\\Westfall (13-15)", header = {...} })
--- header: next (a Zygor title), faction ("Alliance"/"Horde"), visible and hideif (Zygor's Lua expressions as text),
--- trial (true for the free trial's copy of a guide).
+-- header: next (a Zygor title), faction ("Alliance"/"Horde"), visible and hideif (Zygor's Lua expressions as text;
+-- visible may also be a plain true/false the pack worked out), trial (true for the free trial's copy of a guide).
+-- meta.maps (optional, retail): Zygor's map table, zone name -> { [floor] = uiMapID }, for the names it makes up.
+-- A guide is listed from its meta alone (Zygor.Head); its text is read when it is first opened.
 --
 -- The format, as far as ObviGuide uses it (Zygor's own reader is Parser.lua, the line kinds are in Goal.lua):
 --   step                      a step; "label X" names it, "|only if <lua>" on a line of its own makes it conditional
@@ -39,8 +41,8 @@ local MAPS = {
 	["Alterac Valley"] = 1459, ["Arathi Basin"] = 1461, ["Warsong Gulch"] = 1460,
 }
 
--- Forever redrew some zone maps, so Zygor's (classic) coordinates on them are moved into the new map frame:
--- classic map x,y -> world position (classic frame) -> map x,y (Forever frame). Copied from the Forever port
+-- Forever redrew some zone maps, so Zygor's (classic) coordinates on them are moved into the new map frame (on Forever
+-- only; retail's maps are left alone): classic map x,y -> world position (classic frame) -> map x,y (Forever frame). Copied from the Forever port
 -- (ZygorGuidesViewer\Code-Forever\Stubs.lua, ZGV.ForeverMapFrames and ZGV.ForeverShiftXY). Per map:
 -- { minX, maxX, minY, maxY } in world yards, X = north, Y = west; map x runs east (-Y), map y runs south (-X).
 local FRAMES = {
@@ -49,6 +51,49 @@ local FRAMES = {
 	[1433] = { classic = { -10022.916, -8575.000, -3741.667, -1570.833 }, forever = { -10022.916, -8575.000, -3852.084, -1681.250 } }, -- Redridge Mountains
 	[1453] = { classic = { -9175.205, -8278.851, 36.701, 1380.971 }, forever = { -9154.170, -7995.830, -14.584, 1722.920 } }, -- Stormwind City
 }
+
+-- Which client this is: Forever (interface 16xxx) has the classic zones above and its redrawn maps; anywhere else
+-- (retail) zone names are looked up on the running client.
+local BUILD = select(4, GetBuildInfo()) or 0
+local FOREVER = BUILD >= 16000 and BUILD < 20000
+
+-- retail: the client's own zone names -> uiMapIDs, built on first use from the whole map tree (946 is the Cosmic
+-- map). A name used by several maps goes to a zone before other kinds of map, then to the lowest id.
+local liveMaps ---@type table<string, integer>?
+local function LiveMaps()
+	if liveMaps then return liveMaps end
+	liveMaps = {}
+	local rank = {} ---@type table<string, integer>
+	for _, info in ipairs(C_Map.GetMapChildrenInfo(946, nil, true) or {}) do
+		local r = info.mapType == Enum.UIMapType.Zone and -1 or info.mapType
+		local had = liveMaps[info.name]
+		if not had or r < rank[info.name] or (r == rank[info.name] and info.mapID < had) then
+			liveMaps[info.name], rank[info.name] = info.mapID, r
+		end
+	end
+	return liveMaps
+end
+
+--- A zone as a guide writes it ("Elwynn Forest", "Orgrimmar/1", "Name##84", "84") -> uiMapID, and whether points on
+--- it are classic coordinates to move onto Forever's map. On retail Zygor's own map table (meta.maps, name ->
+--- {[floor] = id}) comes first when the pack hands it over: it knows Zygor's floors and made-up names.
+---@param text string
+---@param maps? table
+---@return integer? map, boolean? shift
+local function MapOf(text, maps)
+	local name, floor = text:match("^(.-)%s*/%s*(%d+)$")
+	name = name or text
+	local id = tonumber(name) or tonumber(text:match("##(%d+)") or "")
+	if id then return id, false end
+	if FOREVER then return MAPS[name], true end
+	local z = maps and maps[name]
+	if type(z) == "number" then return z end
+	if type(z) == "table" then
+		local f = tonumber(floor) or tonumber(z.default) or (z[0] and 0) or next(z)
+		if type(z[f]) == "number" then return z[f] end
+	end
+	return LiveMaps()[name]
+end
 
 ---@param map integer
 ---@param x number   0..1
@@ -120,7 +165,8 @@ end
 -- calls become condition trees; the rest counts as "always" and is reported.
 
 local CLASSES = { warrior = "WARRIOR", paladin = "PALADIN", hunter = "HUNTER", rogue = "ROGUE", priest = "PRIEST",
-	shaman = "SHAMAN", mage = "MAGE", warlock = "WARLOCK", druid = "DRUID" }
+	shaman = "SHAMAN", mage = "MAGE", warlock = "WARLOCK", druid = "DRUID",
+	deathknight = "DEATHKNIGHT", monk = "MONK", demonhunter = "DEMONHUNTER", evoker = "EVOKER" }
 
 -- Faction names Zygor's rep() uses -> classic faction ids. Others (Season of Discovery's) stay names, which the
 -- condition looks up in game.
@@ -220,10 +266,10 @@ local CALLS = {
 	hasbuff = function(a) if type(a[1]) == "number" then return C({ "aura", a[1], a[2] }) end return UNKNOWN end,
 	equipped = function(a) if type(a[1]) == "number" then return C({ "equipped", a[1] }) end return UNKNOWN end,
 	subzone = function(a) if type(a[1]) == "string" then return C({ "subzone", a[1] }) end return UNKNOWN end,
-	-- a zone with a map here by its map; others (dungeons) by name
+	-- a zone with a map here (Forever) by its map; others (dungeons, and every zone on retail) by name
 	zone = function(a)
 		if type(a[1]) ~= "string" then return UNKNOWN end
-		local m = MAPS[a[1]]
+		local m = FOREVER and MAPS[a[1]]
 		return C(m and { "map", m } or { "zone", a[1] })
 	end,
 	rep = function(a) if type(a[1]) == "string" then return { num = "rep", id = FACTIONS[a[1]] or a[1] } end return UNKNOWN end,
@@ -244,6 +290,13 @@ local CALLS = {
 	selfmade = function() return C(FALSE) end,
 	-- the optional dungeon runs a player picks in Zygor's window; nobody has picked them here
 	guideflag = function() return C(FALSE) end,
+	-- retail
+	achieved = function(a)
+		if type(a[1]) ~= "number" or (a[2] ~= nil and type(a[2]) ~= "number") or a[3] ~= nil then return UNKNOWN end
+		return C({ "achieved", a[1], a[2] })
+	end,
+	raceclass = function(a) local w = type(a[1]) == "string" and #a == 1 and Word(a[1]) return w and C(w) or UNKNOWN end,
+	invehicle = function() return C({ "vehicle" }) end,
 }
 -- the words that stand for a value without a call
 local WORDS = {
@@ -422,11 +475,13 @@ local ACTIONS = { talk = true, accept = true, turnin = true, kill = true, collec
 	hearth = true, fpath = true, fly = true, confirm = true, equip = true, equipped = true, learnspell = true, trash = true,
 	bank = true, vendor = true, trainer = true, stablemaster = true, gossip = true, complete = true, condition = true,
 	havebuff = true, nobuff = true, skill = true, skillmax = true, invehicle = true, outvehicle = true,
-	zombiewalk = true, getrune = true, learnpetspell = true, unequipped = true, unequip = true }
+	zombiewalk = true, getrune = true, learnpetspell = true, unequipped = true, unequip = true, achieve = true,
+	-- retail scenarios (ticked off by hand)
+	scenariogoal = true, scenariostage = true, scenariostart = true, scenarioend = true }
 -- Zygor-window scripts and the like: a line with one of these is dropped (and reported)
 -- other Zygor line commands the leveling guides use now and then; reported, and the line has nothing to show
-local OTHER = { expcollect = true, turninany = true, useany = true, achieve = true, rep = true, repcollect = true,
-	goldcollect = true, create = true, craft = true, abandon = true, scenariogoal = true }
+local OTHER = { expcollect = true, turninany = true, useany = true, rep = true, repcollect = true,
+	goldcollect = true, create = true, craft = true, abandon = true }
 local DROP = { talknpcs = true, openskill = true, autoscript = true, execute = true, popuptext = true, script = true,
 	loadguide = true, nexttab = true }
 -- modifiers that change nothing here (waypoint and automation hints, Zygor-window behaviour)
@@ -438,7 +493,8 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 	showtext = true, more = true, travelfor = true, title = true, defaultfor = true, model = true,
 	modelnpc = true, blizztooltip = true, buttonicon = true, accountwide = true, usename = true, noordinal = true,
 	nomovieskip = true, nohearth = true, travelcfg = true, minizone = true, mapicon = true, required = true,
-	gotoontaxi = true, countexpr = true, updatescript = true, grouprole = true, orlogic = true, meta = true }
+	gotoontaxi = true, countexpr = true, updatescript = true, grouprole = true, orlogic = true, meta = true,
+	count = true }   -- (|count N: which of several lines on one objective this is)
 
 ---@class ObviGuideZygorLine
 ---@field action? string
@@ -461,6 +517,8 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 
 ---@class ObviGuideZygorCtx
 ---@field map? integer        the map the last coordinates were on (lines may leave the zone out)
+---@field shift? boolean      whether points on that map are classic ones to move onto Forever's map
+---@field maps? table          Zygor's map table, when the pack hands it over (meta.maps)
 ---@field counts table<string, integer>
 ---@field order string[]
 
@@ -479,20 +537,21 @@ local function Point(s, ctx)
 	s = s:gsub('%s*"[^"]*"%s*$', "")   -- a "title" after the coordinates
 	local mapText, x, y, rest = s:match("^%s*(.-)%s*,?%s*(%-?[%d%.]+)%s*,%s*(%-?[%d%.]+)%s*(.-)%s*$")
 	if not x then return nil end
-	local radius = tonumber(rest:match("^<%s*([%d%.]+)") or "")
-	local map
+	-- "< 20" (arrive within 20 yards), or the old "x,y,20"; "> 20" (leave the area) has no radius here
+	local radius = tonumber(rest:match("^<%s*([%d%.]+)") or rest:match("^,%s*([%d%.]+)") or "")
+	local map, shift
 	if mapText ~= "" then
-		mapText = mapText:gsub("%s*/%s*%d+$", "")
-		map = tonumber(mapText) or MAPS[mapText]
+		map, shift = MapOf(mapText, ctx.maps)
 		if not map then Warn(ctx, ("no map for the zone '%s'; its points are left out"):format(mapText)) return nil end
-		ctx.map = map
+		ctx.map, ctx.shift = map, shift
 	else
-		map = ctx.map
+		map, shift = ctx.map, ctx.shift
 		if not map then return nil end
 	end
 	local px, py = (tonumber(x) or 0) / 100, (tonumber(y) or 0) / 100
-	-- every coordinate in a Zygor guide is a classic one (the Forever port only shifts those with the zone written out)
-	if not tonumber(mapText) then px, py = Shift(map, px, py) end
+	-- on Forever every coordinate in a Zygor guide on a zone named by its name is a classic one, also where a line leaves
+	-- the zone out (the Forever port only shifts those with the zone written out)
+	if shift then px, py = Shift(map, px, py) end
 	return { map = map, x = px, y = py, radius = radius }
 end
 
@@ -515,13 +574,13 @@ local function ReadLine(line, step, ctx)
 			if cmd == "label" then
 				step.label = params:gsub('^"(.-)"$', "%1")
 			elseif cmd == "map" then
-				local m = MAPS[(params:gsub("%s*/%s*%d+$", ""))]
-				if m then ctx.map = m end
+				local m, shift = MapOf(params, ctx.maps)
+				if m then ctx.map, ctx.shift = m, shift end
 			elseif cmd == "mapmarker" then
 				-- where the mobs or things of a step are (Zygor's orange dots on the maps), not a point to walk to
-				local saved = ctx.map
+				local saved, savedShift = ctx.map, ctx.shift
 				local p = Point(params, ctx)
-				ctx.map = saved
+				ctx.map, ctx.shift = saved, savedShift
 				if p then step.markers = step.markers or {} table.insert(step.markers, p) end
 			elseif cmd == "only" then
 				local expr = params:match("^if%s+(.*)$")
@@ -535,6 +594,11 @@ local function ReadLine(line, step, ctx)
 				any = true
 			elseif cmd == "goto" or cmd == "at" then
 				rec.point = Point(params, ctx) or rec.point
+				-- "goto Zone" without coordinates: nothing to point at, but the lines after it may leave the zone out
+				if not params:find("%d,") then
+					local m, shift = MapOf((params:gsub('%s*"[^"]*"%s*$', ""):gsub("%s*[<>]%s*[%d%.]+%s*$", "")), ctx.maps)
+					if m then ctx.map, ctx.shift = m, shift end
+				end
 			elseif cmd == "q" or cmd == "quest" then
 				local q, o = params:match("^(%d+)/?(%d*)")
 				rec.quest, rec.objective = tonumber(q), tonumber(o)
@@ -633,6 +697,12 @@ local function MakeGoal(rec, step, ctx)
 		if c then done = a == "havebuff" and c or { "not", c } end
 	elseif (a == "unequipped" or a == "unequip") and id then
 		done = { "not", { "equipped", id } }
+	elseif a == "invehicle" or a == "outvehicle" then
+		done = a == "invehicle" and { "vehicle" } or { "not", { "vehicle" } }
+	elseif a == "achieve" then
+		-- "achieve 9406", "achieve 9406/2" (one of its criteria, by number or id)
+		local ach, sub = p:match("^(%d+)/?(%d*)")
+		if ach then done = { "achieved", tonumber(ach), tonumber(sub) } end
 	elseif a == "complete" or a == "condition" then
 		local c, partial = Expr(p)
 		if not partial then done = c or TRUE end
@@ -703,6 +773,8 @@ local function MakeGoal(rec, step, ctx)
 		-- (and can still be ticked off by hand). A line without text counts only as one of several (|or) or to jump.
 		local verbs = { havebuff = "Get the buff ", nobuff = "Get rid of the buff ", unequipped = "Take off ", unequip = "Take off " }
 		if not text and verbs[a] then text = verbs[a] .. Named(name, "LOOT") end
+		local plain = { invehicle = "Get in the vehicle", outvehicle = "Leave the vehicle", achieve = "Earn the achievement" }
+		if not text and plain[a] then text = plain[a] end
 		if not text and (rec.orGroup or rec.next) then text = "Continue" end
 		if not text then return nil end
 		goal = { kind = "confirm", text = text, done = done }
@@ -898,26 +970,60 @@ local function NameOf(title, header)
 	return (header.faction and (header.faction .. ":") or "") .. title
 end
 
+--- What the guide list needs, from the title and header alone: title, group, who it is for, what follows. No steps
+--- yet; nil (and why) for a guide not to list.
+---@param source string
+---@param meta table
+---@param ctx ObviGuideZygorCtx
+---@return ObviGuideGuide?, string?
+local function Head(source, meta, ctx)
+	local header = type(meta.header) == "table" and meta.header or {}
+	local full = type(meta.title) == "string" and meta.title or "Zygor guide"
+	-- guides Zygor itself never lists: the startup wizard, Season of Discovery guides. (visible: Zygor's expression as
+	-- text, or a pack's own yes/no)
+	local visible = header.visible
+	if visible == false or (type(visible) == "string" and Expr(visible) == FALSE) then
+		return nil, ("'%s' is not a guide to follow (Zygor hides it); left out"):format(full)
+	end
+	local hide ---@type ObviGuideCond?
+	if type(header.hideif) == "string" then
+		local partial
+		hide, partial = Expr(header.hideif)
+		if hide == nil and not partial then return nil, ("'%s' is hidden in Zygor (hideif %s); left out"):format(full, header.hideif) end
+		if partial then hide = nil end
+	end
+
+	local path, title = full:match("^(.*)\\([^\\]+)$")
+	title = title or full
+	local group = "Zygor" .. (header.trial and " (trial)" or "") .. (path and (": " .. path) or "")
+	local cond = header.faction and { "faction", header.faction } or nil ---@type ObviGuideCond?
+	if type(visible) == "string" then
+		local c, partial = Expr(visible)
+		if partial then Warn(ctx, ('can\'t read who the guide is for: "%s"'):format(visible)) end
+		cond = Conditions.All(cond, c)
+	end
+	if hide then cond = Conditions.All(cond, { "not", hide }) end
+	return {
+		title = title .. (header.trial and " (trial)" or ""),
+		name = NameOf(full, header) .. (header.trial and ":trial" or ""),
+		group = group,
+		next = type(header.next) == "string" and NameOf(header.next, header) or nil,
+		cond = cond,
+		format = "zygor",
+		source = source,
+		steps = {},
+	}
+end
+
 ---@param text string
 ---@param source string
 ---@param meta table
 ---@param ctx ObviGuideZygorCtx
 ---@return ObviGuideGuide?, string?
 local function ParseGuide(text, source, meta, ctx)
-	local header = type(meta.header) == "table" and meta.header or {}
-	local full = type(meta.title) == "string" and meta.title or "Zygor guide"
-	-- guides Zygor itself never lists: the startup wizard, Season of Discovery guides
-	if header.visible then
-		local c = Expr(header.visible)
-		if c == FALSE then return nil, ("'%s' is not a guide to follow (Zygor hides it); left out"):format(full) end
-	end
-	local hide ---@type ObviGuideCond?
-	if header.hideif then
-		local partial
-		hide, partial = Expr(header.hideif)
-		if hide == nil and not partial then return nil, ("'%s' is hidden in Zygor (hideif %s); left out"):format(full, header.hideif) end
-		if partial then hide = nil end
-	end
+	local g, why = Head(source, meta, ctx)
+	if not g then return nil, why end
+	ctx.maps = type(meta.maps) == "table" and meta.maps or nil
 
 	text = text:gsub("\r", ""):gsub("||", "\n")
 	local raw = {} ---@type {lines: string[], sticky: string[]}[]
@@ -968,7 +1074,7 @@ local function ParseGuide(text, source, meta, ctx)
 			pending = {}
 		end
 	end
-	if #steps == 0 then return nil, ("'%s' has no steps"):format(full) end
+	if #steps == 0 then return nil, ("'%s' has no steps"):format(g.title) end
 	Assemble(steps)
 
 	-- |next "label": the step with that label nearest this one ("+label" / "-label": the next / previous one), as
@@ -995,32 +1101,16 @@ local function ParseGuide(text, source, meta, ctx)
 		s.nexts = nil
 	end
 
-	local path, title = full:match("^(.*)\\([^\\]+)$")
-	title = title or full
-	local group = "Zygor" .. (header.trial and " (trial)" or "") .. (path and (": " .. path) or "")
-	local cond = header.faction and { "faction", header.faction } or nil ---@type ObviGuideCond?
-	if header.visible then
-		local c, partial = Expr(header.visible)
-		if partial then Warn(ctx, ('can\'t read who the guide is for: "%s"'):format(header.visible)) end
-		cond = Conditions.All(cond, c)
-	end
-	if hide then cond = Conditions.All(cond, { "not", hide }) end
-	return {
-		title = title .. (header.trial and " (trial)" or ""),
-		name = NameOf(full, header) .. (header.trial and ":trial" or ""),
-		group = group,
-		next = type(header.next) == "string" and NameOf(header.next, header) or nil,
-		cond = cond,
-		format = "zygor",
-		source = source,
-		steps = steps,
-	}
+	g.steps = steps
+	return g
 end
 
---- One guide's text, with its title and header in `meta` (see the top of this file).
-function Zygor.Parse(text, source, meta)
-	local ctx = { counts = {}, order = {} } ---@type ObviGuideZygorCtx
-	local g, why = ParseGuide(text, source, type(meta) == "table" and meta or {}, ctx)
+--- The guide (or nil) and the warnings, each once with how often it came up.
+---@param ctx ObviGuideZygorCtx
+---@param g? ObviGuideGuide
+---@param why? string
+---@return string[]
+local function Warnings(ctx, g, why)
 	local warnings = {}
 	if why then table.insert(warnings, why) end
 	local title = g and g.title or "?"
@@ -1028,5 +1118,23 @@ function Zygor.Parse(text, source, meta)
 		local n = ctx.counts[msg]
 		table.insert(warnings, ("%s: %s%s"):format(title, msg, n > 1 and (" (x" .. n .. ")") or ""))
 	end
-	return { g }, warnings
+	return warnings
+end
+
+--- One guide's text, with its title and header in `meta` (see the top of this file).
+function Zygor.Parse(text, source, meta)
+	local ctx = { counts = {}, order = {} } ---@type ObviGuideZygorCtx
+	local g, why = ParseGuide(text, source, type(meta) == "table" and meta or {}, ctx)
+	return { g }, Warnings(ctx, g, why)
+end
+
+--- The guide as the list shows it, from `meta` alone (no steps yet): ObviGuide.Add keeps the text and reads it with
+--- Parse when the guide is first opened, so a pack can hand over thousands of guides cheaply.
+---@param source string
+---@param meta table
+---@return ObviGuideGuide?, string[]
+function Zygor.Head(source, meta)
+	local ctx = { counts = {}, order = {} } ---@type ObviGuideZygorCtx
+	local g, why = Head(source, meta, ctx)
+	return g, Warnings(ctx, g, why)
 end
