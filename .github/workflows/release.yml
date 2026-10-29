@@ -21,4 +21,4 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the packager builds the changelog from the history
-      - uses: BigWigsMods/packager@v2.6.1
+      - uses: BigWigsMods/packager@v2
