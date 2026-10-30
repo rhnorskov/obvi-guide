@@ -1,7 +1,8 @@
 -- Actions: keybindable actions for the current step, like Zygor's action buttons but without a bar. Hidden secure
--- buttons each do one thing the step (or its side tasks) needs: use an item, cast a spell, or target an NPC or mob.
--- Action 1 is the step's main action; actions 2-4 take the step's other targets and items, then the side tasks.
--- Bind them in Key Bindings > ObviGuide. Secure buttons can't change in combat, so a step change during a fight takes
+-- buttons each do one thing the step (or its side tasks) needs: use an item, cast a spell, target an NPC or mob, or
+-- interact with an object in the world. Action 1 is the step's main action; actions 2-4 take the step's other targets
+-- and items, then the side tasks.
+-- Bind them in Key Bindings > Obvi Guide. Secure buttons can't change in combat, so a step change during a fight takes
 -- effect when combat ends.
 local _, ns = ...
 ---@cast ns ObviGuideNS
@@ -15,7 +16,7 @@ ns.Action = Action
 local COUNT = 4
 
 ---@class ObviGuideActionInfo
----@field kind "item"|"spell"|"target"
+---@field kind "item"|"spell"|"target"|"interact"   interact: the key is the game's Interact (an object to click)
 ---@field goal? ObviGuideGoal   the line the action belongs to (for the key hint)
 ---@field value string|integer|string[]   a target: one name, or several (any of them)
 ---@field enemy? boolean       a target to attack (else to talk to)
@@ -25,6 +26,7 @@ local COUNT = 4
 ---@field binding string
 ---@field current? ObviGuideActionInfo
 ---@field interacting boolean  the key is "Interact with Target" now
+---@field gossip? ObviGuideGoal   the "Select …" line whose dialogue option the key picks while the dialogue shows
 
 local slots = {} ---@type ObviGuideActionSlot[]
 for i = 1, COUNT do
@@ -37,7 +39,7 @@ for i = 1, COUNT do
 	button:RegisterForClicks("AnyDown", "AnyUp")
 	local binding = "CLICK " .. name .. ":LeftButton"
 	-- the names Key Bindings shows (FrameXML globals)
-	_G["BINDING_NAME_" .. binding] = i == 1 and "Step action" or ("Step action " .. i)
+	_G["BINDING_NAME_" .. binding] = "Action Button " .. i
 	slots[i] = { button = button, binding = binding, interacting = false }
 end
 
@@ -97,6 +99,12 @@ local function Pick()
 			for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy) end
 		end
 	end
+	-- a thing in the world to click ("Click the Box of Scrolls"): the key is the game's own Interact, which uses the
+	-- object the game highlights nearby. Every reader colours such names the same ("click" purple), so that tells.
+	local pick = "|c" .. ns.Colors.PICK
+	for _, g in ipairs(step.goals) do
+		if g.text and g.text:find(pick, 1, true) and open(g) then add("interact", "interact", g) break end
+	end
 	-- then the side tasks
 	for _, g in ipairs(step.side) do
 		if g.kind == "use" and g.id and Engine.IsVisible(g) then add("item", g.id, g)
@@ -124,6 +132,8 @@ local function Apply()
 		elseif a and a.kind == "spell" then
 			b:SetAttribute("type", "spell")
 			b:SetAttribute("spell", a.value)
+		elseif a and a.kind == "interact" then
+			-- (nothing to click: the key itself becomes Interact, see Rebind)
 		elseif a then
 			b:SetAttribute("type", "macro")
 			local v = a.value
@@ -156,8 +166,9 @@ function Action.Rebind()
 	if InCombatLockdown() then pending = true return end
 	local changed = false
 	for _, slot in ipairs(slots) do
-		local want = TargetIsOurs(slot)
-		if want ~= slot.interacting then
+		-- (a slot picking a dialogue option keeps that until the dialogue closes, see Gossip below)
+		local want = TargetIsOurs(slot) or (slot.current ~= nil and slot.current.kind == "interact")
+		if not slot.gossip and want ~= slot.interacting then
 			ClearOverrideBindings(slot.button)
 			if want then
 				for _, key in ipairs({ GetBindingKey(slot.binding) }) do SetOverrideBinding(slot.button, true, key, "INTERACTTARGET") end
@@ -194,14 +205,72 @@ function Action.Hints(goal)
 		local a = slot.current
 		local key = a and a.goal == goal and Action.Key(i)
 		if a and key then
-			local hint = slot.interacting and (key .. ": " .. (a.enemy and "attack" or "talk")) or key
+			local verb = a.kind == "interact" and "interact" or (a.enemy and "attack" or "talk")
+			local hint = slot.interacting and (key .. ": " .. verb) or key
+			if slot.gossip then hint = key end   -- (the key picks the dialogue option now; that line says so)
 			-- a target's key goes after its name in the line's text (several mobs: one key after each)
 			local v = a.value
 			table.insert(out, { name = a.kind == "target" and type(v) ~= "table" and tostring(v) or nil, hint = hint })
 		end
+		-- the "Select …" line whose dialogue option the key picks right now
+		local pickKey = slot.gossip == goal and Action.Key(i)
+		if pickKey then table.insert(out, { hint = pickKey .. ": select" }) end
 	end
 	return out
 end
+
+-- Dialogue options: while an NPC's dialogue is open and the step has a "Select …" line with the option's id (Zygor's
+-- |gossip), and that very option is offered, the action key that talked to the NPC picks it. Without an id, or when
+-- the option isn't there, the key stays as it was. Picking an option needs no secure button: a plain one does it.
+local picker = CreateFrame("Button", "ObviGuideGossipButton", UIParent)
+picker:Hide()
+picker:SetScript("OnClick", function(self)
+	local option = self["option"]
+	if option then C_GossipInfo.SelectOption(option) end
+end)
+
+--- Lets go of a dialogue option: the slot's key goes back to what the step needs.
+local function GossipDone()
+	if InCombatLockdown() then return end
+	local any = false
+	for _, slot in ipairs(slots) do
+		if slot.gossip then
+			ClearOverrideBindings(slot.button)
+			slot.gossip, slot.interacting, any = nil, false, true
+		end
+	end
+	picker["option"] = nil
+	if any then Action.Rebind() ns:Fire("OBVIGUIDE_UPDATE") end
+end
+
+local function Gossip()
+	GossipDone()
+	if InCombatLockdown() then return end
+	local _, step = Engine.Current()
+	if not step then return end
+	local offered = {}
+	for _, o in ipairs(C_GossipInfo.GetOptions() or {}) do if o.gossipOptionID then offered[o.gossipOptionID] = true end end
+	local goal
+	for _, g in ipairs(step.goals) do
+		if g.gossip and offered[g.gossip] and Engine.IsVisible(g) then goal = g break end
+	end
+	if not goal then return end
+	-- the key that talks (a friendly target), else action 1
+	local slot = slots[1]
+	for _, s in ipairs(slots) do
+		if s.current and s.current.kind == "target" and not s.current.enemy then slot = s break end
+	end
+	local keys = { GetBindingKey(slot.binding) }
+	if #keys == 0 then return end
+	picker["option"] = goal.gossip
+	ClearOverrideBindings(slot.button)
+	for _, key in ipairs(keys) do SetOverrideBindingClick(slot.button, true, key, "ObviGuideGossipButton") end
+	slot.gossip = goal
+	ns:Fire("OBVIGUIDE_UPDATE")
+end
+
+ns:On("GOSSIP_SHOW", Gossip)
+ns:On("GOSSIP_CLOSED", GossipDone)
 
 ns:On("OBVIGUIDE_STEP", function() Apply() Action.Rebind() end)
 ns:On("OBVIGUIDE_UPDATE", function() Apply() Action.Rebind() end)
@@ -221,6 +290,8 @@ end)
 _G["BINDING_NAME_OBVIGUIDE_NEXTSTEP"] = "Next step"
 _G["BINDING_NAME_OBVIGUIDE_PREVSTEP"] = "Previous step"
 _G["BINDING_NAME_OBVIGUIDE_TOGGLE"] = "Show/hide window"
+_G["BINDING_NAME_OBVIGUIDE_PICKER"] = "Choose a guide"
 function ObviGuide.NextStep() Engine.Step(1) end
 function ObviGuide.PrevStep() Engine.Step(-1) end
 function ObviGuide.Toggle() ns.Window.Toggle() end
+function ObviGuide.Guides() ns.GuidePicker.Toggle() end

@@ -52,12 +52,15 @@ local function Build()
 	Checkbox("Show on the minimap", "minimap", true,
 		"The current step's destination and the spots it marks (yellow dots) on the minimap.",
 		function() ns.MinimapPins.Refresh() end)
+	Checkbox("Flip window", "flip", false,
+		"The window's header at the bottom with the step above it, growing upwards. For a window low on the screen.",
+		function() ns.Window.Arrange() end)
 
 	Header("Quests")
-	Checkbox("Auto accept quests", "autoAccept", false,
-		"Accepts the quests the current step accepts when you talk to the NPC. Hold Shift to skip it.")
-	Checkbox("Auto turn in quests", "autoTurnin", false,
-		"Turns in the quests the current step turns in. A choice of rewards is left to you. Hold Shift to skip it.")
+	Checkbox("Auto accept guide quests", "autoAccept", true,
+		"Accepts the guide's quests when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
+	Checkbox("Auto turn in guide quests", "autoTurnin", true,
+		"Turns in the guide's quests (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
 
 	Header("Troubleshooting")
 	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",

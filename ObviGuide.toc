@@ -22,5 +22,6 @@ UI\Window.lua
 UI\Minimap.lua
 UI\Copy.lua
 UI\Cleanup.lua
+UI\GuidePicker.lua
 UI\Options.lua
 Commands.lua

@@ -1,5 +1,6 @@
--- Slash commands: /obvi or /og (or /obviguide) toggles the window; "/og list" lists the loaded guides; "/og debug";
--- "/og names" tests looking up creature and item names by id; "/og cleanup" cleans up the quest log.
+-- Slash commands: /obvi or /og (or /obviguide) toggles the window; "/og guides" opens the guide picker; "/og list"
+-- lists the loaded guides in chat; "/og debug"; "/og names" tests looking up creature and item names by id;
+-- "/og cleanup" cleans up the quest log.
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -109,6 +110,8 @@ slashCmdList.OBVIGUIDE = function(msg)
 		if ns.debug and #ns.warnings > 0 then ns.Copy("Obvi Guide: guide warnings", table.concat(ns.warnings, "\n")) end
 	elseif cmd == "pins" then
 		ns.MinimapPins.Debug()
+	elseif cmd == "guides" then
+		ns.GuidePicker.Open()
 	elseif cmd == "cleanup" then
 		ns.Cleanup()
 	elseif cmd == "names" then

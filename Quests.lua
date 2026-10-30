@@ -1,32 +1,38 @@
--- Auto accept and turn in (two options on the Settings page, off by default): only the quests the current step (or its
--- side tasks) accepts or turns in. A choice of rewards is left to the player. Holding Shift while talking to an NPC
--- leaves that conversation alone.
+-- Auto accept and turn in (two options on the Settings page, on by default): only the quests the loaded guide accepts
+-- or turns in, anywhere in it (in steps meant for this character). Other quests are left alone, and so is a choice of
+-- rewards. Holding Shift while talking to an NPC leaves that conversation alone.
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
 local Engine = ns.Engine
+local Conditions = ns.Conditions
 -- the greeting's pickers take the quest's index (the annotations say they take nothing)
 local SelectActiveByIndex = _G["SelectActiveQuest"] ---@type fun(index: integer)
 local SelectAvailableByIndex = _G["SelectAvailableQuest"] ---@type fun(index: integer)
 
---- The quests the current step accepts and turns in.
+--- The quests the loaded guide accepts and turns in, in its steps and lines meant for this character.
 ---@return table<integer, boolean> accepts, table<integer, boolean> turnins
 local function StepQuests()
 	local accepts, turnins = {}, {}
-	local _, step = Engine.Current()
-	if not step then return accepts, turnins end
-	for _, list in ipairs({ step.goals, step.side }) do
-		for _, g in ipairs(list) do
-			if g.quest and Engine.IsVisible(g) then
-				if g.kind == "accept" then accepts[g.quest] = true end
-				if g.kind == "turnin" then turnins[g.quest] = true end
+	local guide = Engine.Current()
+	if not guide then return accepts, turnins end
+	for _, step in ipairs(guide.steps or {}) do
+		if Conditions.Eval(step.cond) then
+			for _, list in ipairs({ step.goals, step.side }) do
+				for _, g in ipairs(list) do
+					if g.quest and Conditions.Eval(g.cond) then
+						if g.kind == "accept" then accepts[g.quest] = true end
+						if g.kind == "turnin" then turnins[g.quest] = true end
+					end
+				end
 			end
 		end
 	end
 	return accepts, turnins
 end
 
-local function On(option) return ns.db and ns.db[option] and not IsShiftKeyDown() end
+-- on unless turned off in Settings (nil: never changed, so the default, on)
+local function On(option) return ns.db ~= nil and ns.db[option] ~= false and not IsShiftKeyDown() end
 
 -- the NPC's chat window: open the step's quest (one per show; the window comes back after it)
 local function Gossip()

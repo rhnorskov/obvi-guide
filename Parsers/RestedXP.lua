@@ -279,7 +279,10 @@ local function ParseStep(header, lines)
 					addGoal({ kind = "hearth", id = HEARTHSTONE, text = cleanText or "Use your Hearthstone", cond = lineCond }, true)
 				elseif dir == "fly" or dir == "fp" or dir == "vendor" or dir == "trainer" or dir == "zone"
 					or dir == "subzone" or dir == "deathskip" or dir == "abandon" or dir == "link" then
-					if cleanText then addGoal({ kind = "confirm", text = cleanText, cond = lineCond }, true) end
+					-- (".fp Name": done once the game lists that flight point as discovered, see Engine)
+					local flight = dir == "fp" and arg:gsub("%s*%-%-.*$", ""):gsub("^%s+", ""):gsub("%s+$", "") or nil
+					if flight == "" then flight = nil end
+					if cleanText then addGoal({ kind = "confirm", text = cleanText, cond = lineCond, flight = flight }, true) end
 				end
 				-- everything else (gossip skips, macros, money, cooldowns, auras, zone skips...) is RestedXP-only
 			end

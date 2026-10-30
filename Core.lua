@@ -29,24 +29,30 @@ local ADDON, ns = ...
 ---@field TargetMacro fun(name: string|string[], enemy?: boolean): string
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
+---@field GuidePicker ObviGuidePicker
 ---@field Options ObviGuideOptions
 
 ---@class ObviGuideDB
 ---@field window? {point: string, relPoint?: string, x: number, y: number, width: number, height: number}
+---@field picker? {w: number, h: number, point?: string, relPoint?: string, x?: number, y?: number}   the guide picker's size and place
 ---@field previewSteps? integer   how many upcoming steps the window shows dimmed (default 0)
 ---@field minimap? boolean        the step's points on the minimap (nil: on)
----@field autoAccept? boolean     accept the current step's quests when talking to the NPC
----@field autoTurnin? boolean     turn in the current step's quests (no choice of rewards)
+---@field flip? boolean           the window's header at the bottom (it grows upwards)
+---@field autoAccept? boolean     accept the guide's quests when talking to the NPC (nil: on)
+---@field autoTurnin? boolean     turn in the guide's quests, no choice of rewards (nil: on)
 
 ---@class ObviGuideCharDB
 ---@field guide? string          the title of the guide this character follows
 ---@field step? integer          the step it was on
 ---@field marks? table<string, table<string, boolean>>  [guide title]["step:goal"] = ticked off / reached
+---@field recent? string[]       the guides opened last, newest first (name, or title), for the guide picker
 
 ---@class ObviGuideParser
 ---@field Parse fun(text: string, source: string, meta?: table): ObviGuideGuide[], string[]   guides, and warnings for the chat
 ---@field Head? fun(source: string, meta: table): ObviGuideGuide?, string[]   one guide as the list shows it, from meta
 ---                                    alone (no steps); a format with Head is read only when a guide is first opened
+---@field Names? fun(text: string): string[]   the quest and NPC names in a guide's text, cheaply (the guide picker's
+---                                    search looks in them for guides not read yet)
 
 -- The neutral guide model every parser produces and the engine and window read.
 ---@class ObviGuideGuide
@@ -112,6 +118,9 @@ local ADDON, ns = ...
 ---@field objective? integer
 ---@field id? integer            npc, item or spell id, by kind
 ---@field count? integer
+---@field need? integer        done once its quest objective has reached this many (part of the objective)
+---@field flight? string       a "get the flight path" line: the flight point's name (done once the game lists it discovered)
+---@field gossip? integer      a "Select …" line: the dialogue option's id (the action key picks it while it shows)
 ---@field level? integer
 ---@field xp? integer
 ---@field point? ObviGuidePoint   for 'goto'; on other lines their own spot, offered as a waypoint on hover

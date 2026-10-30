@@ -31,9 +31,75 @@ local function MarkKey(step, goal)
 	for i, g in ipairs(step.side) do if g == goal then return step.index .. ":s" .. i end end
 end
 
+-- Flight paths, as Zygor's LibTaxi does it: the game lists a continent's flight points with whether each is still
+-- undiscovered (C_TaxiMap.GetTaxiNodesForMap, slow, so a continent is read once and kept), and it's read again when a
+-- new flight path is learned or a flight map opens.
+local discovered = {} ---@type table<integer, table<string, boolean>>   continent -> lower-case names discovered
+
+--- The continent a map is on (the map itself when there's none above it).
+---@param map integer
+---@return integer
+local function ContinentOf(map)
+	local info = C_Map.GetMapInfo(map)
+	while info and info.mapType and info.mapType > Enum.UIMapType.Continent and (info.parentMapID or 0) ~= 0 do
+		info = C_Map.GetMapInfo(info.parentMapID)
+	end
+	return info and info.mapID or map
+end
+
+--- Whether a "get the flight path" line's flight point is discovered (by name, on its line's or step's continent).
+---@param goal ObviGuideGoal
+---@param step ObviGuideStep
+---@return boolean
+local function FlightKnown(goal, step)
+	local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
+	if not (map and goal.flight and C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap) then return false end
+	local cont = ContinentOf(map)
+	local names = discovered[cont]
+	if not names then
+		names = {}
+		local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, cont)
+		for _, node in ipairs(ok and nodes or {}) do
+			-- "Tokka's Landing, Zul'Aman" -> "tokka's landing" (as Zygor trims them)
+			if not node.isUndiscovered and node.name then names[(node.name:gsub(", .*", "")):lower()] = true end
+		end
+		discovered[cont] = names
+	end
+	local want = goal.flight:gsub(", .*", ""):lower()
+	if names[want] then return true end
+	for name in pairs(names) do if name:find(want, 1, true) then return true end end
+	return false
+end
+
+ns:On("UI_INFO_MESSAGE", function(_, _, message)
+	if message == _G["ERR_NEWTAXIPATH"] then wipe(discovered) Engine.Update() end
+end)
+ns:On("TAXIMAP_OPENED", function() wipe(discovered) Engine.Update() end)
+
+--- Lower-case words only: "Arrive at |cff..Talonstrike Terrace|r (0/1)" -> "arrive at talonstrike terrace".
+---@param s string?
+local function Words(s)
+	s = (s or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", ""):gsub("%b()", "")
+	return (s:lower():gsub("[%d/:%p]", " "):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", ""))
+end
+
+--- The quest objective a line counts. Guides number objectives as the game did when they were written; when the
+--- numbered one's text doesn't mention the line's words but exactly one other objective does, that one is meant
+--- (the game numbers some quests' objectives differently, e.g. on retail).
 local function Objective(goal)
 	local objs = goal.quest and C_QuestLog.GetQuestObjectives(goal.quest)
-	return objs and objs[goal.objective or 1]
+	if not objs then return nil end
+	local o = objs[goal.objective or 1]
+	local want = Words(goal.text)
+	if #want < 8 or (o and Words(o.text):find(want, 1, true)) then return o end
+	local match
+	for _, other in ipairs(objs) do
+		if Words(other.text):find(want, 1, true) then
+			if match then return o end   -- more than one: keep the guide's number
+			match = other
+		end
+	end
+	return match or o
 end
 
 --- Yards between the player and a point, or nil when they are not on the same continent.
@@ -74,8 +140,12 @@ function Engine.IsComplete(goal, step)
 	if k == "accept" then return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
 	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
 	if k == "objective" or k == "kill" or (k == "collect" and goal.objective) then
+		-- a quest ready to turn in counts all its objectives done, as Zygor does: on retail the objective list can
+		-- still say 0/1 when the quest is complete (seen with "Arrive at Talonstrike Terrace")
 		if C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or C_QuestLog.ReadyForTurnIn(goal.quest) then return true end
 		local o = Objective(goal)
+		-- a line for part of the objective ("|count 3" in Zygor) is done once the objective has reached that many
+		if o and goal.need then return (o.numFulfilled or 0) >= goal.need end
 		return o and o.finished or false
 	end
 	if k == "collect" then return C_Item.GetItemCount(goal.id) >= (goal.count or 1) end
@@ -94,6 +164,7 @@ function Engine.IsComplete(goal, step)
 		local place = goal.text:match("to (.+)$")
 		return place ~= nil and (GetBindLocation() or "") == place:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
 	end
+	if goal.flight and FlightKnown(goal, step) then return true end
 	if k == "goto" or k == "confirm" or k == "hearth" then
 		local key = MarkKey(step, goal)
 		return key ~= nil and Marks()[key] == true
@@ -187,8 +258,19 @@ end
 --- Moves forward past steps that don't apply or are done. A step meant for this character that is done (or has
 --- nothing left to do) may jump elsewhere instead (Zygor's "|next"); the step it lands on starts afresh, without the
 --- ticks of an earlier visit, as Zygor has it (so a menu step you come back to asks again).
+-- Loading screens: while one shows, and for a moment after it, the quest log can be empty or half filled (seen
+-- entering a follower dungeon: the steps for its quest looked as if they didn't apply and were passed over). No
+-- moving on until the game has settled; then one check.
+local SETTLE = 2
+local settling = false
+ns:On("LOADING_SCREEN_ENABLED", function() settling = true end)
+ns:On("LOADING_SCREEN_DISABLED", function()
+	settling = true
+	C_Timer.After(SETTLE, function() settling = false Engine.Update() end)
+end)
+
 function Engine.Advance()
-	if not guide or ended then return end
+	if not guide or ended or settling then return end
 	if paused then
 		local applies, done = Engine.StepState(guide.steps[index])
 		if applies and not done then paused = false end
@@ -234,6 +316,7 @@ function Engine.Load(title, step)
 	if not g then ns.Print("no guide called '%s'", title) return end
 	guide, index = g, math.max(1, math.min(step or 1, #g.steps))
 	paused, ended = false, false
+	ns:Fire("OBVIGUIDE_LOADED", g)   -- (the guide picker's "Recent")
 	Changed()
 	Engine.Advance()
 end
@@ -264,6 +347,15 @@ function Engine.Step(dir)
 	end
 	-- next past the last step: the guide's end
 	if dir > 0 then ended = true Changed() end
+end
+
+--- Straight to a step by its number (typed into the step counter), held there like a step chosen with the arrows.
+---@param n integer
+function Engine.GoTo(n)
+	if not guide then return end
+	index = math.max(1, math.min(math.floor(n), #guide.steps))
+	ended, paused = false, true
+	Changed()
 end
 
 --- Fast forward or back (right-click on the arrows, as in Zygor): forward to the next unfinished step, back to the
@@ -305,8 +397,26 @@ function Engine.Tick(goal)
 	Engine.Update()
 end
 
+-- a step that turns done in front of the player stays a moment, so its last line's "done" effect is seen
+local open           -- the current step, while it isn't done yet
+local lingering = false
+
 function Engine.Update()
-	Engine.Advance()
+	local _, step = Engine.Current()
+	if step and not lingering then
+		local _, done = Engine.StepState(step)
+		if not done then
+			open = step
+		elseif open == step then
+			open, lingering = nil, true
+			C_Timer.After(1, function()
+				lingering = false
+				Engine.Advance()
+				ns:Fire("OBVIGUIDE_UPDATE")
+			end)
+		end
+	end
+	if not lingering then Engine.Advance() end
 	ns:Fire("OBVIGUIDE_UPDATE")
 end
 

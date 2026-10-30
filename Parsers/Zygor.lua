@@ -493,8 +493,7 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 	showtext = true, more = true, travelfor = true, title = true, defaultfor = true, model = true,
 	modelnpc = true, blizztooltip = true, buttonicon = true, accountwide = true, usename = true, noordinal = true,
 	nomovieskip = true, nohearth = true, travelcfg = true, minizone = true, mapicon = true, required = true,
-	gotoontaxi = true, countexpr = true, updatescript = true, grouprole = true, orlogic = true, meta = true,
-	count = true }   -- (|count N: which of several lines on one objective this is)
+	gotoontaxi = true, countexpr = true, updatescript = true, grouprole = true, orlogic = true, meta = true }
 
 ---@class ObviGuideZygorLine
 ---@field action? string
@@ -505,6 +504,7 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 ---@field noway? boolean
 ---@field quest? integer
 ---@field objective? integer
+---@field need? integer       "count": done once the objective has reached this many
 ---@field future? boolean
 ---@field complete? boolean     "c": reached by arriving
 ---@field nocomplete? boolean   "n": never done by itself
@@ -602,6 +602,9 @@ local function ReadLine(line, step, ctx)
 			elseif cmd == "q" or cmd == "quest" then
 				local q, o = params:match("^(%d+)/?(%d*)")
 				rec.quest, rec.objective = tonumber(q), tonumber(o)
+			elseif cmd == "count" then
+				-- "|count 3": the line is done once its objective has reached 3 (one step per delegate, and so on)
+				rec.need = tonumber(params:match("^(%d+)"))
 			elseif cmd == "future" then rec.future = true
 			elseif cmd == "c" then rec.complete = true
 			elseif cmd == "n" then rec.nocomplete = true
@@ -753,7 +756,8 @@ local function MakeGoal(rec, step, ctx)
 		-- the engine compares the place after "to" with the game's bind location
 		goal = { kind = "home", text = "Set your Hearthstone to " .. p }
 	elseif a == "fpath" then
-		goal = { kind = "confirm", text = text or ("Get the " .. name .. " flight path") }
+		-- done once the game lists that flight point as discovered (see Engine), or ticked off by hand
+		goal = { kind = "confirm", text = text or ("Get the " .. name .. " flight path"), flight = name }
 	elseif a == "fly" then
 		goal = { kind = "confirm", text = text or ("Fly to " .. p) }
 	elseif a == "equip" or a == "equipped" then
@@ -778,8 +782,14 @@ local function MakeGoal(rec, step, ctx)
 		if not text and (rec.orGroup or rec.next) then text = "Continue" end
 		if not text then return nil end
 		goal = { kind = "confirm", text = text, done = done }
+	elseif a == "gossip" then
+		-- "Select 'Thank you for your insight.' |gossip 137855": what to choose when talking; the step completes on its
+		-- other lines (as in Zygor), so it's an instruction, not something to tick off
+		if not text then return nil end
+		-- the option's id: while the NPC's dialogue shows it, the action key picks it (see Action.lua)
+		goal = { kind = "text", text = text, gossip = tonumber((p or ""):match("(%d+)")) }
 	elseif a then
-		-- confirm, gossip, complete <lua> we can't read and the rest: ticked off by the player
+		-- confirm, complete <lua> we can't read and the rest: ticked off by the player
 		if not text then return nil end
 		if a == "complete" or a == "condition" then Warn(ctx, ('|%s "%s" is ticked off by hand'):format(a, p))
 		elseif a ~= "confirm" and a ~= "gossip" then Warn(ctx, ("|%s is ticked off by hand"):format(a)) end
@@ -796,6 +806,8 @@ local function MakeGoal(rec, step, ctx)
 	end
 	-- "Hearth to X |goto ... |c": a text line with a waypoint that is reached by arriving, whatever else the step has
 	if rec.complete and rec.point and goal.kind == "text" and not goal.target then goal.kind, goal.point = "goto", rec.point end
+	-- "|count N": done at N of the objective, not when the whole objective is
+	if rec.need and goal.quest and goal.objective then goal.need = rec.need end
 	if goal.kind ~= "accept" and goal.kind ~= "turnin" then goal.cond = Conditions.All(goal.cond, QuestGate(rec)) end
 	if rec.nocomplete and COMPLETABLE[goal.kind] and goal.kind ~= "objective" then goal.kind = "text" end
 	goal.cond = Conditions.All(goal.cond, rec.cond)
@@ -1137,4 +1149,18 @@ function Zygor.Head(source, meta)
 	local ctx = { counts = {}, order = {} } ---@type ObviGuideZygorCtx
 	local g, why = Head(source, meta, ctx)
 	return g, Warnings(ctx, g, why)
+end
+
+--- The quests (accept and turn-in lines) and NPCs (talk lines) a guide's text names, found without reading the rest
+--- of it: what the guide picker's search looks in. For several NPCs on one line, the first.
+---@param text string
+---@return string[]
+function Zygor.Names(text)
+	local names = {}
+	-- a command starts a line (after Zygor's ".", "*" or "|" marks) or a "|" chunk; the name runs up to its "##id"
+	-- (spaces only: a match must not run on into the next line)
+	for cmd, name in ("\n" .. text):gmatch("[\n|][ \t%.%*]*(%l+)[ \t]+([^\n|#]-)##") do
+		if cmd == "accept" or cmd == "turnin" or cmd == "talk" then names[#names + 1] = (name:gsub('^"(.-)"$', "%1")) end
+	end
+	return names
 end

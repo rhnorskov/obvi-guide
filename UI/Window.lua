@@ -32,6 +32,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field StepText FontString
 ---@field Background Texture
 ---@field Body Frame
+---@field Header Frame
 ---@field SideHeader Frame
 ---@field Continue Button|{text: FontString}   the guide end's "Continue with ..." button
 ---@field Resize Button
@@ -42,6 +43,7 @@ local frame
 ---@field text FontString
 ---@field icon Texture
 ---@field dash FontString   the quest tracker's "- " in front of objectives, in the icon column
+---@field Flash fun()     plays the "done" effect
 ---@field goal? ObviGuideGoal
 ---@field step? ObviGuideStep
 ---@field dim? boolean      a previewed step: no action
@@ -54,6 +56,50 @@ local lines = {} ---@type ObviGuideLine[]
 local used = 0
 
 local function Width() return frame:GetWidth() end
+
+--- The objective tracker's "done" effect on a line (as ObjectiveTrackerAnimLineTemplate has it): the check mark
+--- pops with a glow, and a golden bar glow sweeps across the line and fades.
+---@param line ObviGuideLine
+local function Flashes(line)
+	local _, fontHeight = line.text:GetFont()
+	local checkGlow = line:CreateTexture(nil, "OVERLAY")
+	checkGlow:SetAtlas("ui-questtracker-tracker-check-glow")
+	checkGlow:SetSize(ICON + 6, ICON + 6)
+	checkGlow:SetPoint("CENTER", line.icon)
+	checkGlow:SetAlpha(0)
+	local glow = line:CreateTexture(nil, "OVERLAY")
+	glow:SetAtlas("ui-questtracker-objfx-barglow")
+	glow:SetPoint("TOPLEFT", line.text, "TOPLEFT", -2, 2)
+	glow:SetSize(180, (fontHeight or ICON) + 6)
+	glow:SetAlpha(0)
+
+	local check = line:CreateAnimationGroup()
+	check:SetToFinalAlpha(true)
+	local up = check:CreateAnimation("Scale")
+	up:SetTarget(line.icon) up:SetDuration(0.15) up:SetScaleFrom(1, 1) up:SetScaleTo(1.2, 1.2) up:SetSmoothing("OUT")
+	local down = check:CreateAnimation("Scale")
+	down:SetTarget(line.icon) down:SetStartDelay(0.15) down:SetDuration(0.15) down:SetScaleFrom(1.2, 1.2) down:SetScaleTo(1, 1)
+	local glowIn = check:CreateAnimation("Alpha")
+	glowIn:SetTarget(checkGlow) glowIn:SetDuration(0.15) glowIn:SetFromAlpha(0) glowIn:SetToAlpha(1)
+	local glowOut = check:CreateAnimation("Alpha")
+	glowOut:SetTarget(checkGlow) glowOut:SetStartDelay(0.15) glowOut:SetDuration(0.15) glowOut:SetFromAlpha(1) glowOut:SetToAlpha(0)
+
+	local sweep = line:CreateAnimationGroup()
+	sweep:SetToFinalAlpha(true)
+	local grow = sweep:CreateAnimation("Scale")
+	grow:SetTarget(glow) grow:SetStartDelay(0.1) grow:SetDuration(0.66) grow:SetSmoothing("OUT")
+	grow:SetScaleFrom(0.01, 1) grow:SetScaleTo(1, 1) grow:SetOrigin("LEFT", 0, 0)
+	local show = sweep:CreateAnimation("Alpha")
+	show:SetTarget(glow) show:SetDuration(0.1) show:SetFromAlpha(0) show:SetToAlpha(1)
+	local fade = sweep:CreateAnimation("Alpha")
+	fade:SetTarget(glow) fade:SetStartDelay(0.43) fade:SetDuration(0.58) fade:SetFromAlpha(1) fade:SetToAlpha(0)
+
+	line.Flash = function() check:Restart() sweep:Restart() end
+end
+
+-- whether each goal was done when last drawn: a line flashes only when it turns done in front of the player (not when
+-- a guide or step opens with lines already done)
+local wasDone = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGoal, boolean>
 
 --- A line: an icon (dash, check, quest mark) and wrapped text, as plain frames, so the window can lay itself out
 --- at any time, in combat too. Clicking is done by secure buttons on a layer of their own laid over the lines
@@ -77,6 +123,7 @@ local function Line()
 		line.text:SetJustifyH("LEFT")
 		line.text:SetWordWrap(true)
 		line.text:SetSpacing(LEADING)
+		Flashes(line)
 		lines[used] = line
 	end
 	line.goal, line.step, line.dim, line.side = nil, nil, nil, nil
@@ -272,6 +319,10 @@ local function RenderLine(line)
 	line.text:SetText(Inline(text))
 	line.text:SetTextColor((dim and DIM or done and DONE or TODO):GetRGB())
 	Icon(line, g, done)
+	if not dim then
+		if done and wasDone[g] == false then line.Flash() end
+		wasDone[g] = done
+	end
 end
 
 ---@param tip ObviGuideTip
@@ -339,10 +390,16 @@ local function Separator(y)
 	return y + 4 + STEP_GAP   -- a little room for the art's shading under the line
 end
 
+-- Room around the lines: 6 px on the header's side, 18 px (the last line's gap + 10) on the far side. With the header
+-- at the bottom the two swap, so the narrow one stays next to the header.
+local NEAR, FAR = 6, 10
+local function TopPad() return (ns.db and ns.db.flip) and (FAR + LINE_GAP) or NEAR end
+local function EndPad() return (ns.db and ns.db.flip) and (NEAR - LINE_GAP) or FAR end
+
 local function Finish(y)
 	for k = used + 1, #lines do lines[k]:Hide() end
 	for k = sepUsed + 1, #separators do separators[k]:Hide() end
-	frame:SetHeight(HEADER + y + 10)
+	frame:SetHeight(HEADER + y + EndPad())
 	SyncClicks()
 end
 
@@ -371,7 +428,7 @@ function Window.Refresh()
 		line.text:SetText(("You've reached the end of |cffffd100%s|r."):format(guide.title))
 		line.text:SetTextColor(TODO:GetRGB())
 		Icon(line, nil, false)
-		local y = Place(line, 6, 0)
+		local y = Place(line, TopPad(), 0)
 		if nextTitle then
 			frame.Continue.text:SetText(("Continue with |cffffd100%s|r"):format(nextTitle))
 			frame.Continue:ClearAllPoints()
@@ -393,10 +450,10 @@ function Window.Refresh()
 		line.text:SetText(#ns.guides == 0 and "No guides loaded. Add a guide pack." or "Pick a guide: click the title above.")
 		line.text:SetTextColor(TODO:GetRGB())
 		Icon(line, nil, false)
-		Finish(Place(line, 6, 0))
+		Finish(Place(line, TopPad(), 0))
 		return
 	end
-	local y = 6
+	local y = TopPad()
 	y = Goals(step, step.goals, y, false, false, step.tips)
 	-- side tasks
 	local open = {}
@@ -424,32 +481,50 @@ function Window.Refresh()
 	Finish(y)
 end
 
--- the guide list, grouped as the guides name their groups; the current guide is ticked. A group with backslashes
--- ("Zygor: Leveling Guides\Starter Guides") is a submenu per part, as Zygor's own list has them.
-local function SetupGuideMenu(_, root)
-	if #ns.guides == 0 then root:CreateTitle("No guides loaded") return end
-	local function IsSelected(g) local cur = Engine.Current() return cur == g end
-	local function Select(g) Engine.Load(g.name or g.title, 1) end
-	local menus = {}
-	local function Menu(path)
-		if menus[path] then return menus[path] end
-		local parent, last = path:match("^(.*)\\([^\\]+)$")
-		menus[path] = (parent and Menu(parent) or root):CreateButton(last or path)
-		return menus[path]
-	end
-	for _, g in ipairs(ns.guides) do
-		-- a guide for other characters (its "only" doesn't hold) is not listed
-		if ns.Conditions.Eval(g.cond) then Menu(g.group):CreateRadio(g.title, IsSelected, Select, g) end
+--- The "Header at the bottom" setting.
+local function Flipped() return ns.db ~= nil and ns.db.flip == true end
+
+--- Anchors the window at its header's edge: by its top-left corner, so a taller or shorter step grows or shrinks it
+--- downwards only; with the header at the bottom, by its bottom-left corner, so it grows upwards and the header stays.
+--- (Dragging leaves it anchored by whichever point is nearest, often the centre, which grows both ways.)
+local function Pin()
+	local left, top, bottom = frame:GetLeft(), frame:GetTop(), frame:GetBottom()
+	if not (left and top and bottom) then return end
+	frame:ClearAllPoints()
+	if Flipped() then
+		frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left, bottom)
+	else
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
 	end
 end
 
---- Anchors the window by its top-left corner, so a taller or shorter step grows or shrinks it downwards only
---- (dragging leaves it anchored by whichever point is nearest, often the centre, which grows both ways).
-local function Pin()
-	local left, top = frame:GetLeft(), frame:GetTop()
-	if not (left and top) then return end
-	frame:ClearAllPoints()
-	frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+--- Places the header at the top (the lines below it) or, with "Header at the bottom", at the bottom (the lines above
+--- it), and the resize handle at the far corner. The background's gradient turns with it, so its dark part stays
+--- behind the header: the art is turned half a turn (SetRotation works on this client, swapped texture coordinates
+--- don't; tested with a scratch addon), and the resize handle a quarter turn into its new corner.
+local function Arrange()
+	local turn = Flipped() and math.pi or 0
+	frame.Background:SetRotation(turn)
+	for _, tex in ipairs({ frame.Resize:GetNormalTexture(), frame.Resize:GetHighlightTexture(), frame.Resize:GetPushedTexture() }) do
+		if tex then tex:SetRotation(Flipped() and math.pi / 2 or 0) end
+	end
+	local header, body, flip = frame.Header, frame.Body, Flipped()
+	header:ClearAllPoints()
+	body:ClearAllPoints()
+	frame.Resize:ClearAllPoints()
+	if flip then
+		header:SetPoint("BOTTOMLEFT")
+		header:SetPoint("BOTTOMRIGHT")
+		body:SetPoint("TOPLEFT")
+		body:SetPoint("BOTTOMRIGHT", 0, HEADER)
+		frame.Resize:SetPoint("TOPRIGHT", 6, 6)
+	else
+		header:SetPoint("TOPLEFT")
+		header:SetPoint("TOPRIGHT")
+		body:SetPoint("TOPLEFT", 0, -HEADER)
+		body:SetPoint("BOTTOMRIGHT")
+		frame.Resize:SetPoint("BOTTOMRIGHT", 6, -6)
+	end
 end
 
 local function SavePosition()
@@ -488,8 +563,7 @@ local function Build()
 
 	-- header: the damage meter's header bar; drag it to move the window
 	local header = CreateFrame("Frame", nil, frame)
-	header:SetPoint("TOPLEFT")
-	header:SetPoint("TOPRIGHT")
+	frame.Header = header   -- (Arrange places it at the top or the bottom)
 	header:SetHeight(HEADER)
 	header:EnableMouse(true)
 	header:RegisterForDrag("LeftButton")
@@ -499,22 +573,25 @@ local function Build()
 	bar:SetAtlas("ui-damagemeters-header-bar")
 	bar:SetAllPoints()
 
-	-- the title is a dropdown with an arrow, like "Damage Done": it lists the guides
+	-- the title looks like a dropdown with an arrow, like "Damage Done"; the arrow is only art (it gets no menu and no
+	-- mouse): clicking it or the title text opens the guide picker (UI\GuidePicker.lua)
 	local picker = CreateFrame("DropdownButton", nil, header, "WowStyle1ArrowDropdownTemplate")
 	picker.hasShadow = false
 	picker:SetPoint("TOPLEFT", 1, -3)   -- header offsets copied from the damage meter (Blizzard_DamageMeter)
-	picker:SetupMenu(SetupGuideMenu)
+	picker:EnableMouse(false)
 	frame.Title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalMed1")
 	frame.Title:SetPoint("LEFT", picker.Arrow or picker, "RIGHT", 0, 3)
 	frame.Title:SetJustifyH("LEFT")
 	frame.Title:SetWordWrap(false)
-	-- clicking the title text opens the same list
-	local titleClick = CreateFrame("Button", nil, header)
-	titleClick:SetAllPoints(frame.Title)
-	titleClick:SetScript("OnClick", function() picker:OpenMenu() end)
-	titleClick:RegisterForDrag("LeftButton")
-	titleClick:SetScript("OnDragStart", function() HideClicks() frame:StartMoving() end)
-	titleClick:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() SyncClicks() end)
+	-- plain buttons over the arrow and the title: a click opens the picker, a drag moves the window
+	for _, region in ipairs({ picker --[[@as Frame]], frame.Title }) do
+		local b = CreateFrame("Button", nil, header)
+		b:SetAllPoints(region)
+		b:SetScript("OnClick", function() ns.GuidePicker.Toggle() end)
+		b:RegisterForDrag("LeftButton")
+		b:SetScript("OnDragStart", function() HideClicks() frame:StartMoving() end)
+		b:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() SyncClicks() end)
+	end
 
 	-- right side: collapse (the tracker's button, as the damage meter uses it), the gear menu, step arrows, counter
 	local collapse = CreateFrame("Button", nil, header)
@@ -568,10 +645,45 @@ local function Build()
 	frame.StepText:SetPoint("RIGHT", back, "LEFT", -4, 0)
 	frame.Title:SetPoint("RIGHT", frame.StepText, "LEFT", -6, 0)
 
+	-- clicking the counter turns it into a number box: type a step and Enter goes there, Escape leaves it
+	local goTo = CreateFrame("EditBox", nil, header, "InputBoxTemplate") --[[@as EditBox]]
+	goTo:SetSize(42, 18)
+	goTo:SetPoint("RIGHT", back, "LEFT", -6, 0)
+	goTo:SetAutoFocus(false)
+	goTo:SetNumeric(true)
+	goTo:SetMaxLetters(5)
+	goTo:SetJustifyH("CENTER")
+	goTo:SetFontObject("GameFontHighlightSmall")
+	goTo:Hide()
+	local function CloseGoTo() goTo:ClearFocus() goTo:Hide() frame.StepText:Show() end
+	goTo:SetScript("OnEnterPressed", function(self)
+		local n = tonumber(self:GetText())
+		CloseGoTo()
+		if n then Engine.GoTo(n) end
+	end)
+	goTo:SetScript("OnEscapePressed", CloseGoTo)
+	goTo:SetScript("OnEditFocusLost", CloseGoTo)
+	local counter = CreateFrame("Button", nil, header)
+	counter:SetAllPoints(frame.StepText)
+	counter:SetScript("OnClick", function()
+		local _, step = Engine.Current()
+		if not step then return end
+		frame.StepText:Hide()
+		goTo:SetText(tostring(step.index))
+		goTo:Show()
+		goTo:SetFocus()
+		goTo:HighlightText()
+	end)
+	counter:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:SetText("Go to step...")
+		GameTooltip:AddLine("Click and type a step number", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	counter:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
 	-- body: the step lines
 	frame.Body = CreateFrame("Frame", nil, frame)
-	frame.Body:SetPoint("TOPLEFT", 0, -HEADER)
-	frame.Body:SetPoint("BOTTOMRIGHT")
 
 	frame.SideHeader = CreateFrame("Frame", nil, frame.Body)
 	frame.SideHeader:SetHeight(1)
@@ -599,7 +711,6 @@ local function Build()
 	-- the damage meter's resize handle, shown while the mouse is over the window; it changes the width
 	frame.Resize = CreateFrame("Button", nil, frame)
 	frame.Resize:SetSize(40, 40)
-	frame.Resize:SetPoint("BOTTOMRIGHT", 6, -6)
 	frame.Resize:SetNormalAtlas("damagemeters-scalehandle")
 	frame.Resize:SetHighlightAtlas("damagemeters-scalehandle-hover")
 	frame.Resize:SetPushedAtlas("damagemeters-scalehandle-pressed")
@@ -627,7 +738,16 @@ local function Build()
 		frame:SetPoint(saved.point, UIParent, saved.relPoint or saved.point, saved.x, saved.y)
 		frame:SetWidth(math.max(MIN_WIDTH, math.min(MAX_WIDTH, saved.width or DEFAULT_WIDTH)))
 	end
+	Arrange()
 	Pin()   -- older saves, and the default spot, may be anchored by another point
+end
+
+--- After "Header at the bottom" changes: the header moves, and the window stays where it is on screen.
+function Window.Arrange()
+	if not frame then return end
+	Arrange()
+	SavePosition()
+	Window.Refresh()
 end
 
 function Window.Toggle()

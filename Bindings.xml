@@ -9,4 +9,5 @@
 	<Binding name="OBVIGUIDE_NEXTSTEP" category="Obvi Guide">ObviGuide.NextStep()</Binding>
 	<Binding name="OBVIGUIDE_PREVSTEP" category="Obvi Guide">ObviGuide.PrevStep()</Binding>
 	<Binding name="OBVIGUIDE_TOGGLE" category="Obvi Guide">ObviGuide.Toggle()</Binding>
+	<Binding name="OBVIGUIDE_PICKER" category="Obvi Guide">ObviGuide.Guides()</Binding>
 </Bindings>
