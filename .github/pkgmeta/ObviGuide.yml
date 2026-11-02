@@ -1,0 +1,19 @@
+# What the BigWigs packager puts in Obvi Guide's zip (see .github/workflows/release.yml): only the ObviGuide folder,
+# without its development files (the docs are for guide writers, on GitHub).
+package-as: obvi-guide
+
+move-folders:
+  obvi-guide/ObviGuide: ObviGuide
+
+ignore:
+  - ObviScribe
+  - ObviGuides_Dungeons
+  - ObviGuides_Professions
+  - media
+  - tools
+  - README.md
+  - LICENSE
+  - .gitattributes
+  - ObviGuide/docs
+  - ObviGuide/tools
+  - ObviGuide/.luarc.json

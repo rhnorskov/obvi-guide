@@ -1,6 +1,7 @@
-# Builds Obvi Guide and publishes it when a version tag is pushed (git tag v0.1.0 && git push origin v0.1.0):
-# the zip goes to CurseForge (and Wago, once set up) and to a GitHub release. Uses the BigWigs packager, which reads
-# .pkgmeta and the project ids in ObviGuide.toc.
+# Builds the addons and publishes them when a version tag is pushed (git tag v0.1.0 && git push origin v0.1.0).
+# Each addon is its own CurseForge project: it is released when its TOC has an X-Curse-Project-ID (the others are
+# skipped), with its own zip, built by the BigWigs packager from .github/pkgmeta/<addon>.yml. Obvi Guide's zip also
+# goes to the GitHub release (and to Wago, once set up).
 name: Release
 
 on:
@@ -13,12 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # the GitHub release
-    env:
-      CF_API_KEY: ${{ secrets.CF_API_KEY }}           # CurseForge API token (repository secret)
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}   # Wago token (optional; skipped when unset)
-      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1   # one at a time
+      matrix:
+        addon: [ObviGuide, ObviScribe, ObviGuides_Dungeons, ObviGuides_Professions]
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the packager builds the changelog from the history
+
+      - name: Find the CurseForge project
+        id: project
+        run: |
+          id=$(grep -oP '^## X-Curse-Project-ID:\s*\K\d+' "${{ matrix.addon }}/${{ matrix.addon }}.toc" || true)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          [ -n "$id" ] || echo "${{ matrix.addon }} has no CurseForge project yet: skipped"
+
       - uses: BigWigsMods/packager@v2
+        if: steps.project.outputs.id != ''
+        with:
+          args: -m .github/pkgmeta/${{ matrix.addon }}.yml -p ${{ steps.project.outputs.id }} -n "${{ matrix.addon }}-{project-version}:${{ matrix.addon }} {project-version}"
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}   # CurseForge API token (repository secret)
+          # only Obvi Guide goes to the GitHub release and Wago for now
+          GITHUB_OAUTH: ${{ matrix.addon == 'ObviGuide' && secrets.GITHUB_TOKEN || '' }}
+          WAGO_API_TOKEN: ${{ matrix.addon == 'ObviGuide' && secrets.WAGO_API_TOKEN || '' }}

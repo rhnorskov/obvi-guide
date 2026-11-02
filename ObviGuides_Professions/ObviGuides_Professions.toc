@@ -1,0 +1,9 @@
+## Interface: 16001, 120105
+## Title: Obvi Guide: Professions
+## Version: @project-version@
+## Notes: Profession leveling guides for Obvi Guide: Mining and Blacksmithing (Alliance), after wow-professions.com's WoW Forever guides.
+## Author: Rasmus Norskov
+## Dependencies: ObviGuide
+
+Mining.lua
+Blacksmithing.lua

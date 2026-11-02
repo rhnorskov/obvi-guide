@@ -1,0 +1,16 @@
+## Interface: 16001, 120105
+## Title: Obvi Guide: Scribe
+## Notes: Write Obvi Guide guides: record while you play or write them by hand, open a loaded guide to change it, test them in Obvi Guide and export them as Lua. /scribe opens it.
+## Version: @project-version@
+## Author: Rasmus Norskov
+## X-License: GPL-3.0-or-later
+## Dependencies: ObviGuide
+## SavedVariables: ObviScribeDB
+
+Core.lua
+Export.lua
+Import.lua
+Recorder.lua
+UI\Copy.lua
+UI\Form.lua
+UI\Editor.lua

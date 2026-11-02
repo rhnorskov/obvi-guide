@@ -1,0 +1,16 @@
+# What the BigWigs packager puts in Obvi Guide: Scribe's zip: only the ObviScribe folder.
+package-as: obvi-guide
+
+move-folders:
+  obvi-guide/ObviScribe: ObviScribe
+
+ignore:
+  - ObviGuide
+  - ObviGuides_Dungeons
+  - ObviGuides_Professions
+  - media
+  - tools
+  - README.md
+  - LICENSE
+  - .gitattributes
+  - ObviScribe/.luarc.json
