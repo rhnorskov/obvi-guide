@@ -37,7 +37,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field Continue Button|{text: FontString}   the guide end's "Continue with ..." button
 ---@field Resize Button
 ---@field Tabs Frame       the row of tabs, outside the header
----@field NewTab Button    its "+"
+---@field NewTab ObviGuideTabButton   its "+"
 ---@field collapsed boolean
 local frame
 
@@ -404,37 +404,115 @@ local function Finish(y)
 	SyncClicks()
 end
 
--- The tabs: a row of small tabs on the outside of the header (above it, or below it with the header at the bottom),
--- one per guide open, and a "+" for a new one. Click one to show it, right-click to close it.
-local TAB_HEIGHT, TAB_MAX, TAB_GAP = 20, 130, 2
-local tabButtons = {} ---@type (Button|{text: FontString, bg: Texture, i: integer})[]
+-- The tabs: a row of tabs on the outside of the header (above it, or below it with the header at the bottom), one per
+-- guide open, and a "+" for a new one. Click one to show it, right-click to close it. The art is the game's own tabs
+-- (TabSystemButtonArtTemplate, the Settings and Professions windows' tabs; art only, so the clicks are ours), turned
+-- half a turn to hang off the top as the game does it; a client without them gets plain dark tabs.
+local TAB_HEIGHT, TAB_MAX, TAB_GAP, PLUS_WIDTH = 32, 150, 2, 40
+local ART = { "LeftActive", "RightActive", "MiddleActive", "Left", "Right", "Middle", "LeftHighlight", "RightHighlight", "MiddleHighlight" }
+
+---@class ObviGuideTabButton : Button
+---@field text FontString
+---@field i integer
+---@field selected boolean
+---@field art? table<string, Texture>   the game's tab pieces (nil: plain tabs)
+---@field bg? Texture                   the plain tab's background
+local tabButtons = {} ---@type ObviGuideTabButton[]
+
+local function OnTop() return not (ns.db and ns.db.flip) end
+
+--- Lays out a tab's art hanging off the top or the bottom, and its text as the game places it (lower when not chosen).
+---@param b ObviGuideTabButton
+local function PaintTab(b)
+	local top, on = OnTop(), b.selected
+	b.text:SetFontObject(on and "GameFontHighlightSmall" or "GameFontNormalSmall")
+	local a = b.art
+	local y = 0
+	if a then
+		for _, k in ipairs(ART) do a[k]:ClearAllPoints() a[k]:SetRotation(top and math.pi or 0) end
+		if top then   -- as TabSystemButtonArtMixin:HandleRotation
+			a.RightActive:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -7, 0)
+			a.LeftActive:SetPoint("BOTTOMRIGHT")
+			a.MiddleActive:SetPoint("LEFT", a.RightActive, "RIGHT")
+			a.MiddleActive:SetPoint("RIGHT", a.LeftActive, "LEFT")
+			a.Right:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -6, 0)
+			a.Left:SetPoint("BOTTOMRIGHT")
+			a.Middle:SetPoint("LEFT", a.Right, "RIGHT")
+			a.Middle:SetPoint("RIGHT", a.Left, "LEFT")
+			a.LeftHighlight:SetPoint("TOPRIGHT", a.Left)
+			a.RightHighlight:SetPoint("TOPLEFT", a.Right)
+		else          -- as the template has them
+			a.LeftActive:SetPoint("TOPLEFT")
+			a.RightActive:SetPoint("TOPRIGHT", 7, 0)
+			a.MiddleActive:SetPoint("LEFT", a.LeftActive, "RIGHT")
+			a.MiddleActive:SetPoint("RIGHT", a.RightActive, "LEFT")
+			a.Left:SetPoint("TOPLEFT")
+			a.Right:SetPoint("TOPRIGHT", 6, 0)
+			a.Middle:SetPoint("LEFT", a.Left, "RIGHT")
+			a.Middle:SetPoint("RIGHT", a.Right, "LEFT")
+			a.LeftHighlight:SetPoint("TOPLEFT", a.Left)
+			a.RightHighlight:SetPoint("TOPRIGHT", a.Right)
+		end
+		a.MiddleHighlight:SetPoint("LEFT", a.Middle, "LEFT")
+		a.MiddleHighlight:SetPoint("RIGHT", a.Middle, "RIGHT")
+		for _, k in ipairs({ "Left", "Middle", "Right" }) do
+			a[k]:SetShown(not on)
+			a[k .. "Active"]:SetShown(on)
+			a[k .. "Highlight"]:SetShown(not on)
+		end
+		if top then y = on and 0 or -3 else y = on and -3 or 2 end   -- TabSystemButtonArtMixin:GetTextYOffset
+	elseif b.bg then
+		b.bg:SetColorTexture(0, 0, 0, on and 0.75 or 0.4)
+	end
+	b.text:ClearAllPoints()
+	b.text:SetPoint("LEFT", 12, y)
+	b.text:SetPoint("RIGHT", -12, y)
+end
+
+---@param tip fun(self: ObviGuideTabButton)
+---@param click fun(self: ObviGuideTabButton, button: string)
+---@return ObviGuideTabButton
+local function NewTabButton(tip, click)
+	local ok, made = pcall(CreateFrame, "Button", nil, frame.Tabs, "TabSystemButtonArtTemplate")
+	local b = (ok and made or CreateFrame("Button", nil, frame.Tabs)) --[[@as ObviGuideTabButton]]
+	b:SetHeight(TAB_HEIGHT)
+	local pieces = b --[[@as table]]
+	if pieces.LeftActive and pieces.MiddleHighlight then
+		b.art = {}
+		for _, k in ipairs(ART) do b.art[k] = pieces[k] end
+		if pieces.Text then pieces.Text:Hide() end   -- (our own text, so it can be cut short)
+	else
+		b.bg = b:CreateTexture(nil, "BACKGROUND")
+		b.bg:SetAllPoints()
+		local hl = b:CreateTexture(nil, "HIGHLIGHT")
+		hl:SetAllPoints()
+		hl:SetColorTexture(1, 1, 1, 0.08)
+	end
+	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	b.text:SetWordWrap(false)
+	b.selected = false
+	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	b:SetScript("OnClick", click)
+	b:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, OnTop() and "ANCHOR_TOP" or "ANCHOR_BOTTOM")
+		tip(self)
+		GameTooltip:Show()
+	end)
+	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	PaintTab(b)
+	return b
+end
 
 ---@param i integer
 local function TabButton(i)
 	local b = tabButtons[i]
 	if b then return b end
-	b = CreateFrame("Button", nil, frame.Tabs) --[[@as Button|{text: FontString, bg: Texture, i: integer}]]
-	b:SetHeight(TAB_HEIGHT)
-	b.bg = b:CreateTexture(nil, "BACKGROUND")
-	b.bg:SetAllPoints()
-	local hl = b:CreateTexture(nil, "HIGHLIGHT")
-	hl:SetAllPoints()
-	hl:SetColorTexture(1, 1, 1, 0.08)
-	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	b.text:SetPoint("LEFT", 6, 0)
-	b.text:SetPoint("RIGHT", -6, 0)
-	b.text:SetWordWrap(false)
-	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	b:SetScript("OnClick", function(self, button)
-		if button == "RightButton" then Engine.CloseTab(self.i) else Engine.SwitchTab(self.i) end
-	end)
-	b:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, (ns.db and ns.db.flip) and "ANCHOR_BOTTOM" or "ANCHOR_TOP")
+	b = NewTabButton(function(self)
 		GameTooltip:SetText(self.text:GetText() or "")
 		GameTooltip:AddLine("Right-click: close the tab", 1, 1, 1)
-		GameTooltip:Show()
+	end, function(self, button)
+		if button == "RightButton" then Engine.CloseTab(self.i) else Engine.SwitchTab(self.i) end
 	end)
-	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	tabButtons[i] = b
 	return b
 end
@@ -442,7 +520,7 @@ end
 local function RefreshTabs()
 	local tabs, shown = Engine.Tabs()
 	local n = #tabs
-	local room = Width() - (TAB_HEIGHT + TAB_GAP) - (n - 1) * TAB_GAP
+	local room = Width() - (PLUS_WIDTH + TAB_GAP) - (n - 1) * TAB_GAP
 	local w = math.min(TAB_MAX, math.floor(room / math.max(n, 1)))
 	local x = 0
 	for i, tab in ipairs(tabs) do
@@ -450,9 +528,8 @@ local function RefreshTabs()
 		b.i = i
 		local g = tab.guide and ns.FindGuide(tab.guide)
 		b.text:SetText(g and g.title or tab.guide or "New tab")
-		local on = i == shown
-		b.bg:SetColorTexture(0, 0, 0, on and 0.75 or 0.4)
-		if on then b.text:SetTextColor(1, 0.82, 0) else b.text:SetTextColor(0.7, 0.7, 0.7) end
+		b.selected = i == shown
+		PaintTab(b)
 		b:SetWidth(w)
 		b:ClearAllPoints()
 		b:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
@@ -460,6 +537,7 @@ local function RefreshTabs()
 		x = x + w + TAB_GAP
 	end
 	for i = n + 1, #tabButtons do tabButtons[i]:Hide() end
+	PaintTab(frame.NewTab)
 	frame.NewTab:ClearAllPoints()
 	frame.NewTab:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
 end
@@ -576,14 +654,14 @@ local function Arrange()
 	frame.Resize:ClearAllPoints()
 	frame.Tabs:ClearAllPoints()
 	-- the tabs are kept on screen with the window (a positive top or negative bottom inset grows the clamped area)
-	local tabs = TAB_HEIGHT + TAB_GAP
+	local tabs = TAB_HEIGHT
 	frame:SetClampRectInsets(0, 0, flip and 0 or tabs, flip and -tabs or 0)
 	if flip then
-		frame.Tabs:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -TAB_GAP)
-		frame.Tabs:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, -TAB_GAP)
+		frame.Tabs:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 0)
+		frame.Tabs:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, 0)
 	else
-		frame.Tabs:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, TAB_GAP)
-		frame.Tabs:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, TAB_GAP)
+		frame.Tabs:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, 0)
+		frame.Tabs:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, 0)
 	end
 	if flip then
 		header:SetPoint("BOTTOMLEFT")
@@ -758,28 +836,15 @@ local function Build()
 	-- the tabs (Arrange puts them above or below the window; RefreshTabs fills them)
 	frame.Tabs = CreateFrame("Frame", nil, frame)
 	frame.Tabs:SetHeight(TAB_HEIGHT)
-	frame.NewTab = CreateFrame("Button", nil, frame.Tabs)
-	frame.NewTab:SetSize(TAB_HEIGHT, TAB_HEIGHT)
-	local plusBg = frame.NewTab:CreateTexture(nil, "BACKGROUND")
-	plusBg:SetAllPoints()
-	plusBg:SetColorTexture(0, 0, 0, 0.4)
-	local plusHl = frame.NewTab:CreateTexture(nil, "HIGHLIGHT")
-	plusHl:SetAllPoints()
-	plusHl:SetColorTexture(1, 1, 1, 0.08)
-	local plus = frame.NewTab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	plus:SetPoint("CENTER", 0, 1)
-	plus:SetText("+")
-	frame.NewTab:SetScript("OnClick", function()
+	frame.NewTab = NewTabButton(function()
+		GameTooltip:SetText("New tab")
+		GameTooltip:AddLine("Open another guide beside this one", 1, 1, 1)
+	end, function()
 		Engine.NewTab()
 		ns.GuidePicker.Open()
 	end)
-	frame.NewTab:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, Flipped() and "ANCHOR_BOTTOM" or "ANCHOR_TOP")
-		GameTooltip:SetText("New tab")
-		GameTooltip:AddLine("Open another guide beside this one", 1, 1, 1)
-		GameTooltip:Show()
-	end)
-	frame.NewTab:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	frame.NewTab:SetWidth(PLUS_WIDTH)
+	frame.NewTab.text:SetText("+")
 
 	-- body: the step lines
 	frame.Body = CreateFrame("Frame", nil, frame)
