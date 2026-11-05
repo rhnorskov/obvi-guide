@@ -39,6 +39,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field Resize Button
 ---@field Tabs Frame       the row of tabs, outside the header
 ---@field NewTab ObviGuideTabButton   its "+"
+---@field TabLine Texture   the line between the tabs and the lines
 ---@field collapsed boolean
 local frame
 
@@ -405,10 +406,10 @@ local function Finish(y)
 	SyncClicks()
 end
 
--- The tabs: a row of small tabs on the outside of the header (above it, or below it with the header at the bottom),
--- one per guide open, and a "+" for a new one. Click one to show it, right-click to close it. They are cut from the
--- header's own art (the damage meter's header bar), so they look like part of it: the tab shown at full strength,
--- the others faded. (The game's framed tabs were tried and looked too heavy next to the flat header.)
+-- The tabs: a row of tabs inside the window, between the header and the lines, one per guide open, and a "+" for a
+-- new one. Click one to show it, right-click to close it. They are kept quiet, in the window's own style: plain text,
+-- the tab shown in gold with a gold mark under it, and a thin gold line (as the side tasks have) between them and the
+-- lines. (The game's framed tabs, and tabs cut from the header bar, were tried: too heavy next to the flat header.)
 
 ---@class ObviGuideTabButton : Button
 ---@field text FontString
@@ -422,8 +423,12 @@ local function OnTop() return not (ns.db and ns.db.flip) end
 ---@param b ObviGuideTabButton
 local function PaintTab(b)
 	local on = b.selected
-	b.bg:SetAlpha(on and 1 or 0.45)
-	if on then b.text:SetTextColor(1, 0.82, 0) else b.text:SetTextColor(0.65, 0.65, 0.65) end
+	-- the mark under the tab shown sits on the lines' side (below the tabs, or above them with the header at the bottom)
+	b.bg:ClearAllPoints()
+	b.bg:SetPoint(OnTop() and "BOTTOMLEFT" or "TOPLEFT", 4, 0)
+	b.bg:SetPoint(OnTop() and "BOTTOMRIGHT" or "TOPRIGHT", -4, 0)
+	b.bg:SetShown(on)
+	if on then b.text:SetTextColor(1, 0.82, 0) else b.text:SetTextColor(0.6, 0.6, 0.6) end
 end
 
 ---@param tip fun(self: ObviGuideTabButton)
@@ -432,12 +437,12 @@ end
 local function NewTabButton(tip, click)
 	local b = CreateFrame("Button", nil, frame.Tabs) --[[@as ObviGuideTabButton]]
 	b:SetHeight(TAB_HEIGHT)
-	b.bg = b:CreateTexture(nil, "BACKGROUND")
-	b.bg:SetAtlas("ui-damagemeters-header-bar")
-	b.bg:SetAllPoints()
+	b.bg = b:CreateTexture(nil, "ARTWORK")   -- the gold mark under the tab shown (PaintTab places it)
+	b.bg:SetColorTexture(1, 0.82, 0, 0.8)
+	b.bg:SetHeight(2)
 	local hl = b:CreateTexture(nil, "HIGHLIGHT")
 	hl:SetAllPoints()
-	hl:SetColorTexture(1, 1, 1, 0.06)
+	hl:SetColorTexture(1, 1, 1, 0.05)
 	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 	b.text:SetPoint("LEFT", 8, 0)
 	b.text:SetPoint("RIGHT", -8, 0)
@@ -490,6 +495,9 @@ local function RefreshTabs()
 	end
 	for i = n + 1, #tabButtons do tabButtons[i]:Hide() end
 	PaintTab(frame.NewTab)
+	frame.TabLine:ClearAllPoints()
+	frame.TabLine:SetPoint(OnTop() and "BOTTOMLEFT" or "TOPLEFT", 5, 0)
+	frame.TabLine:SetPoint(OnTop() and "BOTTOMRIGHT" or "TOPRIGHT", -4, 0)
 	frame.NewTab:ClearAllPoints()
 	frame.NewTab:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
 end
@@ -783,9 +791,12 @@ local function Build()
 	end)
 	counter:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-	-- the tabs (Arrange puts them above or below the window; RefreshTabs fills them)
+	-- the tabs (Arrange puts them next to the header, inside the window; RefreshTabs fills them)
 	frame.Tabs = CreateFrame("Frame", nil, frame)
 	frame.Tabs:SetHeight(TAB_HEIGHT)
+	frame.TabLine = frame.Tabs:CreateTexture(nil, "BACKGROUND")   -- the thin gold line on the lines' side (RefreshTabs)
+	frame.TabLine:SetColorTexture(1, 0.82, 0, 0.25)
+	frame.TabLine:SetHeight(1)
 	frame.NewTab = NewTabButton(function()
 		GameTooltip:SetText("New tab")
 		GameTooltip:AddLine("Open another guide beside this one", 1, 1, 1)
