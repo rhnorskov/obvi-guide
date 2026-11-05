@@ -32,11 +32,11 @@ local function MarkKey(step, goal)
 end
 
 -- Flight paths, as Zygor's LibTaxi does it: the game lists a continent's flight points with whether each is still
--- undiscovered (C_TaxiMap.GetTaxiNodesForMap, slow, so a continent is read once and kept), and it's read again when a
+-- undiscovered (C_TaxiMap.GetTaxiNodesForMap, slow, so a map is read once and kept), and it's read again when a
 -- new flight path is learned or a flight map opens.
-local discovered = {} ---@type table<integer, table<string, boolean>>   map -> lower-case names discovered
+local discovered = {} ---@type table<integer, table<string, boolean>>   map -> lower-case name -> discovered
 
---- The flight points discovered on a map's flight map (read once, kept until a flight path is learned).
+--- The flight points a map's flight map lists (read once, kept until a flight path is learned): name -> discovered.
 ---@param map integer
 ---@return table<string, boolean>
 local function Discovered(map)
@@ -46,7 +46,10 @@ local function Discovered(map)
 	local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, map)
 	for _, node in ipairs(ok and nodes or {}) do
 		-- "Tokka's Landing, Zul'Aman" -> "tokka's landing" (as Zygor trims them)
-		if not node.isUndiscovered and node.name then names[(node.name:gsub(", .*", "")):lower()] = true end
+		if node.name then
+			local name = (node.name:gsub(", .*", "")):lower()
+			names[name] = (names[name] or false) or not node.isUndiscovered
+		end
 	end
 	discovered[map] = names
 	return names
@@ -54,7 +57,9 @@ end
 
 --- Whether a "get the flight path" line's flight point is discovered (by name). The flight points are asked for on
 --- the line's (or step's) map and every map above it, as some zones (underground ones) hang off the tree oddly and
---- their continent's flight map doesn't list them.
+--- their continent's flight map doesn't list them. A zone's own list can call a flight point discovered that isn't
+--- (seen with Lakeshire on Redridge's map, while Eastern Kingdoms' listed it undiscovered), so a map that lists it
+--- undiscovered wins.
 ---@param goal ObviGuideGoal
 ---@param step ObviGuideStep
 ---@return boolean
@@ -62,15 +67,18 @@ local function FlightKnown(goal, step)
 	local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
 	if not (map and goal.flight and C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap) then return false end
 	local want = goal.flight:gsub(", .*", ""):lower()
-	local info, seen = C_Map.GetMapInfo(map), 0
+	local info, seen, known = C_Map.GetMapInfo(map), 0, false
 	while info and seen < 8 do
-		local names = Discovered(info.mapID)
-		if names[want] then return true end
-		for name in pairs(names) do if name:find(want, 1, true) then return true end end
+		for name, found in pairs(Discovered(info.mapID)) do
+			if name == want or name:find(want, 1, true) then
+				if not found then return false end
+				known = true
+			end
+		end
 		if (info.parentMapID or 0) == 0 then break end
 		info, seen = C_Map.GetMapInfo(info.parentMapID), seen + 1
 	end
-	return false
+	return known
 end
 
 ns:On("UI_INFO_MESSAGE", function(_, _, message)
