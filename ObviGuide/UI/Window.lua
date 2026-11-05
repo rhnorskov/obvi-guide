@@ -404,91 +404,43 @@ local function Finish(y)
 	SyncClicks()
 end
 
--- The tabs: a row of tabs on the outside of the header (above it, or below it with the header at the bottom), one per
--- guide open, and a "+" for a new one. Click one to show it, right-click to close it. The art is the game's own tabs
--- (TabSystemButtonArtTemplate, the Settings and Professions windows' tabs; art only, so the clicks are ours), turned
--- half a turn to hang off the top as the game does it; a client without them gets plain dark tabs.
-local TAB_HEIGHT, TAB_MAX, TAB_GAP, PLUS_WIDTH = 32, 150, 2, 40
-local ART = { "LeftActive", "RightActive", "MiddleActive", "Left", "Right", "Middle", "LeftHighlight", "RightHighlight", "MiddleHighlight" }
+-- The tabs: a row of small tabs on the outside of the header (above it, or below it with the header at the bottom),
+-- one per guide open, and a "+" for a new one. Click one to show it, right-click to close it. They are cut from the
+-- header's own art (the damage meter's header bar), so they look like part of it: the tab shown at full strength,
+-- the others faded. (The game's framed tabs were tried and looked too heavy next to the flat header.)
+local TAB_HEIGHT, TAB_MAX, TAB_GAP, PLUS_WIDTH = 22, 150, 2, 24
 
 ---@class ObviGuideTabButton : Button
 ---@field text FontString
+---@field bg Texture
 ---@field i integer
 ---@field selected boolean
----@field art? table<string, Texture>   the game's tab pieces (nil: plain tabs)
----@field bg? Texture                   the plain tab's background
 local tabButtons = {} ---@type ObviGuideTabButton[]
 
 local function OnTop() return not (ns.db and ns.db.flip) end
 
---- Lays out a tab's art hanging off the top or the bottom, and its text as the game places it (lower when not chosen).
 ---@param b ObviGuideTabButton
 local function PaintTab(b)
-	local top, on = OnTop(), b.selected
-	b.text:SetFontObject(on and "GameFontHighlightSmall" or "GameFontNormalSmall")
-	local a = b.art
-	local y = 0
-	if a then
-		for _, k in ipairs(ART) do a[k]:ClearAllPoints() a[k]:SetRotation(top and math.pi or 0) end
-		if top then   -- as TabSystemButtonArtMixin:HandleRotation
-			a.RightActive:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -7, 0)
-			a.LeftActive:SetPoint("BOTTOMRIGHT")
-			a.MiddleActive:SetPoint("LEFT", a.RightActive, "RIGHT")
-			a.MiddleActive:SetPoint("RIGHT", a.LeftActive, "LEFT")
-			a.Right:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -6, 0)
-			a.Left:SetPoint("BOTTOMRIGHT")
-			a.Middle:SetPoint("LEFT", a.Right, "RIGHT")
-			a.Middle:SetPoint("RIGHT", a.Left, "LEFT")
-			a.LeftHighlight:SetPoint("TOPRIGHT", a.Left)
-			a.RightHighlight:SetPoint("TOPLEFT", a.Right)
-		else          -- as the template has them
-			a.LeftActive:SetPoint("TOPLEFT")
-			a.RightActive:SetPoint("TOPRIGHT", 7, 0)
-			a.MiddleActive:SetPoint("LEFT", a.LeftActive, "RIGHT")
-			a.MiddleActive:SetPoint("RIGHT", a.RightActive, "LEFT")
-			a.Left:SetPoint("TOPLEFT")
-			a.Right:SetPoint("TOPRIGHT", 6, 0)
-			a.Middle:SetPoint("LEFT", a.Left, "RIGHT")
-			a.Middle:SetPoint("RIGHT", a.Right, "LEFT")
-			a.LeftHighlight:SetPoint("TOPLEFT", a.Left)
-			a.RightHighlight:SetPoint("TOPRIGHT", a.Right)
-		end
-		a.MiddleHighlight:SetPoint("LEFT", a.Middle, "LEFT")
-		a.MiddleHighlight:SetPoint("RIGHT", a.Middle, "RIGHT")
-		for _, k in ipairs({ "Left", "Middle", "Right" }) do
-			a[k]:SetShown(not on)
-			a[k .. "Active"]:SetShown(on)
-			a[k .. "Highlight"]:SetShown(not on)
-		end
-		if top then y = on and 0 or -3 else y = on and -3 or 2 end   -- TabSystemButtonArtMixin:GetTextYOffset
-	elseif b.bg then
-		b.bg:SetColorTexture(0, 0, 0, on and 0.75 or 0.4)
-	end
-	b.text:ClearAllPoints()
-	b.text:SetPoint("LEFT", 12, y)
-	b.text:SetPoint("RIGHT", -12, y)
+	local on = b.selected
+	b.bg:SetAlpha(on and 1 or 0.45)
+	if on then b.text:SetTextColor(1, 0.82, 0) else b.text:SetTextColor(0.65, 0.65, 0.65) end
 end
 
 ---@param tip fun(self: ObviGuideTabButton)
 ---@param click fun(self: ObviGuideTabButton, button: string)
 ---@return ObviGuideTabButton
 local function NewTabButton(tip, click)
-	local ok, made = pcall(CreateFrame, "Button", nil, frame.Tabs, "TabSystemButtonArtTemplate")
-	local b = (ok and made or CreateFrame("Button", nil, frame.Tabs)) --[[@as ObviGuideTabButton]]
+	local b = CreateFrame("Button", nil, frame.Tabs) --[[@as ObviGuideTabButton]]
 	b:SetHeight(TAB_HEIGHT)
-	local pieces = b --[[@as table]]
-	if pieces.LeftActive and pieces.MiddleHighlight then
-		b.art = {}
-		for _, k in ipairs(ART) do b.art[k] = pieces[k] end
-		if pieces.Text then pieces.Text:Hide() end   -- (our own text, so it can be cut short)
-	else
-		b.bg = b:CreateTexture(nil, "BACKGROUND")
-		b.bg:SetAllPoints()
-		local hl = b:CreateTexture(nil, "HIGHLIGHT")
-		hl:SetAllPoints()
-		hl:SetColorTexture(1, 1, 1, 0.08)
-	end
+	b.bg = b:CreateTexture(nil, "BACKGROUND")
+	b.bg:SetAtlas("ui-damagemeters-header-bar")
+	b.bg:SetAllPoints()
+	local hl = b:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetAllPoints()
+	hl:SetColorTexture(1, 1, 1, 0.06)
 	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	b.text:SetPoint("LEFT", 8, 0)
+	b.text:SetPoint("RIGHT", -8, 0)
 	b.text:SetWordWrap(false)
 	b.selected = false
 	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -654,14 +606,14 @@ local function Arrange()
 	frame.Resize:ClearAllPoints()
 	frame.Tabs:ClearAllPoints()
 	-- the tabs are kept on screen with the window (a positive top or negative bottom inset grows the clamped area)
-	local tabs = TAB_HEIGHT
+	local tabs = TAB_HEIGHT + TAB_GAP
 	frame:SetClampRectInsets(0, 0, flip and 0 or tabs, flip and -tabs or 0)
 	if flip then
-		frame.Tabs:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 0)
-		frame.Tabs:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+		frame.Tabs:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -TAB_GAP)
+		frame.Tabs:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, -TAB_GAP)
 	else
-		frame.Tabs:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, 0)
-		frame.Tabs:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, 0)
+		frame.Tabs:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, TAB_GAP)
+		frame.Tabs:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, TAB_GAP)
 	end
 	if flip then
 		header:SetPoint("BOTTOMLEFT")
