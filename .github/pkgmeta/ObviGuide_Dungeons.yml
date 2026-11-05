@@ -1,0 +1,17 @@
+# What the BigWigs packager puts in Obvi Guide: Dungeons' zip: only the ObviGuide_Dungeons folder.
+package-as: obvi-guide
+
+move-folders:
+  obvi-guide/ObviGuide_Dungeons: ObviGuide_Dungeons
+
+ignore:
+  - ObviGuide
+  - ObviGuide_Scribe
+  - ObviGuide_Professions
+  - ObviGuide_Zygor
+  - media
+  - tools
+  - README.md
+  - LICENSE
+  - .gitattributes
+  - ObviGuide_Dungeons/.luarc.json

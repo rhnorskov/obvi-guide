@@ -1,14 +1,15 @@
 # Obvi Guide
 
 A guide viewer for World of Warcraft (retail and WoW Forever), plus the addons around it. Each folder is its own
-addon, released as its own CurseForge project:
+addon, released as its own CurseForge project (except the Zygor bridge, which is never released):
 
 | Folder | Addon | What it is |
 |---|---|---|
 | `ObviGuide` | Obvi Guide | The viewer. Reads guides in its own format, RestedXP's and Zygor's. Ships no guides. |
-| `ObviScribe` | Obvi Guide: Scribe | Write guides in game: record while playing, edit, test, export. |
-| `ObviGuides_Dungeons` | Obvi Guide: Dungeons | Dungeon quest guides. |
-| `ObviGuides_Professions` | Obvi Guide: Professions | Profession leveling guides. |
+| `ObviGuide_Scribe` | Obvi Guide: Scribe | Write guides in game: record while playing, edit, test, export. |
+| `ObviGuide_Dungeons` | Obvi Guide: Dungeons | Dungeon quest guides. |
+| `ObviGuide_Professions` | Obvi Guide: Professions | Profession leveling guides. |
+| `ObviGuide_Zygor` | Obvi Guide: Zygor | Personal: reads the guides of your own installed Zygor addon in game. Not released. |
 
 Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 

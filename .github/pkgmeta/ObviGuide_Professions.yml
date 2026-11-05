@@ -1,0 +1,17 @@
+# What the BigWigs packager puts in Obvi Guide: Professions' zip: only the ObviGuide_Professions folder.
+package-as: obvi-guide
+
+move-folders:
+  obvi-guide/ObviGuide_Professions: ObviGuide_Professions
+
+ignore:
+  - ObviGuide
+  - ObviGuide_Scribe
+  - ObviGuide_Dungeons
+  - ObviGuide_Zygor
+  - media
+  - tools
+  - README.md
+  - LICENSE
+  - .gitattributes
+  - ObviGuide_Professions/.luarc.json

@@ -10,6 +10,14 @@ ObviGuide = {}
 ---@param build fun(g: ObviGuideGuideBuilder)
 function ObviGuide.Guide(build) end
 
+--- Adds guides written in another guide format. A format that can list a guide from its meta alone (Zygor) keeps
+--- the text and reads it when the guide is first opened; the text may then also be a function that returns it.
+---@param format "rxp"|"zygor"   RestedXP or Zygor guide syntax
+---@param text string|(fun(): string)   the guide text (one or more guides)
+---@param meta? table     what the format needs besides the text (Zygor: the title and header)
+---@return integer added  how many guides were added
+function ObviGuide.Add(format, text, meta) end
+
 --- Opens a guide (by title or id) in the window at its first step, without the ticks of an earlier run. A guide
 --- added again with the same id from the same addon replaces the old one, so a tool can add, edit and reopen a draft.
 ---@param title string

@@ -1,0 +1,6 @@
+## Interface: 16001, 120105
+## Title: Obvi Guide: Zygor
+## Notes: Personal use only: hands the guides of my own installed Zygor addon to Obvi Guide in game (nothing is copied). Not for sharing.
+## Dependencies: ObviGuide, ZygorGuidesViewer
+
+ZygorBridge.lua

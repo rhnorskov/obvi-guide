@@ -217,6 +217,7 @@ end
 ---@param text string|(fun(): string)   the guide text (one or more guides)
 ---@param meta? table     what the format needs besides the text (Zygor: the title and header)
 ---@return integer added  how many guides were added
+---@diagnostic disable-next-line: duplicate-set-field
 function ObviGuide.Add(format, text, meta)
 	local parser = ns.Parsers[format]
 	local source = (debugstack(2, 1, 0) or ""):match("AddOns[\\/]([^\\/]+)") or "?"

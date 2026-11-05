@@ -6,9 +6,10 @@ move-folders:
   obvi-guide/ObviGuide: ObviGuide
 
 ignore:
-  - ObviScribe
-  - ObviGuides_Dungeons
-  - ObviGuides_Professions
+  - ObviGuide_Scribe
+  - ObviGuide_Dungeons
+  - ObviGuide_Professions
+  - ObviGuide_Zygor
   - media
   - tools
   - README.md

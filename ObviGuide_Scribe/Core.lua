@@ -172,8 +172,8 @@ function ns.Register(d, quiet)
 		return false
 	end
 	local code = ns.Export(d, { group = "Drafts", id = ns.DraftId(d) })
-	-- the chunk name says it comes from ObviScribe, which is how Obvi Guide tells who added a guide
-	local fn, err = loadstring(code, "@Interface\\AddOns\\ObviScribe\\Draft.lua")
+	-- the chunk name says it comes from ObviGuide_Scribe, which is how Obvi Guide tells who added a guide
+	local fn, err = loadstring(code, "@Interface\\AddOns\\ObviGuide_Scribe\\Draft.lua")
 	if not fn then ns.Print("could not read the draft: %s", tostring(err)) return false end
 	local ok, res = pcall(fn)
 	if not ok then ns.Print("could not add the draft: %s", tostring(res)) return false end
