@@ -32,7 +32,8 @@ jobs:
           [ -n "$id" ] || echo "${{ matrix.addon }} has no CurseForge project yet: skipped"
 
       # The packager packs the checkout's root as one addon, so the addon's folder becomes the root (the rest is put
-      # aside; .git stays for the version and the changelog). The zip then holds just that addon's folder.
+      # aside). The packager copies the files git lists, so the new layout is committed here (never pushed) and the
+      # release tag moved onto it: the version stays the tag's. The zip then holds just that addon's folder.
       - name: Make the addon the root
         if: steps.project.outputs.id != ''
         run: |
@@ -42,6 +43,9 @@ jobs:
           mv !(.git) "$aside"/
           mv "$aside/${{ matrix.addon }}"/* .
           cp "$aside/.github/pkgmeta/${{ matrix.addon }}.yml" "$RUNNER_TEMP/pkgmeta.yml"
+          git add -A
+          git -c user.name=release -c user.email=release@localhost commit -q -m "${{ matrix.addon }} at the root"
+          git tag -f "${{ github.ref_name }}"
 
       - uses: BigWigsMods/packager@v2
         if: steps.project.outputs.id != ''
