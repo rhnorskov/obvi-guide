@@ -632,7 +632,7 @@ function Engine.DebugStep()
 				for _, node in ipairs(ok and nodes or {}) do
 					if node.name and node.name:lower():find(want, 1, true) then
 						hits[#hits + 1] = ("%s (id %s, undiscovered %s, state %s, faction %s)"):format(node.name,
-							tostring(node.nodeID), tostring(node.isUndiscovered), tostring(node.state), tostring(node.faction))
+							tostring(node.nodeID), tostring(node.isUndiscovered), tostring((node --[[@as table]]).state), tostring(node.faction))
 					end
 				end
 				out[#out + 1] = ("  map %d %s: %d nodes, matches: %s"):format(info.mapID, tostring(info.name),
