@@ -31,10 +31,22 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
           [ -n "$id" ] || echo "${{ matrix.addon }} has no CurseForge project yet: skipped"
 
+      # The packager packs the checkout's root as one addon, so the addon's folder becomes the root (the rest is put
+      # aside; .git stays for the version and the changelog). The zip then holds just that addon's folder.
+      - name: Make the addon the root
+        if: steps.project.outputs.id != ''
+        run: |
+          shopt -s dotglob extglob
+          aside="$RUNNER_TEMP/repo"
+          mkdir "$aside"
+          mv !(.git) "$aside"/
+          mv "$aside/${{ matrix.addon }}"/* .
+          cp "$aside/.github/pkgmeta/${{ matrix.addon }}.yml" "$RUNNER_TEMP/pkgmeta.yml"
+
       - uses: BigWigsMods/packager@v2
         if: steps.project.outputs.id != ''
         with:
-          args: -m .github/pkgmeta/${{ matrix.addon }}.yml -p ${{ steps.project.outputs.id }} -n "${{ matrix.addon }}-{project-version}:${{ matrix.addon }} {project-version}"
+          args: -m ${{ runner.temp }}/pkgmeta.yml -p ${{ steps.project.outputs.id }}
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}   # CurseForge API token (repository secret)
           # only Obvi Guide goes to the GitHub release and Wago for now

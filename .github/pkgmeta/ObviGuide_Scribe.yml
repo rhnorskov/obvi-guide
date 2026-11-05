@@ -1,17 +1,12 @@
-# What the BigWigs packager puts in Obvi Guide: Scribe's zip: only the ObviGuide_Scribe folder.
-package-as: obvi-guide
+# What the BigWigs packager puts in Obvi Guide: Scribe's zip. The release workflow makes the ObviGuide_Scribe folder the checkout's
+# root first, so the paths here are inside it.
+package-as: ObviGuide_Scribe
 
-move-folders:
-  obvi-guide/ObviGuide_Scribe: ObviGuide_Scribe
+# the changelog is written by hand (CHANGELOG.md in the addon's folder), not made from commit messages
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
 
+# development files stay out of the zip
 ignore:
-  - ObviGuide
-  - ObviGuide_Dungeons
-  - ObviGuide_Professions
-  - ObviGuide_Zygor
-  - media
-  - tools
-  - README.md
-  - LICENSE
-  - .gitattributes
-  - ObviGuide_Scribe/.luarc.json
+  - .luarc.json
