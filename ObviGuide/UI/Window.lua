@@ -36,6 +36,8 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field SideHeader Frame
 ---@field Continue Button|{text: FontString}   the guide end's "Continue with ..." button
 ---@field Resize Button
+---@field Tabs Frame       the row of tabs, outside the header
+---@field NewTab Button    its "+"
 ---@field collapsed boolean
 local frame
 
@@ -402,9 +404,70 @@ local function Finish(y)
 	SyncClicks()
 end
 
+-- The tabs: a row of small tabs on the outside of the header (above it, or below it with the header at the bottom),
+-- one per guide open, and a "+" for a new one. Click one to show it, right-click to close it.
+local TAB_HEIGHT, TAB_MAX, TAB_GAP = 20, 130, 2
+local tabButtons = {} ---@type (Button|{text: FontString, bg: Texture, i: integer})[]
+
+---@param i integer
+local function TabButton(i)
+	local b = tabButtons[i]
+	if b then return b end
+	b = CreateFrame("Button", nil, frame.Tabs) --[[@as Button|{text: FontString, bg: Texture, i: integer}]]
+	b:SetHeight(TAB_HEIGHT)
+	b.bg = b:CreateTexture(nil, "BACKGROUND")
+	b.bg:SetAllPoints()
+	local hl = b:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetAllPoints()
+	hl:SetColorTexture(1, 1, 1, 0.08)
+	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	b.text:SetPoint("LEFT", 6, 0)
+	b.text:SetPoint("RIGHT", -6, 0)
+	b.text:SetWordWrap(false)
+	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	b:SetScript("OnClick", function(self, button)
+		if button == "RightButton" then Engine.CloseTab(self.i) else Engine.SwitchTab(self.i) end
+	end)
+	b:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, (ns.db and ns.db.flip) and "ANCHOR_BOTTOM" or "ANCHOR_TOP")
+		GameTooltip:SetText(self.text:GetText() or "")
+		GameTooltip:AddLine("Right-click: close the tab", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	tabButtons[i] = b
+	return b
+end
+
+local function RefreshTabs()
+	local tabs, shown = Engine.Tabs()
+	local n = #tabs
+	local room = Width() - (TAB_HEIGHT + TAB_GAP) - (n - 1) * TAB_GAP
+	local w = math.min(TAB_MAX, math.floor(room / math.max(n, 1)))
+	local x = 0
+	for i, tab in ipairs(tabs) do
+		local b = TabButton(i)
+		b.i = i
+		local g = tab.guide and ns.FindGuide(tab.guide)
+		b.text:SetText(g and g.title or tab.guide or "New tab")
+		local on = i == shown
+		b.bg:SetColorTexture(0, 0, 0, on and 0.75 or 0.4)
+		if on then b.text:SetTextColor(1, 0.82, 0) else b.text:SetTextColor(0.7, 0.7, 0.7) end
+		b:SetWidth(w)
+		b:ClearAllPoints()
+		b:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
+		b:Show()
+		x = x + w + TAB_GAP
+	end
+	for i = n + 1, #tabButtons do tabButtons[i]:Hide() end
+	frame.NewTab:ClearAllPoints()
+	frame.NewTab:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
+end
+
 --- Lays the window out for the current step. Works in combat too: only the click buttons wait for the fight to end.
 function Window.Refresh()
 	if not frame or not frame:IsShown() then return end
+	RefreshTabs()
 	local guide, step = Engine.Current()
 	frame.Title:SetText(guide and guide.title or "Obvi Guide")
 	frame.StepText:SetText(guide and step and ("%d/%d"):format(step.index, #guide.steps) or "")
@@ -511,6 +574,17 @@ local function Arrange()
 	header:ClearAllPoints()
 	body:ClearAllPoints()
 	frame.Resize:ClearAllPoints()
+	frame.Tabs:ClearAllPoints()
+	-- the tabs are kept on screen with the window (a positive top or negative bottom inset grows the clamped area)
+	local tabs = TAB_HEIGHT + TAB_GAP
+	frame:SetClampRectInsets(0, 0, flip and 0 or tabs, flip and -tabs or 0)
+	if flip then
+		frame.Tabs:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -TAB_GAP)
+		frame.Tabs:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, -TAB_GAP)
+	else
+		frame.Tabs:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, TAB_GAP)
+		frame.Tabs:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, TAB_GAP)
+	end
 	if flip then
 		header:SetPoint("BOTTOMLEFT")
 		header:SetPoint("BOTTOMRIGHT")
@@ -680,6 +754,32 @@ local function Build()
 		GameTooltip:Show()
 	end)
 	counter:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+	-- the tabs (Arrange puts them above or below the window; RefreshTabs fills them)
+	frame.Tabs = CreateFrame("Frame", nil, frame)
+	frame.Tabs:SetHeight(TAB_HEIGHT)
+	frame.NewTab = CreateFrame("Button", nil, frame.Tabs)
+	frame.NewTab:SetSize(TAB_HEIGHT, TAB_HEIGHT)
+	local plusBg = frame.NewTab:CreateTexture(nil, "BACKGROUND")
+	plusBg:SetAllPoints()
+	plusBg:SetColorTexture(0, 0, 0, 0.4)
+	local plusHl = frame.NewTab:CreateTexture(nil, "HIGHLIGHT")
+	plusHl:SetAllPoints()
+	plusHl:SetColorTexture(1, 1, 1, 0.08)
+	local plus = frame.NewTab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	plus:SetPoint("CENTER", 0, 1)
+	plus:SetText("+")
+	frame.NewTab:SetScript("OnClick", function()
+		Engine.NewTab()
+		ns.GuidePicker.Open()
+	end)
+	frame.NewTab:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, Flipped() and "ANCHOR_BOTTOM" or "ANCHOR_TOP")
+		GameTooltip:SetText("New tab")
+		GameTooltip:AddLine("Open another guide beside this one", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	frame.NewTab:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
 	-- body: the step lines
 	frame.Body = CreateFrame("Frame", nil, frame)

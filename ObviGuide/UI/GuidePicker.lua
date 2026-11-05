@@ -703,12 +703,12 @@ local function StartIndex()
 	frame:SetScript("OnUpdate", Index)
 end
 
---- Opens a guide and closes the picker. From its first step, as the old menu did: the engine moves on past the
---- steps already done.
+--- Opens a guide and closes the picker: in the tab that has it already, or else in the tab shown, from its first
+--- step (the engine moves on past the steps already done).
 ---@param g ObviGuideGuide
 local function Load(g)
 	if frame then frame:Hide() end
-	ns.Engine.Load(g.name or g.title, 1)
+	ns.Engine.Open(g.name or g.title)
 end
 
 ---@param self ObviGuidePickerButton

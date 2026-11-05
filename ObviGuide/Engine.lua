@@ -256,9 +256,27 @@ function Engine.Current()
 	return guide, guide and not ended and guide.steps[index] or nil
 end
 
+-- Tabs, as Zygor has them: several guides open at once (a leveling guide, a dungeon, a profession), one of them shown.
+-- Each tab keeps its guide (by name where the guide has one: titles may repeat across groups, Zygor's are the last part
+-- of its path) and the step it was on: charDB.tabs, with charDB.tab the one shown. A tab with no guide yet is empty.
+---@return ObviGuideTab[]
+local function Tabs()
+	local db = ns.charDB
+	if not db then return {} end
+	if not db.tabs then
+		-- from before tabs: the one guide followed becomes the first tab
+		db.tabs = { { guide = db.guide, step = db.step } }
+		db.tab, db.guide, db.step = 1, nil, nil
+	end
+	if #db.tabs == 0 then db.tabs[1] = {} end
+	db.tab = math.max(1, math.min(db.tab or 1, #db.tabs))
+	return db.tabs
+end
+
 local function Changed()
-	-- by name where the guide has one: titles may repeat across groups (Zygor's are the last part of its path)
-	if ns.charDB and guide then ns.charDB.guide, ns.charDB.step = guide.name or guide.title, index end
+	local tab = Tabs()[ns.charDB and ns.charDB.tab or 1]
+	-- (a tab whose guide isn't here, its pack not loaded, keeps it)
+	if tab and guide then tab.guide, tab.step = guide.name or guide.title, index end
 	local _, step = Engine.Current()
 	ns.Travel.Show(step)
 	ns:Fire("OBVIGUIDE_STEP")
@@ -339,6 +357,73 @@ function Engine.Load(title, step)
 	ns:Fire("OBVIGUIDE_LOADED", g)   -- (the guide picker's "Recent")
 	Changed()
 	Engine.Advance()
+end
+
+--- The open tabs, and which one is shown.
+---@return ObviGuideTab[] tabs, integer shown
+function Engine.Tabs()
+	local tabs = Tabs()
+	return tabs, ns.charDB and ns.charDB.tab or 1
+end
+
+-- shows what the shown tab holds: its guide at its step, or nothing (an empty tab)
+local function ShowTab()
+	local tab = Tabs()[ns.charDB.tab]
+	local g = tab and tab.guide and ns.FindGuide(tab.guide)
+	if g then
+		guide, index = g, math.max(1, math.min(tab.step or 1, #g.steps))
+	else
+		guide, index = nil, 1
+	end
+	paused, ended = false, false
+	Changed()
+	Engine.Advance()
+	ns:Fire("OBVIGUIDE_UPDATE")
+end
+
+--- Shows another tab.
+---@param i integer
+function Engine.SwitchTab(i)
+	if not ns.charDB or not Tabs()[i] or i == ns.charDB.tab then return end
+	ns.charDB.tab = i
+	ShowTab()
+end
+
+--- Opens a new, empty tab and shows it (a guide picked from the list then goes in it).
+function Engine.NewTab()
+	if not ns.charDB then return end
+	local tabs = Tabs()
+	table.insert(tabs, {})
+	ns.charDB.tab = #tabs
+	ShowTab()
+end
+
+--- Closes a tab (the last one left is emptied instead).
+---@param i integer
+function Engine.CloseTab(i)
+	if not ns.charDB then return end
+	local tabs = Tabs()
+	if not tabs[i] then return end
+	table.remove(tabs, i)
+	if #tabs == 0 then tabs[1] = {} end
+	local shown = ns.charDB.tab
+	if i < shown or shown > #tabs then shown = shown - 1 end
+	ns.charDB.tab = math.max(1, shown)
+	ShowTab()
+end
+
+--- Opens a guide picked from the list: switches to the tab that has it already, or else opens it in the tab shown,
+--- from its first step (the engine moves on past the steps already done).
+---@param title string
+function Engine.Open(title)
+	local g = ns.FindGuide(title)
+	for i, tab in ipairs(Tabs()) do
+		if g and tab.guide and ns.FindGuide(tab.guide) == g then
+			if i == ns.charDB.tab then Engine.Load(title, 1) else Engine.SwitchTab(i) end
+			return
+		end
+	end
+	Engine.Load(title, 1)
 end
 
 --- One step by hand (the window's arrows, the keybinds): the next or previous step meant for this character (its
@@ -506,9 +591,9 @@ end)
 -- that hands over guides only after another addon has loaded its own)
 local inWorld = false
 local function Restore()
-	if guide or not inWorld then return end
-	local saved = ns.charDB and ns.charDB.guide
-	if saved and ns.FindGuide(saved) then Engine.Load(saved, ns.charDB.step) end
+	if guide or not inWorld or not ns.charDB then return end
+	local tab = Tabs()[ns.charDB.tab]
+	if tab and tab.guide and ns.FindGuide(tab.guide) then Engine.Load(tab.guide, tab.step) end
 end
 ns:On("PLAYER_ENTERING_WORLD", function() inWorld = true Restore() end)
 ns:On("OBVIGUIDE_GUIDES_ADDED", Restore)

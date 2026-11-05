@@ -44,9 +44,15 @@ local ADDON, ns = ...
 ---@field autoAccept? boolean     accept the guide's quests when talking to the NPC (nil: on)
 ---@field autoTurnin? boolean     turn in the guide's quests, no choice of rewards (nil: on)
 
+---@class ObviGuideTab
+---@field guide? string          the guide in this tab (name, or title); none: an empty tab
+---@field step? integer          the step it is on
+
 ---@class ObviGuideCharDB
----@field guide? string          the title of the guide this character follows
----@field step? integer          the step it was on
+---@field tabs? ObviGuideTab[]   the guides open in tabs
+---@field tab? integer           the tab shown
+---@field guide? string          (before tabs) the guide this character followed
+---@field step? integer          (before tabs) the step it was on
 ---@field marks? table<string, table<string, boolean>>  [guide title]["step:goal"] = ticked off / reached
 ---@field recent? string[]       the guides opened last, newest first (name, or title), for the guide picker
 
