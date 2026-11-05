@@ -15,10 +15,26 @@ local OWNER = "ObviGuide"   -- Shortest Path keeps one journey per owner
 local ourPin               -- the user waypoint we set, so we never clear someone else's
 local ourTomTom            -- the TomTom waypoint we set (its uid)
 
+-- Whether the journey Shortest Path guides is ours. Its own route bookkeeping can't say: it ends our route whenever the
+-- journey's point is swapped (a replan to the same place, an arrival held) while it keeps guiding there, and our journey
+-- would then look like one the player planned. So we listen: a journey that starts or moves somewhere while our route is
+-- gone is the player's; one that ends is no one's.
+local ourJourney = false
+local listening = false
+local afterCombat = false   -- a journey to plan once combat is over
+
 -- Shortest Path Forever's public API (an optional dependency, so looked up at run time)
 local function SPF()
 	local spf = _G["ShortestPathForever"] ---@type {API: table}?
-	return spf and spf.API
+	local api = spf and spf.API
+	if api and not listening and type(api.Subscribe) == "function" then
+		listening = true
+		api.Subscribe(function(changes)
+			if changes.ended then ourJourney = false end
+			if (changes.started or changes.changed) and api.CurrentStop(OWNER) == nil then ourJourney = false end
+		end)
+	end
+	return api
 end
 
 ---@class ObviGuideTomTom
@@ -111,9 +127,11 @@ local function Place(p, title, step)
 		ns.Arrow.Set(p, title)
 	elseif kind == "spf" then
 		local api = SPF() --[[@as table]]
-		if not p then api.Cancel(OWNER) return end
-		if step and api.Active() and api.CurrentStop(OWNER) == nil then return end
-		api.NavigateRoute(OWNER, { { map = p.map, x = p.x, y = p.y, title = Plain(title), hold = true, radius = p.radius } })
+		if not p then api.Cancel(OWNER) ourJourney = false return end
+		if step and api.Active() and not ourJourney then return end   -- the player's own journey: left alone
+		-- Shortest Path plans no journey in combat (a step often moves on there, as the mob dies): again after it
+		if InCombatLockdown() then afterCombat = true return end
+		ourJourney = api.NavigateRoute(OWNER, { { map = p.map, x = p.x, y = p.y, title = Plain(title), hold = true, radius = p.radius } }) ~= false
 	elseif kind == "tomtom" then
 		ClearTomTom()
 		if not p then return end
@@ -150,7 +168,13 @@ function Travel.Show(step)
 	Place(dest, title, true)
 end
 
---- Shows the current step's waypoint again (after the setting changed).
+--- Shows the current step's waypoint again (after the setting changed, or after combat).
 function Travel.Refresh()
 	Travel.Show(select(2, ns.Engine.Current()))
 end
+
+ns:On("PLAYER_REGEN_ENABLED", function()
+	if not afterCombat then return end
+	afterCombat = false
+	Travel.Refresh()
+end)
