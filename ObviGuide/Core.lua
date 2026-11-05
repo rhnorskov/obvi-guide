@@ -54,6 +54,7 @@ local ADDON, ns = ...
 ---@field guide? string          (before tabs) the guide this character followed
 ---@field step? integer          (before tabs) the step it was on
 ---@field marks? table<string, table<string, boolean>>  [guide title]["step:goal"] = ticked off / reached
+---@field flights? table<string, boolean>   flight points seen known (lower-case names; flight maps opened, paths learned)
 ---@field recent? string[]       the guides opened last, newest first (name, or title), for the guide picker
 
 ---@class ObviGuideParser

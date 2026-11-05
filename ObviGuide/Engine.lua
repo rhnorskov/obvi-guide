@@ -33,68 +33,117 @@ end
 
 -- Flight paths, as Zygor's LibTaxi does it: the game lists a continent's flight points with whether each is still
 -- undiscovered (C_TaxiMap.GetTaxiNodesForMap, slow, so a map is read once and kept), and it's read again when a
--- new flight path is learned or a flight map opens.
-local discovered = {} ---@type table<integer, table<string, boolean>>   map -> lower-case name -> discovered
+-- new flight path is learned or a flight map opens. On WoW Forever that list calls every flight point discovered
+-- (seen: Lakeshire, not yet flown to, "undiscovered false" on Redridge's, Eastern Kingdoms' and Azeroth's maps), so a
+-- list is believed only when it marks at least one flight point undiscovered. Otherwise the flight points this
+-- character was seen to know count: the ones a flight master's map offered (charDB.flights), and the ones learned.
+local discovered = {} ---@type table<integer, {names: table<string, boolean>, trusted: boolean}>
 
---- The flight points a map's flight map lists (read once, kept until a flight path is learned): name -> discovered.
+--- "Tokka's Landing, Zul'Aman" -> "tokka's landing" (as Zygor trims them)
+---@param name string
+local function FlightName(name) return (name:gsub(", .*", "")):lower() end
+
+--- The flight points a map's flight map lists (read once, kept until a flight path is learned): name -> discovered,
+--- and whether the list can be believed (it marks some flight point undiscovered).
 ---@param map integer
----@return table<string, boolean>
 local function Discovered(map)
-	local names = discovered[map]
-	if names then return names end
-	names = {}
+	local list = discovered[map]
+	if list then return list end
+	list = { names = {}, trusted = false }
 	local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, map)
 	for _, node in ipairs(ok and nodes or {}) do
-		-- "Tokka's Landing, Zul'Aman" -> "tokka's landing" (as Zygor trims them)
 		if node.name then
-			local name = (node.name:gsub(", .*", "")):lower()
-			names[name] = (names[name] or false) or not node.isUndiscovered
+			local name = FlightName(node.name)
+			list.names[name] = (list.names[name] or false) or not node.isUndiscovered
+			if node.isUndiscovered then list.trusted = true end
 		end
 	end
-	discovered[map] = names
-	return names
+	discovered[map] = list
+	return list
+end
+
+--- The flight points this character was seen to know.
+---@return table<string, boolean>
+local function Seen()
+	if not ns.charDB then return {} end
+	ns.charDB.flights = ns.charDB.flights or {}
+	return ns.charDB.flights
 end
 
 --- Whether a "get the flight path" line's flight point is discovered (by name). The flight points are asked for on
 --- the line's (or step's) map and every map above it, as some zones (underground ones) hang off the tree oddly and
---- their continent's flight map doesn't list them. A zone's own list can call a flight point discovered that isn't
---- (seen with Lakeshire on Redridge's map, while Eastern Kingdoms' listed it undiscovered), so a map that lists it
---- undiscovered wins.
+--- their continent's flight map doesn't list them; a believable list that has it decides (one listing it
+--- undiscovered wins). Without one, the flight points seen known decide.
 ---@param goal ObviGuideGoal
 ---@param step ObviGuideStep
 ---@return boolean
 local function FlightKnown(goal, step)
+	if not goal.flight then return false end
+	local want = FlightName(goal.flight)
+	local function Match(name) return name == want or name:find(want, 1, true) ~= nil end
 	local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
-	if not (map and goal.flight and C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap) then return false end
-	local want = goal.flight:gsub(", .*", ""):lower()
-	local info, seen, known = C_Map.GetMapInfo(map), 0, false
-	while info and seen < 8 do
-		for name, found in pairs(Discovered(info.mapID)) do
-			if name == want or name:find(want, 1, true) then
-				if not found then return false end
-				known = true
+	if map and C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap then
+		local info, seen, known = C_Map.GetMapInfo(map), 0, nil
+		while info and seen < 8 do
+			local list = Discovered(info.mapID)
+			if list.trusted then
+				for name, found in pairs(list.names) do
+					if Match(name) then
+						if not found then return false end
+						known = true
+					end
+				end
 			end
+			if (info.parentMapID or 0) == 0 then break end
+			info, seen = C_Map.GetMapInfo(info.parentMapID), seen + 1
 		end
-		if (info.parentMapID or 0) == 0 then break end
-		info, seen = C_Map.GetMapInfo(info.parentMapID), seen + 1
+		if known then return true end
 	end
-	return known
+	for name in pairs(Seen()) do if Match(name) then return true end end
+	return false
+end
+
+-- an open flight map: the flight points it offers are known (on this client the map lists only those; where it lists
+-- the rest too, they are unreachable)
+local function RememberFlights()
+	local seen = Seen()
+	local mapID = _G["GetTaxiMapID"] and _G["GetTaxiMapID"]()
+	local ok, nodes = false, nil
+	if mapID and C_TaxiMap.GetAllTaxiNodes then ok, nodes = pcall(C_TaxiMap.GetAllTaxiNodes, mapID) end
+	local unreachable = Enum.FlightPathState and Enum.FlightPathState.Unreachable
+	for _, node in ipairs(ok and nodes or {}) do
+		local state = (node --[[@as table]]).state
+		if node.name and state ~= unreachable then seen[FlightName(node.name)] = true end
+	end
+	local count = _G["NumTaxiNodes"] and _G["NumTaxiNodes"]() or 0
+	for i = 1, count do
+		local kind, name = _G["TaxiNodeGetType"](i), _G["TaxiNodeName"](i)
+		if name and (kind == "REACHABLE" or kind == "CURRENT") then seen[FlightName(name)] = true end
+	end
 end
 
 ns:On("UI_INFO_MESSAGE", function(_, _, message)
 	if message ~= _G["ERR_NEWTAXIPATH"] then return end
 	wipe(discovered)
-	-- learned just now: the current step's flight lines count as done, whatever the flight map lists
+	-- learned just now: the current step's flight lines count as done, whatever the flight map lists, and their flight
+	-- points are remembered as known (Zygor notes the flight master's node the same way)
 	local _, step = Engine.Current()
 	if step then
 		for _, g in ipairs(step.goals) do
 			local key = g.flight and MarkKey(step, g)
-			if key then Marks()[key] = true end
+			if key then
+				Marks()[key] = true
+				Seen()[FlightName(g.flight)] = true
+			end
 		end
 	end
 	Engine.Update()
 end)
-ns:On("TAXIMAP_OPENED", function() wipe(discovered) Engine.Update() end)
+ns:On("TAXIMAP_OPENED", function()
+	wipe(discovered)
+	RememberFlights()
+	Engine.Update()
+end)
 
 --- Lower-case words only: "Arrive at |cff..Talonstrike Terrace|r (0/1)" -> "arrive at talonstrike terrace".
 ---@param s string?
@@ -624,6 +673,9 @@ function Engine.DebugStep()
 		if goal.flight then
 			local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
 			out[#out + 1] = ("  flight %q, map %s"):format(goal.flight, tostring(map))
+			local saved = {}
+			for name in pairs(Seen()) do saved[#saved + 1] = name end
+			out[#out + 1] = "  seen known: " .. (#saved > 0 and table.concat(saved, ", ") or "none")
 			local want = goal.flight:gsub(", .*", ""):lower()
 			local info, seen = map and C_Map.GetMapInfo(map), 0
 			while info and seen < 8 do
