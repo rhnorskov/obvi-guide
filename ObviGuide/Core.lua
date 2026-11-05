@@ -118,6 +118,7 @@ local ADDON, ns = ...
 ---@field orCount? integer       step counts them all as done (default 1)
 ---@field finishes? boolean      once this line is done, so is the step (Zygor's confirm lines)
 ---@field with? ObviGuideGoal[]   done once these are (a sticky's "kill wolves" with its "collect 8 meat")
+---@field closes? "trainer"|"vendor"   done once its target's trainer or merchant window is closed again
 ---@field quest? integer
 ---@field objective? integer
 ---@field id? integer            npc, item or spell id, by kind

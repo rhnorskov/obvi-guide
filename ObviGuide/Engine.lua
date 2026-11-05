@@ -464,6 +464,32 @@ for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_TURNED_IN"
 	ns:On(event, function() Engine.Update() end)
 end
 
+-- a "train at"/"sell to" line (goal.closes) is done once that NPC's trainer or merchant window is closed again, as Zygor
+-- does: the NPC is noted when the window opens (its creature id, from the GUID's 6th field)
+local openedBy = {} ---@type table<string, integer|false>   window kind -> the NPC who opened it
+local function Opened(kind)
+	local guid = UnitGUID("npc")
+	local id = guid and not (issecretvalue and issecretvalue(guid)) and tonumber((select(6, strsplit("-", guid))))
+	openedBy[kind] = id or false
+end
+local function Closed(kind)
+	local who = openedBy[kind]
+	openedBy[kind] = nil
+	if who == nil then return end
+	local _, step = Engine.Current()
+	if not step then return end
+	for _, g in ipairs(step.goals) do
+		if g.closes == kind and Engine.IsVisible(g) and (not (g.target and g.target.id) or g.target.id == who) then
+			Marks()[MarkKey(step, g)] = true
+		end
+	end
+	Engine.Update()
+end
+ns:On("TRAINER_SHOW", function() Opened("trainer") end)
+ns:On("TRAINER_CLOSED", function() Closed("trainer") end)
+ns:On("MERCHANT_SHOW", function() Opened("vendor") end)
+ns:On("MERCHANT_CLOSED", function() Closed("vendor") end)
+
 -- a hearth goal is done once the player casts a hearth (the Hearthstone's spell, or Astral Recall; as RestedXP checks)
 local HEARTH_SPELLS = { [8690] = true, [556] = true }
 ns:On("UNIT_SPELLCAST_SUCCEEDED", function(_, unit, _, spellID)

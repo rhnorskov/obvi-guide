@@ -785,6 +785,8 @@ local function MakeGoal(rec, step, ctx)
 	elseif a == "vendor" or a == "trainer" or a == "stablemaster" then
 		local verbs = { vendor = "Sell items to ", trainer = "Train at ", stablemaster = "Visit " }
 		goal = { kind = "confirm", text = text or (verbs[a] .. Named(name, "FRIENDLY")), target = { name = name, id = id } }
+		-- as in Zygor: done once that NPC's trainer (or merchant) window is closed again
+		if a ~= "stablemaster" then goal.closes = a end
 	elseif done then
 		-- "Enter the cave |complete subzone(...)", "|havebuff ...", "|unequipped ...": done once the condition holds
 		-- (and can still be ticked off by hand). A line without text counts only as one of several (|or) or to jump.
