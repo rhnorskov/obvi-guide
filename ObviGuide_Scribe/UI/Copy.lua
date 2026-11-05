@@ -10,6 +10,8 @@ local function Build()
 	-- the game's standard panel, without the portrait
 	local f = CreateFrame("Frame", "ObviScribeCopyFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
 	_G["ButtonFrameTemplate_HidePortrait"](f)
+	-- the template's close button hides through HideUIPanel, which does nothing in combat; hide it ourselves (as Esc does)
+	f["CloseButton"]:SetScript("OnClick", function() f:Hide() end)
 	f:SetSize(600, 460)
 	f:SetPoint("CENTER")
 	f:SetFrameStrata("DIALOG")

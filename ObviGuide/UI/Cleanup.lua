@@ -181,6 +181,8 @@ local function Build()
 	-- the game's standard panel (Forever's own frame art), without the portrait, like the copy window
 	local f = CreateFrame("Frame", "ObviGuideCleanupFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
 	_G["ButtonFrameTemplate_HidePortrait"](f)
+	-- the template's close button hides through HideUIPanel, which does nothing in combat; hide it ourselves (as Esc does)
+	f["CloseButton"]:SetScript("OnClick", function() f:Hide() end)
 	if f["SetTitle"] then f["SetTitle"](f, "Quest Cleanup") end
 	f:SetSize(380, 440)
 	f:SetPoint("CENTER")

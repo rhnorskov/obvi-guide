@@ -180,6 +180,8 @@ local HELPERS = {
 local function Build()
 	frame = CreateFrame("Frame", "ObviScribeFormFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
 	_G["ButtonFrameTemplate_HidePortrait"](frame)
+	-- the template's close button hides through HideUIPanel, which does nothing in combat; hide it ourselves (as Esc does)
+	frame["CloseButton"]:SetScript("OnClick", function() frame:Hide() end)
 	frame:SetWidth(WIDTH)
 	frame:SetPoint("CENTER", 0, 80)
 	frame:SetFrameStrata("DIALOG")

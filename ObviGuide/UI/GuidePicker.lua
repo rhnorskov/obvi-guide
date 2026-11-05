@@ -985,6 +985,8 @@ local function Build()
 	-- the game's standard panel, without the portrait, like the copy and cleanup windows
 	local f = CreateFrame("Frame", "ObviGuidePickerFrame", UIParent, "ButtonFrameTemplate") --[[@as Frame]]
 	_G["ButtonFrameTemplate_HidePortrait"](f)
+	-- the template's close button hides through HideUIPanel, which does nothing in combat; hide it ourselves (as Esc does)
+	f["CloseButton"]:SetScript("OnClick", function() f:Hide() end)
 	if f["SetTitle"] then f["SetTitle"](f, "Guides") end
 	-- the size and place it had last
 	local saved = ns.db and ns.db.picker
