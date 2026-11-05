@@ -758,6 +758,13 @@ local function MakeGoal(rec, step, ctx)
 		local lvl, xp = p:match("^(%d+),?(%d*)")
 		if not lvl then return nil end
 		goal = { kind = "level", level = tonumber(lvl), xp = tonumber(xp), text = text or ("Reach level " .. lvl) }
+	elseif a == "skill" or a == "skillmax" then
+		-- "|skill Mining,50": the skill reached; "|skillmax Mining,75": trained up to that cap (Apprentice is 75)
+		local prof, n = p:match("^%s*([^,]-)%s*,%s*(%d+)")
+		if not prof or prof == "" then return nil end
+		n = tonumber(n)
+		goal = { kind = "skill", skill = prof, level = a == "skill" and n or nil, cap = a == "skillmax" and n or nil,
+			text = text or (a == "skill" and ("Reach %s %d"):format(prof, n) or ("Train %s up to %d"):format(prof, n)) }
 	elseif a == "home" then
 		-- the engine compares the place after "to" with the game's bind location
 		goal = { kind = "home", text = "Set your Hearthstone to " .. p }
