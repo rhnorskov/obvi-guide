@@ -12,7 +12,6 @@ local Window = {}
 ns.Window = Window
 
 local HEADER = 32
-local TAB_HEIGHT, TAB_MAX, TAB_GAP, PLUS_WIDTH = 22, 150, 2, 24   -- the guide tabs, under the header
 local MIN_WIDTH, MAX_WIDTH, DEFAULT_WIDTH = 220, 600, 300
 -- background opacity: the damage meter's default (Edit Mode "Background" 50%), which stays the same on hover
 local BG_ALPHA, BG_ALPHA_HOVER = 0.5, 0.5
@@ -37,9 +36,6 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field SideHeader Frame
 ---@field Continue Button|{text: FontString}   the guide end's "Continue with ..." button
 ---@field Resize Button
----@field Tabs Frame       the row of tabs, outside the header
----@field NewTab ObviGuideTabButton   its "+"
----@field TabLine Texture   the line between the tabs and the lines
 ---@field collapsed boolean
 local frame
 
@@ -402,110 +398,13 @@ local function EndPad() return (ns.db and ns.db.flip) and (NEAR - LINE_GAP) or F
 local function Finish(y)
 	for k = used + 1, #lines do lines[k]:Hide() end
 	for k = sepUsed + 1, #separators do separators[k]:Hide() end
-	frame:SetHeight(HEADER + TAB_HEIGHT + TAB_GAP + y + EndPad())
+	frame:SetHeight(HEADER + y + EndPad())
 	SyncClicks()
-end
-
--- The tabs: a row of tabs inside the window, between the header and the lines, one per guide open, and a "+" for a
--- new one. Click one to show it, right-click to close it. They are kept quiet, in the window's own style: plain text,
--- the tab shown in gold with a gold mark under it, and a thin gold line (as the side tasks have) between them and the
--- lines. (The game's framed tabs, and tabs cut from the header bar, were tried: too heavy next to the flat header.)
-
----@class ObviGuideTabButton : Button
----@field text FontString
----@field bg Texture
----@field i integer
----@field selected boolean
-local tabButtons = {} ---@type ObviGuideTabButton[]
-
-local function OnTop() return not (ns.db and ns.db.flip) end
-
----@param b ObviGuideTabButton
-local function PaintTab(b)
-	local on = b.selected
-	-- the mark under the tab shown sits on the lines' side (below the tabs, or above them with the header at the bottom)
-	b.bg:ClearAllPoints()
-	b.bg:SetPoint(OnTop() and "BOTTOMLEFT" or "TOPLEFT", 4, 0)
-	b.bg:SetPoint(OnTop() and "BOTTOMRIGHT" or "TOPRIGHT", -4, 0)
-	b.bg:SetShown(on)
-	if on then b.text:SetTextColor(1, 0.82, 0) else b.text:SetTextColor(0.6, 0.6, 0.6) end
-end
-
----@param tip fun(self: ObviGuideTabButton)
----@param click fun(self: ObviGuideTabButton, button: string)
----@return ObviGuideTabButton
-local function NewTabButton(tip, click)
-	local b = CreateFrame("Button", nil, frame.Tabs) --[[@as ObviGuideTabButton]]
-	b:SetHeight(TAB_HEIGHT)
-	b.bg = b:CreateTexture(nil, "ARTWORK")   -- the gold mark under the tab shown (PaintTab places it)
-	b.bg:SetColorTexture(1, 0.82, 0, 0.8)
-	b.bg:SetHeight(2)
-	local hl = b:CreateTexture(nil, "HIGHLIGHT")
-	hl:SetAllPoints()
-	hl:SetColorTexture(1, 1, 1, 0.05)
-	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	b.text:SetPoint("LEFT", 8, 0)
-	b.text:SetPoint("RIGHT", -8, 0)
-	b.text:SetWordWrap(false)
-	b.selected = false
-	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	b:SetScript("OnClick", click)
-	b:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, OnTop() and "ANCHOR_TOP" or "ANCHOR_BOTTOM")
-		tip(self)
-		GameTooltip:Show()
-	end)
-	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	PaintTab(b)
-	return b
-end
-
----@param i integer
-local function TabButton(i)
-	local b = tabButtons[i]
-	if b then return b end
-	b = NewTabButton(function(self)
-		GameTooltip:SetText(self.text:GetText() or "")
-		GameTooltip:AddLine("Right-click: close the tab", 1, 1, 1)
-	end, function(self, button)
-		if button == "RightButton" then Engine.CloseTab(self.i) else Engine.SwitchTab(self.i) end
-	end)
-	tabButtons[i] = b
-	return b
-end
-
-local function RefreshTabs()
-	local tabs, shown = Engine.Tabs()
-	local n = #tabs
-	local room = Width() - 8 - (PLUS_WIDTH + TAB_GAP) - (n - 1) * TAB_GAP
-	local w = math.min(TAB_MAX, math.floor(room / math.max(n, 1)))
-	local x = 0
-	for i, tab in ipairs(tabs) do
-		local b = TabButton(i)
-		b.i = i
-		local g = tab.guide and ns.FindGuide(tab.guide)
-		b.text:SetText(g and g.title or tab.guide or "New tab")
-		b.selected = i == shown
-		PaintTab(b)
-		b:SetWidth(w)
-		b:ClearAllPoints()
-		b:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
-		b:Show()
-		x = x + w + TAB_GAP
-	end
-	for i = n + 1, #tabButtons do tabButtons[i]:Hide() end
-	PaintTab(frame.NewTab)
-	frame.TabLine:ClearAllPoints()
-	frame.TabLine:SetPoint(OnTop() and "BOTTOMLEFT" or "TOPLEFT", 5, 0)
-	frame.TabLine:SetPoint(OnTop() and "BOTTOMRIGHT" or "TOPRIGHT", -4, 0)
-	frame.NewTab:ClearAllPoints()
-	frame.NewTab:SetPoint("LEFT", frame.Tabs, "LEFT", x, 0)
 end
 
 --- Lays the window out for the current step. Works in combat too: only the click buttons wait for the fight to end.
 function Window.Refresh()
 	if not frame or not frame:IsShown() then return end
-	RefreshTabs()
 	local guide, step = Engine.Current()
 	frame.Title:SetText(guide and guide.title or "Obvi Guide")
 	frame.StepText:SetText(guide and step and ("%d/%d"):format(step.index, #guide.steps) or "")
@@ -513,14 +412,12 @@ function Window.Refresh()
 	frame.SideHeader:Hide()
 	if frame.collapsed then
 		frame.Body:Hide()
-		frame.Tabs:Hide()
 		for k = 1, #lines do lines[k]:Hide() end
 		frame:SetHeight(HEADER)
 		SyncClicks()
 		return
 	end
 	frame.Body:Show()
-	frame.Tabs:Show()
 	-- the guide's end: a line saying so, and a button on to the guide that follows (when we have it)
 	local ended, nextTitle = Engine.Ended()
 	frame.Continue:Hide()
@@ -614,23 +511,16 @@ local function Arrange()
 	header:ClearAllPoints()
 	body:ClearAllPoints()
 	frame.Resize:ClearAllPoints()
-	frame.Tabs:ClearAllPoints()
-	-- the tabs: inside the window, next to the header, between it and the lines
-	local row = TAB_HEIGHT + TAB_GAP
 	if flip then
 		header:SetPoint("BOTTOMLEFT")
 		header:SetPoint("BOTTOMRIGHT")
-		frame.Tabs:SetPoint("BOTTOMLEFT", 4, HEADER + TAB_GAP)
-		frame.Tabs:SetPoint("BOTTOMRIGHT", -4, HEADER + TAB_GAP)
 		body:SetPoint("TOPLEFT")
-		body:SetPoint("BOTTOMRIGHT", 0, HEADER + row)
+		body:SetPoint("BOTTOMRIGHT", 0, HEADER)
 		frame.Resize:SetPoint("TOPRIGHT", 6, 6)
 	else
 		header:SetPoint("TOPLEFT")
 		header:SetPoint("TOPRIGHT")
-		frame.Tabs:SetPoint("TOPLEFT", 4, -HEADER - TAB_GAP)
-		frame.Tabs:SetPoint("TOPRIGHT", -4, -HEADER - TAB_GAP)
-		body:SetPoint("TOPLEFT", 0, -HEADER - row)
+		body:SetPoint("TOPLEFT", 0, -HEADER)
 		body:SetPoint("BOTTOMRIGHT")
 		frame.Resize:SetPoint("BOTTOMRIGHT", 6, -6)
 	end
@@ -648,6 +538,46 @@ local function SetupSettingsMenu(_, root)
 	root:CreateDivider()
 	root:CreateButton("Quest Cleanup", function() ns.Cleanup() end)
 	root:CreateButton("Hide (/og shows it again)", function() frame:Hide() end)
+end
+
+-- The title's menu, as the damage meter's title switches what it shows: the active guides (several can be open, each
+-- where it was left: a leveling guide, a dungeon, a profession), one to switch to, each with a close button on hover
+-- (as Edit Mode's layouts have theirs); and "Add guide..." to open one more from the guide picker (UI\GuidePicker.lua).
+local MenuTemplates = _G["MenuTemplates"] ---@type table?
+local MenuVariants = _G["MenuVariants"] ---@type table?
+
+local function GuidesMenu(_, root)
+	local tabs, shown = Engine.Tabs()
+	root:CreateTitle("Active guides")
+	for i, tab in ipairs(tabs) do
+		if tab.guide then
+			local g = ns.FindGuide(tab.guide)
+			local radio = root:CreateRadio(g and g.title or tab.guide, function() return i == shown end,
+				function() Engine.SwitchTab(i) end)
+			if MenuTemplates and MenuTemplates.AttachAutoHideCancelButton and MenuVariants then
+				radio:AddInitializer(function(button, _, menu)
+					local close = MenuTemplates.AttachAutoHideCancelButton(button)
+					MenuTemplates.SetUtilityButtonTooltipText(close, "Close this guide")
+					MenuTemplates.SetUtilityButtonAnchor(close, MenuVariants.GearButtonAnchor, button)
+					MenuTemplates.SetUtilityButtonClickHandler(close, function()
+						Engine.CloseTab(i)
+						menu:Close()
+					end)
+				end)
+			end
+		end
+	end
+	root:CreateDivider()
+	root:CreateButton("Add guide...", function() ns.GuidePicker.Open(true) end)
+	if not (MenuTemplates and MenuTemplates.AttachAutoHideCancelButton) then   -- (no close buttons on this client)
+		root:CreateButton("Close this guide", function() Engine.CloseTab(shown) end)
+	end
+end
+
+--- The title clicked: the guides menu, or straight to the guide picker while no guide is open.
+---@param owner Frame
+local function TitleClick(owner)
+	if Engine.Current() then MenuUtil.CreateContextMenu(owner, GuidesMenu) else ns.GuidePicker.Open() end
 end
 
 local function Build()
@@ -683,7 +613,7 @@ local function Build()
 	bar:SetAllPoints()
 
 	-- the title looks like a dropdown with an arrow, like "Damage Done"; the arrow is only art (it gets no menu and no
-	-- mouse): clicking it or the title text opens the guide picker (UI\GuidePicker.lua)
+	-- mouse): clicking it or the title text opens the guides menu (GuidesMenu)
 	local picker = CreateFrame("DropdownButton", nil, header, "WowStyle1ArrowDropdownTemplate")
 	picker.hasShadow = false
 	picker:SetPoint("TOPLEFT", 1, -3)   -- header offsets copied from the damage meter (Blizzard_DamageMeter)
@@ -692,11 +622,11 @@ local function Build()
 	frame.Title:SetPoint("LEFT", picker.Arrow or picker, "RIGHT", 0, 3)
 	frame.Title:SetJustifyH("LEFT")
 	frame.Title:SetWordWrap(false)
-	-- plain buttons over the arrow and the title: a click opens the picker, a drag moves the window
+	-- plain buttons over the arrow and the title: a click opens the guides menu, a drag moves the window
 	for _, region in ipairs({ picker --[[@as Frame]], frame.Title }) do
 		local b = CreateFrame("Button", nil, header)
 		b:SetAllPoints(region)
-		b:SetScript("OnClick", function() ns.GuidePicker.Toggle() end)
+		b:SetScript("OnClick", TitleClick)
 		b:RegisterForDrag("LeftButton")
 		b:SetScript("OnDragStart", function() HideClicks() frame:StartMoving() end)
 		b:SetScript("OnDragStop", function() frame:StopMovingOrSizing() SavePosition() SyncClicks() end)
@@ -790,22 +720,6 @@ local function Build()
 		GameTooltip:Show()
 	end)
 	counter:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-	-- the tabs (Arrange puts them next to the header, inside the window; RefreshTabs fills them)
-	frame.Tabs = CreateFrame("Frame", nil, frame)
-	frame.Tabs:SetHeight(TAB_HEIGHT)
-	frame.TabLine = frame.Tabs:CreateTexture(nil, "BACKGROUND")   -- the thin gold line on the lines' side (RefreshTabs)
-	frame.TabLine:SetColorTexture(1, 0.82, 0, 0.25)
-	frame.TabLine:SetHeight(1)
-	frame.NewTab = NewTabButton(function()
-		GameTooltip:SetText("New tab")
-		GameTooltip:AddLine("Open another guide beside this one", 1, 1, 1)
-	end, function()
-		Engine.NewTab()
-		ns.GuidePicker.Open()
-	end)
-	frame.NewTab:SetWidth(PLUS_WIDTH)
-	frame.NewTab.text:SetText("+")
 
 	-- body: the step lines
 	frame.Body = CreateFrame("Frame", nil, frame)

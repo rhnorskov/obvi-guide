@@ -256,7 +256,8 @@ function Engine.Current()
 	return guide, guide and not ended and guide.steps[index] or nil
 end
 
--- Tabs, as Zygor has them: several guides open at once (a leveling guide, a dungeon, a profession), one of them shown.
+-- Open guides ("tabs", as Zygor has them; here switched in the window title's menu): several guides open at once (a
+-- leveling guide, a dungeon, a profession), one of them shown.
 -- Each tab keeps its guide (by name where the guide has one: titles may repeat across groups, Zygor's are the last part
 -- of its path) and the step it was on: charDB.tabs, with charDB.tab the one shown. A tab with no guide yet is empty.
 ---@return ObviGuideTab[]
@@ -389,15 +390,6 @@ function Engine.SwitchTab(i)
 	ShowTab()
 end
 
---- Opens a new, empty tab and shows it (a guide picked from the list then goes in it).
-function Engine.NewTab()
-	if not ns.charDB then return end
-	local tabs = Tabs()
-	table.insert(tabs, {})
-	ns.charDB.tab = #tabs
-	ShowTab()
-end
-
 --- Closes a tab (the last one left is emptied instead).
 ---@param i integer
 function Engine.CloseTab(i)
@@ -412,16 +404,23 @@ function Engine.CloseTab(i)
 	ShowTab()
 end
 
---- Opens a guide picked from the list: switches to the tab that has it already, or else opens it in the tab shown,
---- from its first step (the engine moves on past the steps already done).
+--- Opens a guide picked from the list: switches to its tab if it's open already, or else opens it from its first
+--- step (the engine moves on past the steps already done) in a new tab beside the others, or in place of the one
+--- shown (an empty one is always filled).
 ---@param title string
-function Engine.Open(title)
+---@param beside? boolean
+function Engine.Open(title, beside)
 	local g = ns.FindGuide(title)
-	for i, tab in ipairs(Tabs()) do
+	local tabs = Tabs()
+	for i, tab in ipairs(tabs) do
 		if g and tab.guide and ns.FindGuide(tab.guide) == g then
 			if i == ns.charDB.tab then Engine.Load(title, 1) else Engine.SwitchTab(i) end
 			return
 		end
+	end
+	if beside and g and ns.charDB and tabs[ns.charDB.tab].guide then
+		table.insert(tabs, {})
+		ns.charDB.tab = #tabs
 	end
 	Engine.Load(title, 1)
 end

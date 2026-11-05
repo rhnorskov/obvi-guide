@@ -703,12 +703,14 @@ local function StartIndex()
 	frame:SetScript("OnUpdate", Index)
 end
 
---- Opens a guide and closes the picker: in the tab that has it already, or else in the tab shown, from its first
---- step (the engine moves on past the steps already done).
+local besides = false   -- the guide picked goes beside the ones open (Picker.Open(true)), not in place of the one shown
+
+--- Opens a guide and closes the picker: the guide's own if it's open already, or else beside the others or in place
+--- of the one shown, from its first step (the engine moves on past the steps already done).
 ---@param g ObviGuideGuide
 local function Load(g)
 	if frame then frame:Hide() end
-	ns.Engine.Open(g.name or g.title)
+	ns.Engine.Open(g.name or g.title, besides)
 end
 
 ---@param self ObviGuidePickerButton
@@ -1119,7 +1121,9 @@ local function Build()
 end
 
 --- Opens the picker: search cleared and focused, the columns opened down to the current guide's folder.
-function Picker.Open()
+---@param beside? boolean  the guide picked opens beside the ones open (else in place of the one shown)
+function Picker.Open(beside)
+	besides = beside == true
 	if not frame then Build() end
 	---@cast frame Frame
 	Rebuild()
