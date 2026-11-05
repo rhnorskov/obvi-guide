@@ -144,6 +144,10 @@ end
 ---@return boolean
 function Engine.IsComplete(goal, step)
 	if goal.done and Conditions.Eval(goal.done) then return true end
+	if goal.with then
+		for _, w in ipairs(goal.with) do if not Engine.IsComplete(w, step) then return false end end
+		return true
+	end
 	local k = goal.kind
 	if k == "accept" then return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
 	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end

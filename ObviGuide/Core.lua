@@ -117,6 +117,7 @@ local ADDON, ns = ...
 ---@field orGroup? string        lines with the same group are alternatives: once orCount of them are done, the
 ---@field orCount? integer       step counts them all as done (default 1)
 ---@field finishes? boolean      once this line is done, so is the step (Zygor's confirm lines)
+---@field with? ObviGuideGoal[]   done once these are (a sticky's "kill wolves" with its "collect 8 meat")
 ---@field quest? integer
 ---@field objective? integer
 ---@field id? integer            npc, item or spell id, by kind

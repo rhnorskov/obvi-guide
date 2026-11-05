@@ -7,6 +7,8 @@
 -- ("Too late to RegisterGuide"). So the guides are handed over then, or after a minute if Zygor never gets there.
 -- Obvi Guide reads a guide's text only when it is first opened; the text (with Zygor's #include pieces filled in and
 -- the fixes below) is made at that moment.
+-- Zygor's addon is ZygorGuidesViewer on retail and ZygorGuidesViewerForever on Forever (both optional dependencies,
+-- so it loads first); both set the same global. Without either, nothing to do.
 local ZGV = _G["ZygorGuidesViewer"] ---@type table
 if not ZGV then return end
 

@@ -949,14 +949,20 @@ local function Assemble(steps)
 	local copies = {} ---@type table<ObviGuideZygorStep, ObviGuideGoal[]>
 	local function Copies(s)
 		if copies[s] then return copies[s] end
-		local list = {}
+		local list, counted, loose = {}, {}, {}
 		for _, g in ipairs(s.goals) do
 			if g.kind ~= "goto" and g.text ~= "Continue when ready" then
 				local copy = setmetatable({}, { __index = g })
 				copy.cond = Conditions.All(s.cond, g.cond)
 				table.insert(list, copy)
+				-- lines that finish by themselves (a quest's objective, a count of items, a quest to take or hand
+				-- in) and lines that don't ("kill Timber Wolf, Young Wolf": no count, no quest)
+				local finishes = g.quest or g.kind == "accept" or g.kind == "turnin" or (g.kind == "collect" and g.id)
+				table.insert(finishes and counted or loose, copy)
 			end
 		end
+		-- as in Zygor, the box goes once its counted lines are done: the loose lines go with them
+		if #counted > 0 then for _, copy in ipairs(loose) do copy.with = counted end end
 		copies[s] = list
 		return list
 	end
