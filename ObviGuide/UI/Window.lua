@@ -12,6 +12,7 @@ local Window = {}
 ns.Window = Window
 
 local HEADER = 32
+local TAB_HEIGHT, TAB_MAX, TAB_GAP, PLUS_WIDTH = 22, 150, 2, 24   -- the guide tabs, under the header
 local MIN_WIDTH, MAX_WIDTH, DEFAULT_WIDTH = 220, 600, 300
 -- background opacity: the damage meter's default (Edit Mode "Background" 50%), which stays the same on hover
 local BG_ALPHA, BG_ALPHA_HOVER = 0.5, 0.5
@@ -400,7 +401,7 @@ local function EndPad() return (ns.db and ns.db.flip) and (NEAR - LINE_GAP) or F
 local function Finish(y)
 	for k = used + 1, #lines do lines[k]:Hide() end
 	for k = sepUsed + 1, #separators do separators[k]:Hide() end
-	frame:SetHeight(HEADER + y + EndPad())
+	frame:SetHeight(HEADER + TAB_HEIGHT + TAB_GAP + y + EndPad())
 	SyncClicks()
 end
 
@@ -408,7 +409,6 @@ end
 -- one per guide open, and a "+" for a new one. Click one to show it, right-click to close it. They are cut from the
 -- header's own art (the damage meter's header bar), so they look like part of it: the tab shown at full strength,
 -- the others faded. (The game's framed tabs were tried and looked too heavy next to the flat header.)
-local TAB_HEIGHT, TAB_MAX, TAB_GAP, PLUS_WIDTH = 22, 150, 2, 24
 
 ---@class ObviGuideTabButton : Button
 ---@field text FontString
@@ -472,7 +472,7 @@ end
 local function RefreshTabs()
 	local tabs, shown = Engine.Tabs()
 	local n = #tabs
-	local room = Width() - (PLUS_WIDTH + TAB_GAP) - (n - 1) * TAB_GAP
+	local room = Width() - 8 - (PLUS_WIDTH + TAB_GAP) - (n - 1) * TAB_GAP
 	local w = math.min(TAB_MAX, math.floor(room / math.max(n, 1)))
 	local x = 0
 	for i, tab in ipairs(tabs) do
@@ -505,12 +505,14 @@ function Window.Refresh()
 	frame.SideHeader:Hide()
 	if frame.collapsed then
 		frame.Body:Hide()
+		frame.Tabs:Hide()
 		for k = 1, #lines do lines[k]:Hide() end
 		frame:SetHeight(HEADER)
 		SyncClicks()
 		return
 	end
 	frame.Body:Show()
+	frame.Tabs:Show()
 	-- the guide's end: a line saying so, and a button on to the guide that follows (when we have it)
 	local ended, nextTitle = Engine.Ended()
 	frame.Continue:Hide()
@@ -605,26 +607,22 @@ local function Arrange()
 	body:ClearAllPoints()
 	frame.Resize:ClearAllPoints()
 	frame.Tabs:ClearAllPoints()
-	-- the tabs are kept on screen with the window (a positive top or negative bottom inset grows the clamped area)
-	local tabs = TAB_HEIGHT + TAB_GAP
-	frame:SetClampRectInsets(0, 0, flip and 0 or tabs, flip and -tabs or 0)
-	if flip then
-		frame.Tabs:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -TAB_GAP)
-		frame.Tabs:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, -TAB_GAP)
-	else
-		frame.Tabs:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, TAB_GAP)
-		frame.Tabs:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 0, TAB_GAP)
-	end
+	-- the tabs: inside the window, next to the header, between it and the lines
+	local row = TAB_HEIGHT + TAB_GAP
 	if flip then
 		header:SetPoint("BOTTOMLEFT")
 		header:SetPoint("BOTTOMRIGHT")
+		frame.Tabs:SetPoint("BOTTOMLEFT", 4, HEADER + TAB_GAP)
+		frame.Tabs:SetPoint("BOTTOMRIGHT", -4, HEADER + TAB_GAP)
 		body:SetPoint("TOPLEFT")
-		body:SetPoint("BOTTOMRIGHT", 0, HEADER)
+		body:SetPoint("BOTTOMRIGHT", 0, HEADER + row)
 		frame.Resize:SetPoint("TOPRIGHT", 6, 6)
 	else
 		header:SetPoint("TOPLEFT")
 		header:SetPoint("TOPRIGHT")
-		body:SetPoint("TOPLEFT", 0, -HEADER)
+		frame.Tabs:SetPoint("TOPLEFT", 4, -HEADER - TAB_GAP)
+		frame.Tabs:SetPoint("TOPRIGHT", -4, -HEADER - TAB_GAP)
+		body:SetPoint("TOPLEFT", 0, -HEADER - row)
 		body:SetPoint("BOTTOMRIGHT")
 		frame.Resize:SetPoint("BOTTOMRIGHT", 6, -6)
 	end
