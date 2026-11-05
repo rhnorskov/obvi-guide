@@ -15,6 +15,8 @@
 --                                                        number or id, done)
 --   {"skill>=", profession, n}  {"skill<", profession, n}   (a profession's skill, by its English name; a profession
 --                                                        the character hasn't got counts as 0)
+--   {"skillmax>=", profession, n}  {"skillmax<", profession, n}   (its cap, what has been trained: Zygor's skillmax;
+--                                                        over 1 means the character has the profession)
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -151,6 +153,8 @@ local tests = {
 	end,
 	["skill>="] = function(c) return (Conditions.Skill(c[2]) or 0) >= c[3] end,
 	["skill<"] = function(c) return (Conditions.Skill(c[2]) or 0) < c[3] end,
+	["skillmax>="] = function(c) return (select(2, Conditions.Skill(c[2])) or 0) >= c[3] end,
+	["skillmax<"] = function(c) return (select(2, Conditions.Skill(c[2])) or 0) < c[3] end,
 	equipped = function(c) return C_Item.IsEquippedItem(c[2]) == true end,
 	money = function(c) return GetMoney() >= c[2] end,
 	rep = function(c)
