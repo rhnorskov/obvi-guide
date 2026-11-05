@@ -606,3 +606,41 @@ ns:On("PLAYER_ENTERING_WORLD", function() inWorld = true Restore() end)
 ns:On("OBVIGUIDE_GUIDES_ADDED", Restore)
 
 C_Timer.NewTicker(0.5, CheckArrival)
+
+--- What the engine makes of the current step, line by line, for /og step: each line's kind, whether it's visible and
+--- done, its manual tick, and for a flight path line what every map asked lists for it (fresh from the game).
+---@return string
+function Engine.DebugStep()
+	local g, step = Engine.Current()
+	if not (g and step) then return "no step" end
+	local out = { ("%s, step %d"):format(g.title, step.index) }
+	local applies, done = Engine.StepState(step)
+	out[#out + 1] = ("applies %s, done %s, paused %s"):format(tostring(applies), tostring(done), tostring(paused))
+	for _, goal in ipairs(step.goals) do
+		local key = MarkKey(step, goal)
+		out[#out + 1] = ("- [%s] %s | visible %s, complete %s, ticked %s%s"):format(goal.kind, tostring(goal.text),
+			tostring(Engine.IsVisible(goal)), tostring(Engine.IsComplete(goal, step)), tostring(key and Marks()[key]),
+			goal.done and ", has a done condition" or "")
+		if goal.flight then
+			local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
+			out[#out + 1] = ("  flight %q, map %s"):format(goal.flight, tostring(map))
+			local want = goal.flight:gsub(", .*", ""):lower()
+			local info, seen = map and C_Map.GetMapInfo(map), 0
+			while info and seen < 8 do
+				local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, info.mapID)
+				local hits = {}
+				for _, node in ipairs(ok and nodes or {}) do
+					if node.name and node.name:lower():find(want, 1, true) then
+						hits[#hits + 1] = ("%s (id %s, undiscovered %s, state %s, faction %s)"):format(node.name,
+							tostring(node.nodeID), tostring(node.isUndiscovered), tostring(node.state), tostring(node.faction))
+					end
+				end
+				out[#out + 1] = ("  map %d %s: %d nodes, matches: %s"):format(info.mapID, tostring(info.name),
+					ok and nodes and #nodes or 0, #hits > 0 and table.concat(hits, "; ") or "none")
+				if (info.parentMapID or 0) == 0 then break end
+				info, seen = C_Map.GetMapInfo(info.parentMapID), seen + 1
+			end
+		end
+	end
+	return table.concat(out, "\n")
+end

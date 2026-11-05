@@ -114,6 +114,8 @@ slashCmdList.OBVIGUIDE = function(msg)
 		ns.GuidePicker.Open()
 	elseif cmd == "cleanup" then
 		ns.Cleanup()
+	elseif cmd == "step" then
+		ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep())
 	elseif cmd == "names" then
 		TestNames()
 	else
