@@ -33,15 +33,8 @@ ObviGuide.Guide(function(g)
 		s:Accept(2040, "Underground Assault")
 	end)
 
-	-- The Defias Brotherhood: back and forth between Sentinel Hill, Lakeshire and Stormwind
-	g:Step(function(s)
-		s:Goto(WESTFALL, 56.3, 47.5)
-		s:Talk(gryan)
-		s:Accept(65, "The Defias Brotherhood")
-		s:Note("At Sentinel Hill.")
-	end)
-
-	-- Alba Fairmoon's chain (the Toxic Soil storyline), which ends in Destruction in Deadmines
+	-- Alba Fairmoon's chain (the Toxic Soil storyline), which ends in Destruction in Deadmines; it starts at level 9,
+	-- so it comes before the Defias Brotherhood (level 14)
 	g:Step(function(s)
 		s:Goto(WESTFALL, 52.5, 53.0)
 		s:Talk(alba)
@@ -108,7 +101,14 @@ ObviGuide.Guide(function(g)
 		s:Talk(alba)
 		s:Turnin(92747, "Moonbrook Espionage")
 		s:Accept(92748, "Explosive Consultation")
-		s:Note("Fly to Stormwind: her engineer is there, and Redridge is on from it.")
+	end)
+
+	-- The Defias Brotherhood: back and forth between Sentinel Hill, Lakeshire and Stormwind
+	g:Step(function(s)
+		s:Goto(WESTFALL, 56.3, 47.5)
+		s:Talk(gryan)
+		s:Accept(65, "The Defias Brotherhood")
+		s:Note("At Sentinel Hill. Then fly to Stormwind: Alba's engineer is there, and Redridge is on from it.")
 	end)
 
 	-- Stormwind on the way to Redridge: Explosive Consultation
