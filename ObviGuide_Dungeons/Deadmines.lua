@@ -155,13 +155,16 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s:Collect(g.Item("Rough Dynamite", 4358), { count = 10, quest = 92749, objective = 1 })
+		s:Note("Engineers make it: craft it, buy it on the auction house or ask for it in trade.")
+	end)
+
+	g:Step(function(s)
 		s:Goto(STORMWIND, 61.9, 30.6)
 		s:Talk(sprite)
-		s:Collect(g.Item("Rough Dynamite", 4358), { count = 10, quest = 92749, objective = 1 })
 		s:Turnin(92749, "A Dynamite Plan")
 		s:Turnin(92751, "Detonation at a Distance")
 		s:Accept(92752, "Explosive Consultation")
-		s:Note("The dynamite is crafted by engineers: make it, buy it on the auction house or ask for it in trade.")
 	end)
 
 	g:Step(function(s)
