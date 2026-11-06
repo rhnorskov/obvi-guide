@@ -5,7 +5,7 @@
 ## Author: rhnorskov
 ## X-License: GPL-3.0-or-later
 ## X-Curse-Project-ID: 1772934
-## OptionalDeps: ShortestPathForever, TomTom
+## OptionalDeps: ShortestPathForever, TomTom, QuestieDB
 ## SavedVariables: ObviGuideDB
 ## SavedVariablesPerCharacter: ObviGuideCharDB
 
@@ -17,6 +17,7 @@ Engine.lua
 Travel.lua
 Action.lua
 Quests.lua
+Catchup.lua
 UI\Window.lua
 UI\Minimap.lua
 UI\Arrow.lua

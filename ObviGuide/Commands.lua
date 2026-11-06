@@ -1,6 +1,6 @@
 -- Slash commands: /obvi or /og (or /obviguide) toggles the window; "/og guides" opens the guide picker; "/og list"
 -- lists the loaded guides in chat; "/og debug"; "/og names" tests looking up creature and item names by id;
--- "/og cleanup" cleans up the quest log.
+-- "/og cleanup" cleans up the quest log; "/og catchup" finds skipped quests the guide still needs (Catchup.lua).
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -114,6 +114,8 @@ slashCmdList.OBVIGUIDE = function(msg)
 		ns.GuidePicker.Open()
 	elseif cmd == "cleanup" then
 		ns.Cleanup()
+	elseif cmd == "catchup" then
+		ns.Catchup.Start()
 	elseif cmd == "step" then
 		ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep() .. "\n" .. ns.Travel.DebugObjective())
 	elseif cmd == "names" then

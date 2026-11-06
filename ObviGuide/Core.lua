@@ -30,6 +30,7 @@ local ADDON, ns = ...
 ---@field TargetMacro fun(name: string|string[], enemy?: boolean): string
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
+---@field Catchup ObviGuideCatchup
 ---@field GuidePicker ObviGuidePicker
 ---@field Options ObviGuideOptions
 
@@ -56,6 +57,7 @@ local ADDON, ns = ...
 ---@field marks? table<string, table<string, boolean>>  [guide title]["step:goal"] = ticked off / reached
 ---@field flights? table<string, boolean>   flight points seen known (lower-case names; flight maps opened, paths learned)
 ---@field recent? string[]       the guides opened last, newest first (name, or title), for the guide picker
+---@field catchup? {guide: string, step: integer, quests: integer[]}   the open catch-up guide, to make it again after a reload
 
 ---@class ObviGuideParser
 ---@field Parse fun(text: string, source: string, meta?: table): ObviGuideGuide[], string[]   guides, and warnings for the chat
@@ -74,6 +76,7 @@ local ADDON, ns = ...
 ---@field format string          the format it came in ("obviguide", "rxp", or one an addon added)
 ---@field source string          which pack added it
 ---@field steps ObviGuideStep[]   (empty while the guide is still pending)
+---@field back? {guide: string, step: integer}   a catch-up guide (Catchup.lua): the guide and step it leads back to
 ---@field pending? ObviGuidePending   its text, not read yet (see ns.Ready)
 
 ---@class ObviGuidePending

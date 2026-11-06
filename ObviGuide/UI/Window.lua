@@ -536,6 +536,7 @@ local function SetupSettingsMenu(_, root)
 	-- the settings live on ObviGuide's page in the game's Options
 	root:CreateButton("Settings", function() ns.Options.Open() end)
 	root:CreateDivider()
+	root:CreateButton("Quest Catchup", function() ns.Catchup.Start() end)
 	root:CreateButton("Quest Cleanup", function() ns.Cleanup() end)
 	root:CreateButton("Hide (/og shows it again)", function() frame:Hide() end)
 end

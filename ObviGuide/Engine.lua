@@ -455,6 +455,8 @@ end
 
 --- From a finished guide on to the one that follows it (the end's button, or the next arrow).
 function Engine.Continue()
+	-- a catch-up guide goes back to the guide it was made for (Catchup.lua)
+	if guide and guide.back then ns.Catchup.Return(guide) return end
 	local _, nextTitle = Engine.Ended()
 	if nextTitle then Engine.Load(nextTitle, 1) end
 end
