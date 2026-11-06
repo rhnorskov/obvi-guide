@@ -1,7 +1,7 @@
--- Blacksmithing 1-225 (Alliance). The recipes, counts, skill ranges, trainers and vendors follow wow-professions.com's
+-- Blacksmithing 1-300 (Alliance). The recipes, counts, skill ranges, trainers and vendors follow wow-professions.com's
 -- WoW Forever Blacksmithing guide: https://www.wow-professions.com/forever/blacksmithing-leveling-guide (used with
--- credit; will be removed on request). The step text is our own. The site has no tested route past 225 yet, so the
--- guide stops there. Trainer and vendor ids and positions come from QuestieDB's Forever data. See README.md.
+-- credit; will be removed on request). The step text is our own. The site's 225-300 part is untested (it goes by the
+-- game's data). Trainer and vendor ids and positions come from QuestieDB's Forever data. See README.md.
 
 local SW, IF, STV = 1453, 1455, 1434
 local BS = "Blacksmithing"
@@ -10,7 +10,7 @@ local BS = "Blacksmithing"
 local IN_IF, IN_SW = "Dwarf or Gnome", "not (Dwarf or Gnome)"
 
 ObviGuide.Guide(function(g)
-	g.title = "Blacksmithing (1-225)"
+	g.title = "Blacksmithing (1-300)"
 	g.group = "Professions"
 	g.id    = "obvi-blacksmithing"
 	g.only  = "Alliance"
@@ -133,12 +133,12 @@ ObviGuide.Guide(function(g)
 		s:Note("Or 5 ", g.Item("Silver Rod", 6338), " (1 Silver Bar and 2 Rough Grinding Stone each), if Silver Bars cost less than 10 Copper Bars.")
 	end)
 
-	Materials(95, { { bronzeBar, 90 } }, function(s)
+	Materials(95, { { copperBar, 180 } })
+	Craft(95, 18, g.Item("Runed Copper Belt", 2857))
+
+	Materials(100, { { bronzeBar, 25 }, { coarseGrinding, 10 } }, function(s)
 		s:Note("Smelt Bronze from Copper and Tin Bars (Mining), or buy it.")
 	end)
-	Craft(95, 15, g.Item("Rough Bronze Leggings", 2865))
-
-	Materials(100, { { bronzeBar, 25 }, { coarseGrinding, 10 } })
 	Craft(100, 5, bronzeBracers)
 
 	Materials(112, { { heavyStone, 60 } }, function(s)
@@ -210,6 +210,37 @@ ObviGuide.Guide(function(g)
 	Craft(225, 10, g.Item("Heavy Mithril Breastplate", 7930), function(s)
 		s:Note("160 ", mithrilBar, " in all.")
 		s:Note("Or, if you find ", g.Item("Plans: Mithril Spurs", 7989), " (a world drop), 10 Mithril Spurs: 40 Mithril Bar and 30 Solid Grinding Stone.")
-		s:Note("The site has no tested route past 225 yet. Classic guides don't fit: most recipes turn grey 25 points earlier in Forever.")
+	end)
+
+	-- 225-300: the site hasn't tested this part (it couldn't get past 225 on the beta); it goes by the game's data
+	Craft(230, 5, g.Item("Dense Sharpening Stone"), function(s)
+		s:Note("5 ", g.Item("Dense Stone"), ". The site didn't test 225-300 in Forever: expect changes.")
+	end)
+	Craft(240, 16, g.Item("Heavy Mithril Boots"), function(s)
+		s:Note("224 ", mithrilBar, " and 64 ", g.Item("Thick Leather"), " in all.")
+	end)
+
+	-- the Imperial Plate plans: Thorium Brotherhood quests in Gadgetzan, each paid in Thorium Bars
+	local thorium = g.Item("Thorium Bar")
+	g:Step(function(s)
+		s.skip = "skill " .. BS .. " >= 245"
+		s:Goto(1446, 51.38, 28.67)
+		s:Talk(g.Npc("Derotain Mudsipper", 14567))
+		s:Do("Do his Imperial Plate quests for the plans: Belt (20 ", thorium, "), Bracer (20), Boots (40) and Leggings (60).")
+		s:Note("Needs level 50. Forever lowered these recipes from 265 to 240; the site thinks the quests were lowered too, but hasn't checked.")
+		s:Note("If they still need 265: 15 Ebon Shiv to 255 and 15 Ornate Thorium Handaxe to 270, plans from Magnus Frostwake in Western Plaguelands (68.1, 77.6).")
+		s:Note("Bring at least 250 Thorium Bars: 140 for the quests, the rest for the first crafts.")
+	end)
+	Craft(245, 5, g.Item("Imperial Plate Belt"), function(s)
+		s:Note("110 ", thorium, ", 30 ", g.Item("Rugged Leather"), " and 5 ", g.Item("Aquamarine"), " in all.")
+	end)
+	Craft(270, 27, g.Item("Imperial Plate Bracers"), function(s)
+		s:Note("540 ", thorium, " and 27 ", g.Item("Star Ruby"), " in all.")
+	end)
+	Craft(290, 20, g.Item("Imperial Plate Boots"), function(s)
+		s:Note("680 ", thorium, ", 20 ", g.Item("Star Ruby"), " and 20 ", g.Item("Aquamarine"), " in all.")
+	end)
+	Craft(300, 10, g.Item("Imperial Plate Leggings"), function(s)
+		s:Note("440 ", thorium, " and 20 ", g.Item("Star Ruby"), " in all.")
 	end)
 end)

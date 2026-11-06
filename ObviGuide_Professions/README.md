@@ -4,7 +4,7 @@ Profession leveling guides for [Obvi Guide](../ObviGuide), written in its own gu
 list under **Professions**. All are for Alliance characters (trainers in Stormwind and Ironforge).
 
 - Mining (1-300)
-- Blacksmithing (1-225)
+- Blacksmithing (1-300)
 - Cooking (1-300)
 - First Aid (1-300)
 
@@ -22,8 +22,7 @@ The routes, zones, recipes, counts, skill ranges and rank-ups come from **WoW-Pr
 
 Used with credit; will be removed on request. The step text is our own and short; read their pages for the full
 reasoning, route maps and alternatives. Their guides were written on the Forever beta (level cap 30), so the later
-parts may change; the Blacksmithing guide stops at 225 because theirs has no tested route past it yet, and their
-Cooking and First Aid routes past 225 were not tested on the beta.
+parts may change; their Blacksmithing, Cooking and First Aid routes past 225 were not tested on the beta.
 
 ## Other sources
 
