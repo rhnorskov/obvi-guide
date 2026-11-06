@@ -4,6 +4,8 @@
 ## Notes: Dungeon quest guides for Obvi Guide: The Hall of Thanes, Ruins of Lordaeron and The Deadmines (Alliance).
 ## Author: Rasmus Norskov
 ## Dependencies: ObviGuide
+## X-License: GPL-3.0-or-later
+## X-Curse-Project-ID: 1787748
 
 HallOfThanes.lua
 RuinsOfLordaeron.lua
