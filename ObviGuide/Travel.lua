@@ -27,22 +27,31 @@ local afterCombat = false   -- a journey to plan once combat is over
 -- The step's objective under the game's waypoint marker (SuperTrackedFrame: its icon and distance on screen), while
 -- Shortest Path Forever guides our journey: Shortest Path shows the way there through that marker, but only the
 -- distance. The marker hides itself when nothing is tracked, and the line with it.
-local objective      ---@type FontString?
+local objective      ---@type Frame|{text: FontString}?   our own frame under the marker (one inside it isn't drawn)
 local objectiveText  ---@type string?
 
 local function ShowObjective()
 	local marker = _G["SuperTrackedFrame"] ---@type Frame|{DistanceText: FontString}?
-	local show = objectiveText ~= nil and ourJourney and Travel.Provider() == "spf"
 	if not marker or not marker.DistanceText then return end
+	local show = objectiveText ~= nil and ourJourney and Travel.Provider() == "spf" and marker:IsVisible()
 	if not objective then
 		if not show then return end
-		objective = marker:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		objective:SetPoint("TOP", marker.DistanceText, "BOTTOM", 0, 2)
-		objective:SetWidth(220)
-		objective:SetWordWrap(true)
-		objective:SetShadowOffset(1, -1)
+		local f = CreateFrame("Frame", nil, UIParent) --[[@as Frame|{text: FontString}]]
+		f:SetFrameStrata(marker:GetFrameStrata())
+		f:SetSize(220, 20)
+		f:SetPoint("TOP", marker.DistanceText, "BOTTOM", 0, 2)
+		f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		f.text:SetPoint("TOP")
+		f.text:SetWidth(220)
+		f.text:SetWordWrap(true)
+		f.text:SetShadowOffset(1, -1)
+		-- the marker comes and goes (and fades) by itself: the line with it
+		marker:HookScript("OnShow", function() ShowObjective() end)
+		marker:HookScript("OnHide", function() ShowObjective() end)
+		f:SetScript("OnUpdate", function(self) self:SetAlpha(marker:GetEffectiveAlpha()) end)
+		objective = f
 	end
-	objective:SetText(show and objectiveText or "")
+	objective.text:SetText(show and objectiveText or "")
 	objective:SetShown(show)
 end
 
