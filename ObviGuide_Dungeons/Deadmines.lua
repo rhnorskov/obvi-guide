@@ -107,17 +107,13 @@ ObviGuide.Guide(function(g)
 		s:Note("At the top of the tower.")
 	end)
 
-	-- the mine below Moonbrook, on the way to the instance
-	g:Side("ship", function(s)
-		s:Collect(g.Item("Miners' Union Card", 1894), { count = 4, quest = 168, objective = 1 })
-		s:Note("From the undead miners in the tunnels before the instance.")
-	end)
-
+	-- the mine below Moonbrook, on the way to the instance: done with the group, on the way in
 	g:Step(function(s)
 		s:Goto(WESTFALL, 42.2, 82.6)
 		s:Kill(g.Mob("Foreman Thistlenettle", 626))
 		s:Collect(g.Item("Thistlenettle's Badge", 1875), { quest = 167, objective = 1 })
-		s:Note("Into the building in Moonbrook and down the mine; he walks the tunnels past the bridge, near the instance portal.")
+		s:Collect(g.Item("Miners' Union Card", 1894), { count = 4, quest = 168, objective = 1 })
+		s:Note("With your group, on the way to the instance: into the building in Moonbrook and down the mine. The foreman walks the tunnels past the bridge, near the instance portal; the undead miners there drop the cards.")
 	end)
 
 	g:Step(function(s)
