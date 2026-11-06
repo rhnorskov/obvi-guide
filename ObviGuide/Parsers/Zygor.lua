@@ -41,18 +41,8 @@ local MAPS = {
 	["Alterac Valley"] = 1459, ["Arathi Basin"] = 1461, ["Warsong Gulch"] = 1460,
 }
 
--- Forever redrew some zone maps, so Zygor's (classic) coordinates on them are moved into the new map frame (on Forever
--- only; retail's maps are left alone): classic map x,y -> world position (classic frame) -> map x,y (Forever frame). Copied from the Forever port
--- (ZygorGuidesViewer\Code-Forever\Stubs.lua, ZGV.ForeverMapFrames and ZGV.ForeverShiftXY). Per map:
--- { minX, maxX, minY, maxY } in world yards, X = north, Y = west; map x runs east (-Y), map y runs south (-X).
-local FRAMES = {
-	[1412] = { classic = { -3697.917, -272.917, -3089.583, 2047.917 }, forever = { -3835.416, 266.666, -3675.000, 2479.167 } }, -- Mulgore
-	[1423] = { classic = { 1218.750, 3800.000, -6056.250, -2185.417 }, forever = { 825.000, 3691.667, -6558.334, -2256.250 } }, -- Eastern Plaguelands
-	[1433] = { classic = { -10022.916, -8575.000, -3741.667, -1570.833 }, forever = { -10022.916, -8575.000, -3852.084, -1681.250 } }, -- Redridge Mountains
-	[1453] = { classic = { -9175.205, -8278.851, 36.701, 1380.971 }, forever = { -9154.170, -7995.830, -14.584, 1722.920 } }, -- Stormwind City
-}
-
--- Which client this is: Forever (interface 16xxx) has the classic zones above and its redrawn maps; anywhere else
+-- Which client this is: Forever (interface 16xxx) has the classic zones above (its guides already use its own, redrawn
+-- maps: Stormwind, Redridge, Mulgore and Eastern Plaguelands); anywhere else
 -- (retail) zone names are looked up on the running client.
 local BUILD = select(4, GetBuildInfo()) or 0
 local FOREVER = BUILD >= 16000 and BUILD < 20000
@@ -74,18 +64,18 @@ local function LiveMaps()
 	return liveMaps
 end
 
---- A zone as a guide writes it ("Elwynn Forest", "Orgrimmar/1", "Name##84", "84") -> uiMapID, and whether points on
---- it are classic coordinates to move onto Forever's map. On retail Zygor's own map table (meta.maps, name ->
---- {[floor] = id}) comes first when the pack hands it over: it knows Zygor's floors and made-up names.
+--- A zone as a guide writes it ("Elwynn Forest", "Orgrimmar/1", "Name##84", "84") -> uiMapID. On retail Zygor's own
+--- map table (meta.maps, name -> {[floor] = id}) comes first when the pack hands it over: it knows Zygor's floors and
+--- made-up names.
 ---@param text string
 ---@param maps? table
----@return integer? map, boolean? shift
+---@return integer?
 local function MapOf(text, maps)
 	local name, floor = text:match("^(.-)%s*/%s*(%d+)$")
 	name = name or text
 	local id = tonumber(name) or tonumber(text:match("##(%d+)") or "")
-	if id then return id, false end
-	if FOREVER then return MAPS[name], true end
+	if id then return id end
+	if FOREVER then return MAPS[name] end
 	local z = maps and maps[name]
 	if type(z) == "number" then return z end
 	if type(z) == "table" then
@@ -93,19 +83,6 @@ local function MapOf(text, maps)
 		if type(z[f]) == "number" then return z[f] end
 	end
 	return LiveMaps()[name]
-end
-
----@param map integer
----@param x number   0..1
----@param y number   0..1
----@return number, number
-local function Shift(map, x, y)
-	local f = FRAMES[map]
-	if not f then return x, y end
-	local c, n = f.classic, f.forever
-	local worldY = c[4] - x * (c[4] - c[3])
-	local worldX = c[2] - y * (c[2] - c[1])
-	return (n[4] - worldY) / (n[4] - n[3]), (n[2] - worldX) / (n[2] - n[1])
 end
 
 -- Zygor's colour braces ({o}text{}) and _highlights_, as its apply_colours has them
@@ -525,7 +502,6 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 
 ---@class ObviGuideZygorCtx
 ---@field map? integer        the map the last coordinates were on (lines may leave the zone out)
----@field shift? boolean      whether points on that map are classic ones to move onto Forever's map
 ---@field maps? table          Zygor's map table, when the pack hands it over (meta.maps)
 ---@field counts table<string, integer>
 ---@field order string[]
@@ -547,19 +523,16 @@ local function Point(s, ctx)
 	if not x then return nil end
 	-- "< 20" (arrive within 20 yards), or the old "x,y,20"; "> 20" (leave the area) has no radius here
 	local radius = tonumber(rest:match("^<%s*([%d%.]+)") or rest:match("^,%s*([%d%.]+)") or "")
-	local map, shift
+	local map
 	if mapText ~= "" then
-		map, shift = MapOf(mapText, ctx.maps)
+		map = MapOf(mapText, ctx.maps)
 		if not map then Warn(ctx, ("no map for the zone '%s'; its points are left out"):format(mapText)) return nil end
-		ctx.map, ctx.shift = map, shift
+		ctx.map = map
 	else
-		map, shift = ctx.map, ctx.shift
+		map = ctx.map
 		if not map then return nil end
 	end
 	local px, py = (tonumber(x) or 0) / 100, (tonumber(y) or 0) / 100
-	-- on Forever every coordinate in a Zygor guide on a zone named by its name is a classic one, also where a line leaves
-	-- the zone out (the Forever port only shifts those with the zone written out)
-	if shift then px, py = Shift(map, px, py) end
 	return { map = map, x = px, y = py, radius = radius }
 end
 
@@ -582,13 +555,13 @@ local function ReadLine(line, step, ctx)
 			if cmd == "label" then
 				step.label = params:gsub('^"(.-)"$', "%1")
 			elseif cmd == "map" then
-				local m, shift = MapOf(params, ctx.maps)
-				if m then ctx.map, ctx.shift = m, shift end
+				local m = MapOf(params, ctx.maps)
+				if m then ctx.map = m end
 			elseif cmd == "mapmarker" then
 				-- where the mobs or things of a step are (Zygor's orange dots on the maps), not a point to walk to
-				local saved, savedShift = ctx.map, ctx.shift
+				local saved = ctx.map
 				local p = Point(params, ctx)
-				ctx.map, ctx.shift = saved, savedShift
+				ctx.map = saved
 				if p then step.markers = step.markers or {} table.insert(step.markers, p) end
 			elseif cmd == "only" then
 				local expr = params:match("^if%s+(.*)$")
@@ -604,8 +577,8 @@ local function ReadLine(line, step, ctx)
 				rec.point = Point(params, ctx) or rec.point
 				-- "goto Zone" without coordinates: nothing to point at, but the lines after it may leave the zone out
 				if not params:find("%d,") then
-					local m, shift = MapOf((params:gsub('%s*"[^"]*"%s*$', ""):gsub("%s*[<>]%s*[%d%.]+%s*$", "")), ctx.maps)
-					if m then ctx.map, ctx.shift = m, shift end
+					local m = MapOf((params:gsub('%s*"[^"]*"%s*$', ""):gsub("%s*[<>]%s*[%d%.]+%s*$", "")), ctx.maps)
+					if m then ctx.map = m end
 				end
 			elseif cmd == "q" or cmd == "quest" then
 				local q, o = params:match("^(%d+)/?(%d*)")
