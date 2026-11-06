@@ -206,3 +206,14 @@ ns:On("PLAYER_REGEN_ENABLED", function()
 	afterCombat = false
 	Travel.Refresh()
 end)
+
+--- The objective line under the waypoint marker, for /og step: what it would show and why it shows or not.
+---@return string
+function Travel.DebugObjective()
+	local marker = _G["SuperTrackedFrame"] ---@type Frame|{DistanceText: FontString?}?
+	local api = SPF()
+	return ("objective line: text %q, ours %s, provider %s, spf active %s, our stop %s, marker %s, distance text %s, line %s")
+		:format(tostring(objectiveText), tostring(ourJourney), Travel.Provider(), tostring(api and api.Active()),
+			tostring(api and api.CurrentStop(OWNER)), marker and (marker:IsShown() and "shown" or "hidden") or "missing",
+			tostring(marker and marker.DistanceText ~= nil), objective and (objective:IsShown() and "shown" or "hidden") or "not made")
+end

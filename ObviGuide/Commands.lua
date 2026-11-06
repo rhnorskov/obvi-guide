@@ -115,7 +115,8 @@ slashCmdList.OBVIGUIDE = function(msg)
 	elseif cmd == "cleanup" then
 		ns.Cleanup()
 	elseif cmd == "step" then
-		ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep())
+		ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep() .. "
+" .. ns.Travel.DebugObjective())
 	elseif cmd == "names" then
 		TestNames()
 	else
