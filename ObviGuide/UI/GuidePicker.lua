@@ -89,13 +89,14 @@ function Picker.Tree(guides, visible)
 	end
 	return { root = root, folders = folders, byName = byName, hay = hay, list = list }
 end
-
---- The search words, in lower case.
+--- The search words, in lower case; curly apostrophes and quotes (’ ‘ “ ”, as some keyboards and pasted text have
+--- them) as the plain ones the guides use.
 ---@param text string?
 ---@return string[]
 function Picker.Words(text)
 	local words = {}
-	for w in (text or ""):lower():gmatch("%S+") do table.insert(words, w) end
+	text = (text or ""):gsub("\226\128[\152\153]", "'"):gsub("\226\128[\156\157]", '"')
+	for w in text:lower():gmatch("%S+") do table.insert(words, w) end
 	return words
 end
 
