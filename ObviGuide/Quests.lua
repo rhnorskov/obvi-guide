@@ -1,6 +1,6 @@
--- Auto accept and turn in (two options on the Settings page, on by default): only the quests the loaded guide accepts
--- or turns in, anywhere in it (in steps meant for this character). Other quests are left alone, and so is a choice of
--- rewards. Holding Shift while talking to an NPC leaves that conversation alone.
+-- Auto accept and turn in (two options on the Settings page, on by default): only the quests the current step accepts
+-- or turns in. Other quests are left alone, and so is a choice of rewards. Holding Shift while talking to an NPC
+-- leaves that conversation alone.
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -10,22 +10,31 @@ local Conditions = ns.Conditions
 local SelectActiveByIndex = _G["SelectActiveQuest"] ---@type fun(index: integer)
 local SelectAvailableByIndex = _G["SelectAvailableQuest"] ---@type fun(index: integer)
 
---- The quests the loaded guide accepts and turns in, in its steps and lines meant for this character.
+--- The quests the current step accepts and turns in (its lines and side tasks meant for this character). A step that
+--- has just been finished stays shown a moment before the guide moves on, while the NPC may already offer the next
+--- quest: then the step after it counts too.
 ---@return table<integer, boolean> accepts, table<integer, boolean> turnins
 local function StepQuests()
 	local accepts, turnins = {}, {}
-	local guide = Engine.Current()
-	if not guide then return accepts, turnins end
-	for _, step in ipairs(guide.steps or {}) do
-		if Conditions.Eval(step.cond) then
-			for _, list in ipairs({ step.goals, step.side }) do
-				for _, g in ipairs(list) do
-					if g.quest and Conditions.Eval(g.cond) then
-						if g.kind == "accept" then accepts[g.quest] = true end
-						if g.kind == "turnin" then turnins[g.quest] = true end
-					end
+	local guide, step = Engine.Current()
+	if not (guide and step) then return accepts, turnins end
+	local function add(s)
+		if not Conditions.Eval(s.cond) then return end
+		for _, list in ipairs({ s.goals, s.side }) do
+			for _, g in ipairs(list) do
+				if g.quest and Conditions.Eval(g.cond) then
+					if g.kind == "accept" then accepts[g.quest] = true end
+					if g.kind == "turnin" then turnins[g.quest] = true end
 				end
 			end
+		end
+	end
+	add(step)
+	local _, done = Engine.StepState(step)
+	if done then
+		for i = step.index + 1, #guide.steps do
+			local applies, nextDone = Engine.StepState(guide.steps[i])
+			if applies and not nextDone then add(guide.steps[i]) break end
 		end
 	end
 	return accepts, turnins
