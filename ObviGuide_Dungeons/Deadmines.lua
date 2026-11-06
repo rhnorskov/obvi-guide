@@ -1,5 +1,6 @@
 -- The Deadmines quests (Alliance): The Defias Brotherhood chain from Sentinel Hill to VanCleef, Red Silk Bandanas,
--- Oh Brother... and Collecting Memories, Underground Assault, and The Unsent Letter that VanCleef carries. Quest, NPC
+-- Oh Brother... and Collecting Memories, Underground Assault, Destruction in Deadmines (for those who did Alba
+-- Fairmoon's Westfall chain), and The Unsent Letter that VanCleef carries. Quest, NPC
 -- and item ids and positions from QuestieDB's Forever data. See README.md.
 
 local STORMWIND, WESTFALL, REDRIDGE = 1453, 1436, 1433
@@ -107,6 +108,15 @@ ObviGuide.Guide(function(g)
 		s:Note("At the top of the tower.")
 	end)
 
+	-- the end of Alba Fairmoon's Westfall chain (Explosive Consultation leads to it), for those who did it
+	g:Step(function(s)
+		s.only = "onquest 92752 or done 92752"
+		s:Goto(WESTFALL, 52.5, 53.0)
+		s:Talk(g.Npc("Alba Fairmoon", 253092))
+		s:Turnin(92752, "Explosive Consultation")
+		s:Accept(92753, "Destruction in Deadmines")
+	end)
+
 	-- the mine below Moonbrook, on the way to the instance: done with the group, on the way in
 	g:Step(function(s)
 		s:Goto(WESTFALL, 42.2, 82.6)
@@ -134,6 +144,13 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s.only = "onquest 92753 or done 92753"
+		s:Use(g.Item("Extra-Destructive Explosives", 254553))
+		s:Quest(92753, 1, "Plant the explosives near the forge.")
+		s:Note("In the goblin foundry, where Gilnid is.")
+	end)
+
+	g:Step(function(s)
 		s.label = "ship"
 		s:Kill(g.Mob("Edwin VanCleef", 639))
 		s:Collect(g.Item("Head of VanCleef", 3637), { quest = 166, objective = 1 })
@@ -148,6 +165,18 @@ ObviGuide.Guide(function(g)
 	end)
 
 	-- the turn-ins
+	g:Step(function(s)
+		s.only = "onquest 92753 or done 92753"
+		s:Goto(WESTFALL, 38.7, 83.7)
+		local alba = g.Npc("Alba Fairmoon", 253279)
+		s:Talk(alba)
+		s:Turnin(92753, "Destruction in Deadmines")
+		s:Accept(92819, "Destruction in Deadmines")
+		s:Quest(92819, 1, "Use the detonator.")
+		s:Turnin(92819, "Destruction in Deadmines")
+		s:Note("She waits by the Deadmines exit, in Moonbrook.")
+	end)
+
 	g:Step(function(s)
 		s:Goto(WESTFALL, 56.3, 47.5)
 		s:Talk(gryan)
