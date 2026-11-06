@@ -64,9 +64,12 @@ local function Pick()
 	-- a line's targets: an action for each when it names several mobs ("Kill Raging Reef Crawler, Encrusted Tide
 	-- Crawler"), as Zygor's action buttons do; the window shows each key after its mob's name
 	local function targets(g) return g.targets or { g.target } end
+	-- items to use first, but only ones in the bags: an item still to be got ("Use Dark Iron Map", looted from the mobs
+	-- the step kills) goes after the targets, so the key for what you do first comes first
+	local later = {} ---@type ObviGuideGoal[]
 	for _, g in ipairs(step.goals) do
 		if g.id and Engine.IsVisible(g) and (g.kind == "use" or (g.kind == "hearth" and not Engine.IsComplete(g, step))) then
-			add("item", g.id, g)
+			if C_Item.GetItemCount(g.id) > 0 then add("item", g.id, g) else table.insert(later, g) end
 		end
 	end
 	for _, g in ipairs(step.goals) do
@@ -99,6 +102,7 @@ local function Pick()
 			for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy) end
 		end
 	end
+	for _, g in ipairs(later) do add("item", g.id, g) end
 	-- a thing in the world to click ("Click the Box of Scrolls"): the key is the game's own Interact, which uses the
 	-- object the game highlights nearby. Every reader colours such names the same ("click" purple), so that tells.
 	local pick = "|c" .. ns.Colors.PICK
