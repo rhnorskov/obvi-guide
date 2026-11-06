@@ -230,6 +230,14 @@ ns:On("PLAYER_REGEN_ENABLED", function()
 	if not afterCombat then return end
 	afterCombat = false
 	Travel.Refresh()
+	-- right after a reload in combat, Shortest Path may not take a journey yet as combat ends: once more a moment later,
+	-- if there is still no journey at all
+	C_Timer.After(2, function()
+		local api = SPF()
+		if api and not ourJourney and not api.Active() and not InCombatLockdown() and Travel.Provider() == "spf" then
+			Travel.Refresh()
+		end
+	end)
 end)
 
 --- The objective line under the waypoint marker, for /og step: what it would show and why it shows or not.
