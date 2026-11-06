@@ -5,7 +5,7 @@
 local IRONFORGE, DUN_MOROGH = 1455, 1426
 
 ObviGuide.Guide(function(g)
-	g.title = "The Hall of Thanes Quests"
+	g.title = "The Hall of Thanes: Quests"
 	g.group = "Dungeons"
 	g.id    = "obvi-hall-of-thanes"
 	g.next  = "obvi-ruins-of-lordaeron"

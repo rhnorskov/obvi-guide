@@ -1,7 +1,7 @@
 ## Interface: 16001, 120105
 ## Title: Obvi Guide: Dungeons
 ## Version: @project-version@
-## Notes: Dungeon quest guides for Obvi Guide: The Hall of Thanes, Ruins of Lordaeron and The Deadmines (Alliance).
+## Notes: Dungeon quest guides for Obvi Guide: The Hall of Thanes, Ruins of Lordaeron, The Deadmines and Wailing Caverns (Alliance).
 ## Author: Rasmus Norskov
 ## Dependencies: ObviGuide
 ## X-License: GPL-3.0-or-later
@@ -10,3 +10,4 @@
 HallOfThanes.lua
 RuinsOfLordaeron.lua
 Deadmines.lua
+WailingCaverns.lua

@@ -6,7 +6,7 @@
 local TIRISFAL, STORMWIND, DUSKWOOD = 1420, 1453, 1431
 
 ObviGuide.Guide(function(g)
-	g.title = "Ruins of Lordaeron Quests"
+	g.title = "Ruins of Lordaeron: Quests"
 	g.group = "Dungeons"
 	g.id    = "obvi-ruins-of-lordaeron"
 	g.next  = "obvi-deadmines"

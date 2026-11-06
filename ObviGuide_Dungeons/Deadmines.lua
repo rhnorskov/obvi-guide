@@ -6,9 +6,10 @@
 local STORMWIND, WESTFALL, REDRIDGE = 1453, 1436, 1433
 
 ObviGuide.Guide(function(g)
-	g.title = "The Deadmines Quests"
+	g.title = "The Deadmines: Quests"
 	g.group = "Dungeons"
 	g.id    = "obvi-deadmines"
+	g.next  = "obvi-wailing-caverns"
 	g.only  = "Alliance"
 
 	local wilder = g.Npc("Wilder Thistlenettle", 656)
