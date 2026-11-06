@@ -5,7 +5,8 @@
 - New: **Wailing Caverns: Quests**: Raptor Horns and Smart Drinks, Trouble at the Docks, Deviate Hides, Deviate
   Eradication and The Glowing Shard, from Ratchet and back.
 - The guides are now called "The Deadmines: Quests" and so on.
-- The Deadmines: the Rough Dynamite for A Dynamite Plan is a step of its own.
+- The Deadmines: the Rough Dynamite for A Dynamite Plan is a step of its own; the Miners' Union Cards are a side task
+  while you look for Foreman Thistlenettle (with the miners that drop them), and a step of their own if he dies first.
 
 ## v0.4.0
 

@@ -221,13 +221,30 @@ ObviGuide.Guide(function(g)
 		s:Accept(92753, "Destruction in Deadmines")
 	end)
 
-	-- the mine below Moonbrook, on the way to the instance: done with the group, on the way in
+	-- the mine below Moonbrook, on the way to the instance: done with the group, on the way in. The cards come from the
+	-- undead miners on the way to the foreman: a side task while looking for him, and a step of their own if he dies
+	-- before there are four.
+	local function cards(s)
+		s:Kill(g.Mob("Skeletal Miner", 623))
+		s:Kill(g.Mob("Undead Excavator", 624))
+		s:Kill(g.Mob("Undead Dynamiter", 625))
+		s:Collect(g.Item("Miners' Union Card", 1894), { count = 4, quest = 168, objective = 1 })
+	end
+
+	g:Side("foreman", cards)
+
 	g:Step(function(s)
+		s.label = "foreman"
 		s:Goto(WESTFALL, 42.2, 82.6)
 		s:Kill(g.Mob("Foreman Thistlenettle", 626))
 		s:Collect(g.Item("Thistlenettle's Badge", 1875), { quest = 167, objective = 1 })
-		s:Collect(g.Item("Miners' Union Card", 1894), { count = 4, quest = 168, objective = 1 })
-		s:Note("With your group, on the way to the instance: into the building in Moonbrook and down the mine. The foreman walks the tunnels past the bridge, near the instance portal; the undead miners there drop the cards.")
+		s:Note("With your group, on the way to the instance: into the building in Moonbrook and down the mine. He walks the tunnels past the bridge, near the instance portal.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 41.1, 81.8)
+		cards(s)
+		s:Note("In the mine tunnels.")
 	end)
 
 	g:Step(function(s)
