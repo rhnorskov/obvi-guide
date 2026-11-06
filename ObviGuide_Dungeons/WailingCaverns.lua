@@ -34,8 +34,9 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s)
 		s:Goto(BARRENS, 43.4, 15.6)
+		s:Kill(g.Mob("Sunscale Scytheclaw", 3256))
 		s:Collect(g.Item("Intact Raptor Horn", 5055), { count = 5, quest = 865, objective = 1 })
-		s:Note("From the Sunscale Scytheclaws, purple raptors in the north-west of the Barrens; more around 45.3, 14.9.")
+		s:Note("Purple raptors in the north-west of the Barrens; more around 45.3, 14.9.")
 	end)
 
 	g:Step(function(s)
