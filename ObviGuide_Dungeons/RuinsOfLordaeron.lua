@@ -1,8 +1,9 @@
--- Ruins of Lordaeron (Alliance, 15-17): the four Alliance quests, all started inside, and the turn-ins in Stormwind.
+-- Ruins of Lordaeron (Alliance, 15-17): the four Alliance quests, all started inside, the turn-ins in Stormwind, and
+-- the letter's follow-up in Duskwood.
 -- Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance, the way there and
 -- where things are inside from DungeonJournal (Exehn). See README.md.
 
-local TIRISFAL, STORMWIND = 1420, 1453
+local TIRISFAL, STORMWIND, DUSKWOOD = 1420, 1453, 1431
 
 ObviGuide.Guide(function(g)
 	g.title = "Ruins of Lordaeron (15-17)"
@@ -82,11 +83,21 @@ ObviGuide.Guide(function(g)
 		s:Goto(STORMWIND, 56.3, 54.0)
 		s:Talk(g.Npc("Orphan Matron Nightingale", 14450))
 		s:Turnin(92415, "Remember That I Love You")
+		s:Accept(95161, "Remember That I Love You")
 	end)
 
 	g:Step(function(s)
+		s:Goto(STORMWIND, 73.7, 46.5)
 		s:Talk(g.Npc("Lady Dena Kennedy", 15991))
 		s:Turnin(95189, "Crest of Lordaeron")
-		s:Note("Somewhere in Stormwind City; her spot isn't known to this guide yet.")
+		s:Note("About here: her spot comes from another guide's map of Stormwind, converted to this one.")
+	end)
+
+	-- the letter goes on to Duskwood
+	g:Step(function(s)
+		s:Goto(DUSKWOOD, 73.0, 44.4)
+		s:Talk(g.Npc("Avette Fellwood", 228))
+		s:Turnin(95161, "Remember That I Love You")
+		s:Note("In Darkshire.")
 	end)
 end)
