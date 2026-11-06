@@ -1,7 +1,7 @@
 -- The Deadmines quests (Alliance): The Defias Brotherhood chain from Sentinel Hill to VanCleef, Red Silk Bandanas,
--- Oh Brother... and Collecting Memories, Underground Assault, Destruction in Deadmines (for those who did Alba
--- Fairmoon's Westfall chain), and The Unsent Letter that VanCleef carries. Quest, NPC
--- and item ids and positions from QuestieDB's Forever data. See README.md.
+-- Oh Brother... and Collecting Memories, Underground Assault, Alba Fairmoon's chain up to Destruction in Deadmines,
+-- and The Unsent Letter that VanCleef carries. Quest, NPC and item ids and positions from QuestieDB's Forever data,
+-- the order of Alba's chain from Attune (CixiDelmont). See README.md.
 
 local STORMWIND, WESTFALL, REDRIDGE = 1453, 1436, 1433
 
@@ -15,6 +15,8 @@ ObviGuide.Guide(function(g)
 	local shoni  = g.Npc("Shoni the Shilent", 6579)
 	local gryan  = g.Npc("Gryan Stoutmantle", 234)
 	local riell  = g.Npc("Scout Riell", 820)
+	local alba   = g.Npc("Alba Fairmoon", 253092)
+	local sprite = g.Npc("Sprite Jumpsprocket", 11026)
 
 	-- Stormwind: the two quests from the Dwarven District, and the gnome's
 	g:Step(function(s)
@@ -39,6 +41,76 @@ ObviGuide.Guide(function(g)
 		s:Note("At Sentinel Hill.")
 	end)
 
+	-- Alba Fairmoon's chain (the Toxic Soil storyline), which ends in Destruction in Deadmines
+	g:Step(function(s)
+		s:Goto(WESTFALL, 52.5, 53.0)
+		s:Talk(alba)
+		s:Accept(92742, "Testing the Wells")
+		s:Accept(92744, "Murloc Gills")
+		s:Note("Just south-west of Sentinel Hill.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 46.1, 38.2)
+		s:Use(g.Item("Well Water Sample Kit", 254545))
+		s:Collect(g.Item("Molsen Farm Water Sample", 254547), { quest = 92742, objective = 2 })
+		s:Note("At the well of the Molsen Farm.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 56.6, 18.6)
+		s:Use(g.Item("Well Water Sample Kit", 254545))
+		s:Collect(g.Item("Jansen Stead Water Sample", 254546), { quest = 92742, objective = 1 })
+		s:Note("At the well of the Jansen Stead.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 54.4, 9.3)
+		s:Collect(g.Item("Longshore Murloc Gill", 254548), { count = 7, quest = 92744, objective = 1 })
+		s:Note("From the murlocs along the north coast.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 52.5, 53.0)
+		s:Talk(alba)
+		s:Turnin(92742, "Testing the Wells")
+		s:Turnin(92744, "Murloc Gills")
+		s:Accept(92745, "The State of the Mines")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 44.8, 21.0)
+		s:Kill(g.Mob("Kobold Digger", 1236), { quest = 92745, objective = 1 })
+		s:Note("In the Jangolode Mine.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 30.0, 46.5)
+		s:Kill(g.Mob("Riverpaw Miner", 1426), { quest = 92745, objective = 2 })
+		s:Note("In the Gold Coast Quarry.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 52.5, 53.0)
+		s:Talk(alba)
+		s:Turnin(92745, "The State of the Mines")
+		s:Accept(92747, "Moonbrook Espionage")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 43.4, 68.8)
+		s:Collect(g.Item("Suspicious Industrial Supplies", 254676), { count = 8, quest = 92747, objective = 1 })
+		s:Note("From the Suspicious Crates around Moonbrook.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(WESTFALL, 52.5, 53.0)
+		s:Talk(alba)
+		s:Turnin(92747, "Moonbrook Espionage")
+		s:Accept(92748, "Explosive Consultation")
+		s:Note("The engineer she sends you to is in Stormwind: the guide gets there with the trip to SI:7.")
+	end)
+
 	g:Step(function(s)
 		s:Goto(REDRIDGE, 21.4, 45.4)
 		s:Talk(g.Npc("Wiley the Black", 266))
@@ -60,6 +132,34 @@ ObviGuide.Guide(function(g)
 		s:Turnin(135, "The Defias Brotherhood")
 		s:Accept(141, "The Defias Brotherhood")
 		s:Note("Upstairs in SI:7, in Old Town.")
+	end)
+
+	-- Explosive Consultation, while in Stormwind
+	g:Step(function(s)
+		s:Goto(STORMWIND, 61.9, 30.6)
+		s:Talk(sprite)
+		s:Turnin(92748, "Explosive Consultation")
+		s:Accept(92749, "A Dynamite Plan")
+		s:Accept(92750, "Detonation at a Distance")
+		s:Note("In the Dwarven District.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(STORMWIND, 80.3, 70.1)
+		s:Talk(g.Npc("Jasper Fel", 1325))
+		s:Turnin(92750, "Detonation at a Distance")
+		s:Accept(92751, "Detonation at a Distance")
+		s:Note("In Old Town, near SI:7.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(STORMWIND, 61.9, 30.6)
+		s:Talk(sprite)
+		s:Collect(g.Item("Rough Dynamite", 4358), { count = 10, quest = 92749, objective = 1 })
+		s:Turnin(92749, "A Dynamite Plan")
+		s:Turnin(92751, "Detonation at a Distance")
+		s:Accept(92752, "Explosive Consultation")
+		s:Note("The dynamite is crafted by engineers: make it, buy it on the auction house or ask for it in trade.")
 	end)
 
 	g:Step(function(s)
@@ -108,11 +208,9 @@ ObviGuide.Guide(function(g)
 		s:Note("At the top of the tower.")
 	end)
 
-	-- the end of Alba Fairmoon's Westfall chain (Explosive Consultation leads to it), for those who did it
 	g:Step(function(s)
-		s.only = "onquest 92752 or done 92752"
 		s:Goto(WESTFALL, 52.5, 53.0)
-		s:Talk(g.Npc("Alba Fairmoon", 253092))
+		s:Talk(alba)
 		s:Turnin(92752, "Explosive Consultation")
 		s:Accept(92753, "Destruction in Deadmines")
 	end)
