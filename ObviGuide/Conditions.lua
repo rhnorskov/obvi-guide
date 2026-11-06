@@ -17,6 +17,8 @@
 --                                                        the character hasn't got counts as 0)
 --   {"skillmax>=", profession, n}  {"skillmax<", profession, n}   (its cap, what has been trained: Zygor's skillmax;
 --                                                        over 1 means the character has the profession)
+--   {"weaponskill>=", tag, n}  {"weaponskill<", tag, n}   (a weapon or armour skill by Zygor's tag, "TH_SWORD"; one not
+--                                                        trained counts as 0)
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -94,6 +96,41 @@ function Conditions.Skill(profession)
 	end
 end
 
+-- Weapon and armour skills by Zygor's tags: their skill line ids, and English names for clients without C_SkillInfo
+local WEAPON_SKILLS = {
+	DUALWIELD = { 118, "Dual Wield" }, SWORD = { 43, "Swords" }, WAND = { 228, "Wands" },
+	TH_SWORD = { 55, "Two-Handed Swords" }, THROWN = { 176, "Thrown" }, FIST = { 473, "Fist Weapons" },
+	TH_MACE = { 160, "Two-Handed Maces" }, TH_AXE = { 172, "Two-Handed Axes" }, AXE = { 44, "Axes" },
+	GUN = { 46, "Guns" }, TH_POLE = { 229, "Polearms" }, BOW = { 45, "Bows" }, CROSSBOW = { 226, "Crossbows" },
+	TH_STAFF = { 136, "Staves" }, MACE = { 54, "Maces" }, DAGGER = { 173, "Daggers" }, PLATE = { 293, "Plate Mail" },
+	MAIL = { 413, "Mail" }, CLOTH = { 415, "Cloth" }, SHIELD = { 433, "Shield" }, LEATHER = { 414, "Leather" },
+}
+
+--- A weapon or armour skill's rank by Zygor's tag ("TH_SWORD"), as Zygor reads it (the skill lines, by id); 0 when
+--- not trained.
+---@param tag string
+---@return integer
+function Conditions.WeaponSkill(tag)
+	local skill = WEAPON_SKILLS[tag:upper()]
+	if not skill then return 0 end
+	local info = _G["C_SkillInfo"] ---@type table?
+	if info and info.GetNumSkillLines then
+		for i = 1, info.GetNumSkillLines() do
+			local line = info.GetSkillLineInfo(i)
+			if line and line.skillID == skill[1] then return line.rank or 0 end
+		end
+		return 0
+	end
+	local numLines, lineInfo = _G["GetNumSkillLines"], _G["GetSkillLineInfo"]
+	if numLines and lineInfo then
+		for i = 1, numLines() do
+			local sname, isHeader, _, rank = lineInfo(i)
+			if not isHeader and sname == skill[2] then return rank or 0 end
+		end
+	end
+	return 0
+end
+
 local eval
 local tests = {
 	["and"] = function(c) for i = 2, #c do if not eval(c[i]) then return false end end return true end,
@@ -155,6 +192,8 @@ local tests = {
 	["skill<"] = function(c) return (Conditions.Skill(c[2]) or 0) < c[3] end,
 	["skillmax>="] = function(c) return (select(2, Conditions.Skill(c[2])) or 0) >= c[3] end,
 	["skillmax<"] = function(c) return (select(2, Conditions.Skill(c[2])) or 0) < c[3] end,
+	["weaponskill>="] = function(c) return Conditions.WeaponSkill(c[2]) >= c[3] end,
+	["weaponskill<"] = function(c) return Conditions.WeaponSkill(c[2]) < c[3] end,
 	equipped = function(c) return C_Item.IsEquippedItem(c[2]) == true end,
 	money = function(c) return GetMoney() >= c[2] end,
 	rep = function(c)

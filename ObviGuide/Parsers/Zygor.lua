@@ -266,6 +266,8 @@ local CALLS = {
 	-- a profession's skill and its cap ('skillmax("Mining") > 1': the character has Mining)
 	skill = function(a) if type(a[1]) == "string" then return { num = "skill", id = a[1] } end return UNKNOWN end,
 	skillmax = function(a) if type(a[1]) == "string" then return { num = "skillmax", id = a[1] } end return UNKNOWN end,
+	-- a weapon or armour skill by Zygor's tag ('weaponskill("TH_SWORD") > 0': Two-Handed Swords trained)
+	weaponskill = function(a) if type(a[1]) == "string" then return { num = "weaponskill", id = a[1] } end return UNKNOWN end,
 	hasbuff = function(a) if type(a[1]) == "number" then return C({ "aura", a[1], a[2] }) end return UNKNOWN end,
 	equipped = function(a) if type(a[1]) == "number" then return C({ "equipped", a[1] }) end return UNKNOWN end,
 	subzone = function(a) if type(a[1]) == "string" then return C({ "subzone", a[1] }) end return UNKNOWN end,
@@ -335,7 +337,7 @@ local function Compare(l, op, r)
 		local function AtLeast(m) return C(l.num == "rep" and { "rep", l.id, m } or { "money", m }) end
 		if ge then table.insert(parts, AtLeast(ge)) end
 		if lt then table.insert(parts, Not(AtLeast(lt))) end
-	elseif l.num == "skill" or l.num == "skillmax" then
+	elseif l.num == "skill" or l.num == "skillmax" or l.num == "weaponskill" then
 		if ge then table.insert(parts, C({ l.num .. ">=", l.id, ge })) end
 		if lt then table.insert(parts, C({ l.num .. "<", l.id, lt })) end
 	else
