@@ -23,6 +23,29 @@ local ourJourney = false
 local listening = false
 local afterCombat = false   -- a journey to plan once combat is over
 
+
+-- The step's objective under the game's waypoint marker (SuperTrackedFrame: its icon and distance on screen), while
+-- Shortest Path Forever guides our journey: Shortest Path shows the way there through that marker, but only the
+-- distance. The marker hides itself when nothing is tracked, and the line with it.
+local objective      ---@type FontString?
+local objectiveText  ---@type string?
+
+local function ShowObjective()
+	local marker = _G["SuperTrackedFrame"] ---@type Frame|{DistanceText: FontString}?
+	local show = objectiveText ~= nil and ourJourney and Travel.Provider() == "spf"
+	if not marker or not marker.DistanceText then return end
+	if not objective then
+		if not show then return end
+		objective = marker:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		objective:SetPoint("TOP", marker.DistanceText, "BOTTOM", 0, 2)
+		objective:SetWidth(220)
+		objective:SetWordWrap(true)
+		objective:SetShadowOffset(1, -1)
+	end
+	objective:SetText(show and objectiveText or "")
+	objective:SetShown(show)
+end
+
 -- Shortest Path Forever's public API (an optional dependency, so looked up at run time)
 local function SPF()
 	local spf = _G["ShortestPathForever"] ---@type {API: table}?
@@ -32,6 +55,7 @@ local function SPF()
 		api.Subscribe(function(changes)
 			if changes.ended then ourJourney = false end
 			if (changes.started or changes.changed) and api.CurrentStop(OWNER) == nil then ourJourney = false end
+			ShowObjective()
 		end)
 	end
 	return api
@@ -155,6 +179,8 @@ end
 ---@param title? string
 function Travel.To(p, title)
 	Place(p, title, false)
+	objectiveText = title
+	ShowObjective()
 end
 
 --- Shows the way to a step's destination, or clears ours when the step has none.
@@ -166,6 +192,8 @@ function Travel.Show(step)
 		for _, g in ipairs(step.goals) do if g.kind ~= "talk" then title = g.text break end end
 	end
 	Place(dest, title, true)
+	objectiveText = dest and title or nil
+	ShowObjective()
 end
 
 --- Shows the current step's waypoint again (after the setting changed, or after combat).
