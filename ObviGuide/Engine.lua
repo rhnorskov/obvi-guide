@@ -62,12 +62,12 @@ local function Discovered(map)
 	return list
 end
 
---- The flight points this character was seen to know.
----@return table<string, boolean>
 -- the flight point each race starts out knowing (as Zygor's InitialFlightPaths has them)
 local HOME_FLIGHT = { Human = "stormwind", Dwarf = "ironforge", Gnome = "ironforge", NightElf = "rut'theran village",
 	Orc = "orgrimmar", Troll = "orgrimmar", Scourge = "undercity", Tauren = "thunder bluff" }
 
+--- The flight points this character was seen to know (and its race's home one).
+---@return table<string, boolean>
 local function Seen()
 	if not ns.charDB then return {} end
 	ns.charDB.flights = ns.charDB.flights or {}
