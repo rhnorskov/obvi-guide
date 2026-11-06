@@ -24,31 +24,47 @@ local listening = false
 local afterCombat = false   -- a journey to plan once combat is over
 
 
--- The step's objective under the game's waypoint marker (SuperTrackedFrame: its icon and distance on screen), while
--- Shortest Path Forever guides our journey: Shortest Path shows the way there through that marker, but only the
--- distance. The marker hides itself when nothing is tracked, and the line with it.
-local objective      ---@type Frame|{text: FontString}?   our own frame under the marker (one inside it isn't drawn)
+-- The step's objective under Shortest Path Forever's arrow, while it guides our journey: the arrow shows the distance,
+-- and the stop's title only on routes of several stops ("Stop 1 of 3: ..."), so not on ours. Its frame has no name;
+-- it is found by its parts (Icon, Arrow, Distance, Progress) once Shortest Path has made it. The line is our own
+-- frame under the arrow's text.
+local objective      ---@type Frame|{text: FontString}?
 local objectiveText  ---@type string?
+local spfArrow       ---@type Frame|{Distance: FontString, Progress: FontString}?
+local lookFor = 0    -- looks for the arrow made in a row
+
+local function FindArrow()
+	if spfArrow then return spfArrow end
+	local f = EnumerateFrames()
+	while f do
+		local t = f --[[@as table]]
+		if t.Distance and t.Progress and t.Arrow and t.Icon and t.MoverHint and f:GetParent() == UIParent then
+			spfArrow = f --[[@as Frame|{Distance: FontString, Progress: FontString}]]
+			return spfArrow
+		end
+		f = EnumerateFrames(f)
+	end
+end
 
 local function ShowObjective()
-	local marker = _G["SuperTrackedFrame"] ---@type Frame|{DistanceText: FontString}?
-	if not marker or not marker.DistanceText then return end
-	local show = objectiveText ~= nil and ourJourney and Travel.Provider() == "spf" and marker:IsVisible()
+	local show = objectiveText ~= nil and ourJourney and Travel.Provider() == "spf"
+	local arrow = show and FindArrow() or spfArrow
+	if not arrow then
+		-- Shortest Path makes its arrow when it first guides, maybe just after us: a few more looks
+		if show and lookFor < 5 then lookFor = lookFor + 1 C_Timer.After(1, ShowObjective) end
+		return
+	end
+	lookFor = 0
 	if not objective then
 		if not show then return end
-		local f = CreateFrame("Frame", nil, UIParent) --[[@as Frame|{text: FontString}]]
-		f:SetFrameStrata(marker:GetFrameStrata())
+		-- a child of the arrow: it moves, scales, fades and hides with it
+		local f = CreateFrame("Frame", nil, arrow) --[[@as Frame|{text: FontString}]]
 		f:SetSize(220, 20)
-		f:SetPoint("TOP", marker.DistanceText, "BOTTOM", 0, 2)
+		f:SetPoint("TOP", arrow.Progress, "BOTTOM", 0, -2)   -- under the arrow's title line (empty on our routes)
 		f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		f.text:SetPoint("TOP")
 		f.text:SetWidth(220)
 		f.text:SetWordWrap(true)
-		f.text:SetShadowOffset(1, -1)
-		-- the marker comes and goes (and fades) by itself: the line with it
-		marker:HookScript("OnShow", function() ShowObjective() end)
-		marker:HookScript("OnHide", function() ShowObjective() end)
-		f:SetScript("OnUpdate", function(self) self:SetAlpha(marker:GetEffectiveAlpha()) end)
 		objective = f
 	end
 	objective.text:SetText(show and objectiveText or "")
@@ -219,10 +235,10 @@ end)
 --- The objective line under the waypoint marker, for /og step: what it would show and why it shows or not.
 ---@return string
 function Travel.DebugObjective()
-	local marker = _G["SuperTrackedFrame"] ---@type Frame|{DistanceText: FontString?}?
 	local api = SPF()
-	return ("objective line: text %q, ours %s, provider %s, spf active %s, our stop %s, marker %s, distance text %s, line %s")
+	local arrow = FindArrow()
+	return ("objective line: text %q, ours %s, provider %s, spf active %s, our stop %s, spf arrow %s, line %s")
 		:format(tostring(objectiveText), tostring(ourJourney), Travel.Provider(), tostring(api and api.Active()),
-			tostring(api and api.CurrentStop(OWNER)), marker and (marker:IsShown() and "shown" or "hidden") or "missing",
-			tostring(marker and marker.DistanceText ~= nil), objective and (objective:IsShown() and "shown" or "hidden") or "not made")
+			tostring(api and api.CurrentStop(OWNER)), arrow and (arrow:IsVisible() and "shown" or "hidden") or "not found",
+			objective and (objective:IsVisible() and "shown" or "hidden") or "not made")
 end
