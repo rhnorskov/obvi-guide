@@ -1,5 +1,5 @@
--- Auto accept and turn in (two options on the Settings page, on by default): only the quests the current step accepts
--- or turns in. Other quests are left alone, and so is a choice of rewards. Holding Shift while talking to an NPC
+-- Auto accept and turn in (two options on the Settings page, on by default): only the quests the current step (or the
+-- next one) accepts or turns in. Other quests are left alone, and so is a choice of rewards. Holding Shift while talking to an NPC
 -- leaves that conversation alone.
 local _, ns = ...
 ---@cast ns ObviGuideNS
@@ -10,9 +10,9 @@ local Conditions = ns.Conditions
 local SelectActiveByIndex = _G["SelectActiveQuest"] ---@type fun(index: integer)
 local SelectAvailableByIndex = _G["SelectAvailableQuest"] ---@type fun(index: integer)
 
---- The quests the current step accepts and turns in (its lines and side tasks meant for this character). A step that
---- has just been finished stays shown a moment before the guide moves on, while the NPC may already offer the next
---- quest: then the step after it counts too.
+--- The quests the current step and the next one accept and turn in (their lines and side tasks meant for this
+--- character). The next step counts too: the player goes on to it anyway, and a finished step stays shown a moment
+--- while the NPC may already offer the next step's quest.
 ---@return table<integer, boolean> accepts, table<integer, boolean> turnins
 local function StepQuests()
 	local accepts, turnins = {}, {}
@@ -30,12 +30,9 @@ local function StepQuests()
 		end
 	end
 	add(step)
-	local _, done = Engine.StepState(step)
-	if done then
-		for i = step.index + 1, #guide.steps do
-			local applies, nextDone = Engine.StepState(guide.steps[i])
-			if applies and not nextDone then add(guide.steps[i]) break end
-		end
+	for i = step.index + 1, #guide.steps do
+		local applies, nextDone = Engine.StepState(guide.steps[i])
+		if applies and not nextDone then add(guide.steps[i]) break end
 	end
 	return accepts, turnins
 end

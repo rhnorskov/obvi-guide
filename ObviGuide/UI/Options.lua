@@ -76,9 +76,9 @@ local function Build()
 
 	Header("Quests")
 	Checkbox("Auto accept guide quests", "autoAccept", true,
-		"Accepts the current step's quests when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
+		"Accepts the quests of the current and next step when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
 	Checkbox("Auto turn in guide quests", "autoTurnin", true,
-		"Turns in the current step's quests (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
+		"Turns in the quests of the current and next step (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
 
 	Header("Troubleshooting")
 	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",
