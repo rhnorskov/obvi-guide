@@ -3,8 +3,9 @@
 Dungeon quest guides for [Obvi Guide](../ObviGuide), written in its own guide format. They show in the guide list under
 **Dungeons**.
 
-- The Hall of Thanes (13-15), Alliance
-- Ruins of Lordaeron (15-17), Alliance
+- The Hall of Thanes Quests (13-15), Alliance
+- Ruins of Lordaeron Quests (15-17), Alliance
+- The Deadmines Quests (16-22), Alliance
 
 ## Sources
 

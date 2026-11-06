@@ -6,9 +6,10 @@
 local TIRISFAL, STORMWIND, DUSKWOOD = 1420, 1453, 1431
 
 ObviGuide.Guide(function(g)
-	g.title = "Ruins of Lordaeron (15-17)"
+	g.title = "Ruins of Lordaeron Quests"
 	g.group = "Dungeons"
 	g.id    = "obvi-ruins-of-lordaeron"
+	g.next  = "obvi-deadmines"
 	g.only  = "Alliance"
 
 	local truman = g.Npc("Captain Truman", 265701)
@@ -51,22 +52,13 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
-		s:Kill(g.Mob("Witherfang", 250483))
-		s:Note("In the long hallway east of the entrance.")
-	end)
-
-	g:Step(function(s)
 		s:Kill(g.Mob("The Baron", 250660))
 		s:Collect(g.Item("Head of the Baron", 268518), { quest = 95250, objective = 1 })
-		s:Note("In the indoor courtyard after Witherfang.")
+		s:Note("The second boss, in the indoor courtyard past Witherfang's hallway.")
 	end)
 
 	g:Step(function(s)
 		s.label = "end"
-		s:Do("Clear on through The Abandoned, Bjork and Rath'mael.")
-	end)
-
-	g:Step(function(s)
 		s:Talk(truman)
 		s:Turnin(95250, "Abominable Creatures")
 		s:Note("Back at the entrance.")

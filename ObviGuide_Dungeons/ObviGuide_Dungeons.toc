@@ -1,9 +1,10 @@
 ## Interface: 16001, 120105
 ## Title: Obvi Guide: Dungeons
 ## Version: @project-version@
-## Notes: Dungeon quest guides for Obvi Guide: The Hall of Thanes and Ruins of Lordaeron (Alliance).
+## Notes: Dungeon quest guides for Obvi Guide: The Hall of Thanes, Ruins of Lordaeron and The Deadmines (Alliance).
 ## Author: Rasmus Norskov
 ## Dependencies: ObviGuide
 
 HallOfThanes.lua
 RuinsOfLordaeron.lua
+Deadmines.lua

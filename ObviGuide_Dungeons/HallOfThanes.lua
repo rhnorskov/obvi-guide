@@ -5,7 +5,7 @@
 local IRONFORGE, DUN_MOROGH = 1455, 1426
 
 ObviGuide.Guide(function(g)
-	g.title = "The Hall of Thanes (13-15)"
+	g.title = "The Hall of Thanes Quests"
 	g.group = "Dungeons"
 	g.id    = "obvi-hall-of-thanes"
 	g.next  = "obvi-ruins-of-lordaeron"
@@ -53,6 +53,7 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s.skip = "ready 96393 or done 96393"   -- (been inside already)
 		s:Do("Enter the Hall of Thanes through the portal next to ", thom, ".")
 	end)
 
@@ -88,7 +89,7 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
-		s:Do("Open the vaults in the Reliquary of Kings and click the ", g.Object("Treaty of Understanding"), " tablet.")
+		s:Say("Open the vaults in the Reliquary of Kings and click the ", g.Object("Treaty of Understanding"), " tablet.")
 		s:Use(treaty):Only("not onquest 98423 and not done 98423")
 		s:Accept(98423, "The Treaty of Understanding")
 		s:Note(g.Warn("Get it before you leave the dungeon."))
