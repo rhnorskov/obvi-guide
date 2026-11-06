@@ -202,6 +202,51 @@ function Engine.IsVisible(goal)
 	end
 	return true
 end
+-- Quest chains whose quests share a title ("The Tome of Divinity" 1641, 1642, 1643...): a guide may start such a
+-- chain at a quest the game no longer gives (on Forever this one starts at the Tome item, 1642), so a line for a quest
+-- counts as done once a quest of the same title that comes later in the guide is in the log or done. Per guide: each
+-- quest's later namesakes, worked out the first time it's asked.
+local namesakes = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, table<integer, integer[]>>
+
+---@param text string?
+local function QuestTitle(text)
+	text = (text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
+	return (text:gsub("^Accept%s+", ""):gsub("^Turn in%s+", ""):lower())
+end
+
+---@param quest integer
+---@return boolean
+local function LaterNamesakeTaken(quest)
+	if not guide then return false end
+	local later = namesakes[guide]
+	if not later then
+		later = {}
+		local order = {} ---@type table<string, integer[]>   title -> its quests, in the order the guide has them
+		for _, s in ipairs(guide.steps) do
+			for _, g in ipairs(s.goals) do
+				if (g.kind == "accept" or g.kind == "turnin") and g.quest then
+					local list = order[QuestTitle(g.text)] or {}
+					order[QuestTitle(g.text)] = list
+					local seen = false
+					for _, q in ipairs(list) do if q == g.quest then seen = true break end end
+					if not seen then list[#list + 1] = g.quest end
+				end
+			end
+		end
+		for _, list in pairs(order) do
+			for i, q in ipairs(list) do
+				later[q] = {}
+				for j = i + 1, #list do table.insert(later[q], list[j]) end
+			end
+		end
+		namesakes[guide] = later
+	end
+	for _, q in ipairs(later[quest] or {}) do
+		if C_QuestLog.IsOnQuest(q) or C_QuestLog.IsQuestFlaggedCompleted(q) then return true end
+	end
+	return false
+end
+
 
 ---@param goal ObviGuideGoal
 ---@param step ObviGuideStep
@@ -213,8 +258,10 @@ function Engine.IsComplete(goal, step)
 		return true
 	end
 	local k = goal.kind
-	if k == "accept" then return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
-	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) end
+	if k == "accept" then
+		return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or LaterNamesakeTaken(goal.quest)
+	end
+	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or LaterNamesakeTaken(goal.quest) end
 	if k == "objective" or k == "kill" or (k == "collect" and goal.objective) then
 		-- a quest ready to turn in counts all its objectives done, as Zygor does: on retail the objective list can
 		-- still say 0/1 when the quest is complete (seen with "Arrive at Talonstrike Terrace")
