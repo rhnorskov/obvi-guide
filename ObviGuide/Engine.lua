@@ -64,9 +64,15 @@ end
 
 --- The flight points this character was seen to know.
 ---@return table<string, boolean>
+-- the flight point each race starts out knowing (as Zygor's InitialFlightPaths has them)
+local HOME_FLIGHT = { Human = "stormwind", Dwarf = "ironforge", Gnome = "ironforge", NightElf = "rut'theran village",
+	Orc = "orgrimmar", Troll = "orgrimmar", Scourge = "undercity", Tauren = "thunder bluff" }
+
 local function Seen()
 	if not ns.charDB then return {} end
 	ns.charDB.flights = ns.charDB.flights or {}
+	local home = HOME_FLIGHT[select(2, UnitRace("player")) or ""]
+	if home then ns.charDB.flights[home] = true end
 	return ns.charDB.flights
 end
 
@@ -80,7 +86,8 @@ end
 local function FlightKnown(goal, step)
 	if not goal.flight then return false end
 	local want = FlightName(goal.flight)
-	local function Match(name) return name == want or name:find(want, 1, true) ~= nil end
+	-- either name may be the longer one: the guide's "Stormwind City" is the game's "Stormwind, Elwynn" (trimmed: "stormwind")
+	local function Match(name) return name:find(want, 1, true) ~= nil or want:find(name, 1, true) ~= nil end
 	local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
 	if map and C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap then
 		local info, seen, known = C_Map.GetMapInfo(map), 0, nil
