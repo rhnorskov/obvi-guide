@@ -1,6 +1,7 @@
--- Parser for Zygor guide syntax (the text inside Zygor's RegisterGuide calls): text in, neutral guides out.
--- ObviGuide reads only text handed to ObviGuide.Add; it never looks at the Zygor addon itself. The title and header of a
--- guide are Lua in Zygor's files, so a pack hands them over as plain values:
+-- Obvi Guide: Zygor's reader for Zygor guide syntax (the text inside Zygor's RegisterGuide calls): text in, Obvi
+-- Guide's guides out. It registers the "zygor" format with Obvi Guide (ObviGuide.AddFormat) and builds with Obvi
+-- Guide's helpers (ObviGuide.Toolkit). ZygorBridge.lua hands it the guide text; Obvi Guide itself knows nothing of
+-- Zygor. The title and header of a guide are Lua in Zygor's files, so they are handed over as plain values:
 --   ObviGuide.Add("zygor", [[ ...guide text... ]], { title = "Leveling Guides\\Westfall (13-15)", header = {...} })
 -- header: next (a Zygor title), faction ("Alliance"/"Horde"), visible and hideif (Zygor's Lua expressions as text;
 -- visible may also be a plain true/false the pack worked out), trial (true for the free trial's copy of a guide).
@@ -13,16 +14,14 @@
 --   a line is chunks split by "|": the first is a command (talk Name##npc, accept Title##quest, kill 5 Mob##npc,
 --   collect 8 Item##item, ...) or plain text; the rest modify it (goto Zone x,y < dist, q 123/1, only if ...,
 --   tip text, future, c, n, noway, or (one of several lines), next "label" (jump there when the step is done), ...)
-local _, ns = ...
----@cast ns ObviGuideNS
+local kit = ObviGuide.Toolkit()
 
-local Conditions = ns.Conditions
-local COLORS = ns.Colors
+local Conditions = kit.Conditions
+local COLORS = kit.Colors
 local HEARTHSTONE = 6948   -- item id
 
 ---@class ObviGuideParser
 local Zygor = {}
-ns.Parsers.zygor = Zygor
 
 -- Zone names -> classic uiMapIDs, from the Forever port's map table (ZygorGuidesViewer\Libs-Classic\LibRover-1.0\
 -- data.lua, MapIDsByName). Dungeons there have made-up ids, so they are left out: points in them are dropped.
@@ -1166,3 +1165,5 @@ function Zygor.Names(text)
 	end
 	return names
 end
+
+ObviGuide.AddFormat("zygor", Zygor)

@@ -5,11 +5,11 @@ addon, released as its own CurseForge project (except the Zygor bridge, which is
 
 | Folder | Addon | What it is |
 |---|---|---|
-| `ObviGuide` | Obvi Guide | The viewer. Reads guides in its own format, RestedXP's and Zygor's. Ships no guides. |
+| `ObviGuide` | Obvi Guide | The viewer. Reads guides in its own format and RestedXP's; other formats can be added by addons. Ships no guides. |
 | `ObviGuide_Scribe` | Obvi Guide: Scribe | Write guides in game: record while playing, edit, test, export. |
 | `ObviGuide_Dungeons` | Obvi Guide: Dungeons | Dungeon quest guides. |
 | `ObviGuide_Professions` | Obvi Guide: Professions | Profession leveling guides. |
-| `ObviGuide_Zygor` | Obvi Guide: Zygor | Personal: reads the guides of your own installed Zygor addon in game. Not released. |
+| `ObviGuide_Zygor` | Obvi Guide: Zygor | Personal: reads the guides of your own installed Zygor addon in game (it brings its own Zygor reader). Not released. |
 
 Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 

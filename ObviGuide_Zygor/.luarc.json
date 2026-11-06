@@ -12,7 +12,7 @@
     "table": "disable",
     "utf8": "disable"
   },
-  "workspace.library": ["../.types/wow-api/Annotations/Core", "../ObviGuide/docs/api.lua"],
+  "workspace.library": ["../.types/wow-api/Annotations/Core", "../ObviGuide/docs/api.lua", "../ObviGuide/Core.lua", "../ObviGuide/Conditions.lua"],
   "workspace.ignoreDir": [".types", ".release", ".github"],
   "workspace.checkThirdParty": false,
   "diagnostics.severity": {

@@ -10,13 +10,25 @@ ObviGuide = {}
 ---@param build fun(g: ObviGuideGuideBuilder)
 function ObviGuide.Guide(build) end
 
---- Adds guides written in another guide format. A format that can list a guide from its meta alone (Zygor) keeps
---- the text and reads it when the guide is first opened; the text may then also be a function that returns it.
----@param format "rxp"|"zygor"   RestedXP or Zygor guide syntax
+--- Adds guides written in another guide format. A format that can list a guide from its meta alone keeps the text
+--- and reads it when the guide is first opened; the text may then also be a function that returns it.
+---@param format string   "rxp" (RestedXP guide syntax), or a format an addon added (ObviGuide.AddFormat)
 ---@param text string|(fun(): string)   the guide text (one or more guides)
----@param meta? table     what the format needs besides the text (Zygor: the title and header)
+---@param meta? table     what the format needs besides the text
 ---@return integer added  how many guides were added
 function ObviGuide.Add(format, text, meta) end
+
+--- Adds a guide format: a reader for another guide syntax, so ObviGuide.Add takes guides written in it. The reader
+--- has Parse(text, source, meta) -> guides, warnings; optionally Head(source, meta) -> one guide listed from its meta
+--- alone (its text is then read when it is first opened) and Names(text) -> the quest and NPC names in the text (for
+--- the guide picker's search). The guides it returns are ObviGuide's own model (Core.lua).
+---@param id string       the name ObviGuide.Add is called with
+---@param parser table
+function ObviGuide.AddFormat(id, parser) end
+
+--- What a format's reader builds guides with: the condition helpers and the colours names are written in.
+---@return {Conditions: table, Colors: table<string, string>}
+function ObviGuide.Toolkit() end
 
 --- Opens a guide (by title or id) in the window at its first step, without the ticks of an earlier run. A guide
 --- added again with the same id from the same addon replaces the old one, so a tool can add, edit and reopen a draft.
@@ -30,7 +42,7 @@ function ObviGuide.Load(title) end
 ---@field group string         its folder in the guide list
 ---@field name? string         its id
 ---@field next? string
----@field format string        "obviguide", "rxp", "zygor"
+---@field format string        "obviguide", "rxp", or a format an addon added
 ---@field source string        the addon that added it
 ---@field steps table[]        empty until read (see ObviGuide.Read)
 

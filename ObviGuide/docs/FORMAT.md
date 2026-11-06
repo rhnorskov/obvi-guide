@@ -4,8 +4,8 @@ ObviGuide guides are written in Lua, with a small set of functions. The full API
 [api.lua](api.lua): add the `docs` folder to your LuaLS workspace library and you get autocomplete, hover docs and
 warnings for typos and missing arguments while you write.
 
-RestedXP and Zygor guides are translated into the same calls in game, when a guide pack adds them, so every guide is
-shown the same way whatever it was written in.
+RestedXP guides, and guides in a format another addon adds (`ObviGuide.AddFormat`), are translated into the same calls
+in game when a guide pack adds them, so every guide is shown the same way whatever it was written in.
 
 Status: draft for review. Builder.lua implements it; RestedXP guides still come in through their own reader.
 
@@ -16,8 +16,6 @@ guide text in another format:
 
 ```lua
 ObviGuide.Add("rxp", [[ ...RestedXP guide text... ]])     -- translated into the calls below
-ObviGuide.Add("zygor", [[ ...Zygor guide text... ]], { title = "...", header = {...} })  -- one guide, with its
-                                                          -- title and header (see Parsers/Zygor.lua)
 ```
 
 ## A guide
@@ -125,6 +123,4 @@ Examples: `"Alliance and not Shaman"`, `"Horde/Shaman"`, `"done 92703 or area 16
 
 ## Open
 
-- Zygor features with no line type yet (e.g. `|only if`, `|n`, gossip choices) are mapped when the Zygor translator
-  is written.
 - `/og export` will print a guide (or the current step) in this form, to copy and edit.

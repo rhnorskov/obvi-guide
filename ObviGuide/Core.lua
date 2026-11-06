@@ -71,7 +71,7 @@ local ADDON, ns = ...
 ---@field group string           a folder for the guide list, e.g. "RestedXP Forever Guide (A)"
 ---@field next? string           the title of the guide that follows
 ---@field cond? ObviGuideCond     listed only for characters this holds for
----@field format string          the format it came in ("rxp", "zygor")
+---@field format string          the format it came in ("obviguide", "rxp", or one an addon added)
 ---@field source string          which pack added it
 ---@field steps ObviGuideStep[]   (empty while the guide is still pending)
 ---@field pending? ObviGuidePending   its text, not read yet (see ns.Ready)
@@ -197,9 +197,9 @@ end)
 
 -- The public API, for guide packs: a small addon with "## Dependencies: ObviGuide" whose files call
 --   ObviGuide.Add("rxp", [[ ...guide text... ]])
--- Zygor guide text comes without its title and header (those are Lua in Zygor's files), so it takes them as a third
--- argument:  ObviGuide.Add("zygor", [[ ...guide text... ]], { title = "Leveling Guides\\Westfall (13-15)", header = {...} })
--- ObviGuide never reads other addons' files or data: guides come in only through this call.
+-- Another guide syntax comes as a format an addon adds (ObviGuide.AddFormat), building its guides with ObviGuide's
+-- helpers (ObviGuide.Toolkit); a format may take more than the text (a third argument, meta).
+-- ObviGuide never reads other addons' files or data: guides come in only through these calls.
 ---@class ObviGuideAPI
 ObviGuide = ObviGuide or {}
 
@@ -220,11 +220,11 @@ local function Announce()
 	C_Timer.After(0, function() announced = false ns:Fire("OBVIGUIDE_GUIDES_ADDED") end)
 end
 
---- Adds guides. A format that can list a guide from its meta alone (Zygor) keeps the text and reads it when the guide
---- is first opened; the text may then also be a function that returns it, called at that moment.
----@param format string   "rxp" (RestedXP guide syntax) or "zygor" (Zygor guide syntax)
+--- Adds guides. A format that can list a guide from its meta alone (it has Head) keeps the text and reads it when the
+--- guide is first opened; the text may then also be a function that returns it, called at that moment.
+---@param format string   "rxp" (RestedXP guide syntax), or a format an addon added (ObviGuide.AddFormat)
 ---@param text string|(fun(): string)   the guide text (one or more guides)
----@param meta? table     what the format needs besides the text (Zygor: the title and header)
+---@param meta? table     what the format needs besides the text
 ---@return integer added  how many guides were added
 ---@diagnostic disable-next-line: duplicate-set-field
 function ObviGuide.Add(format, text, meta)
@@ -249,6 +249,24 @@ function ObviGuide.Add(format, text, meta)
 	for _, g in ipairs(guides) do table.insert(ns.guides, g) end
 	Announce()
 	return #guides
+end
+
+--- Adds a guide format: a reader for another guide syntax, so ObviGuide.Add takes guides written in it. An addon that
+--- reads some other addon's guides brings its own reader this way; ObviGuide itself reads its own format and
+--- RestedXP's.
+---@param id string               the name ObviGuide.Add is called with
+---@param parser ObviGuideParser
+---@diagnostic disable-next-line: duplicate-set-field
+function ObviGuide.AddFormat(id, parser)
+	ns.Parsers[id] = parser
+end
+
+--- What a format's reader builds guides with: the condition helpers (Conditions.All, Conditions.RACES, ...) and the
+--- colours names are written in (Colors).
+---@return {Conditions: ObviGuideConditions, Colors: table<string, string>}
+---@diagnostic disable-next-line: duplicate-set-field
+function ObviGuide.Toolkit()
+	return { Conditions = ns.Conditions, Colors = ns.Colors }
 end
 
 --- Reads a pending guide's text now (its first use). Returns the guide, or nil when it turns out unreadable: then it
