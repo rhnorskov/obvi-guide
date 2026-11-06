@@ -263,10 +263,13 @@ function Engine.IsComplete(goal, step)
 	end
 	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or LaterNamesakeTaken(goal.quest) end
 	if k == "objective" or k == "kill" or (k == "collect" and goal.objective) then
-		-- a quest ready to turn in counts all its objectives done, as Zygor does: on retail the objective list can
-		-- still say 0/1 when the quest is complete (seen with "Arrive at Talonstrike Terrace")
-		if C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or C_QuestLog.ReadyForTurnIn(goal.quest) then return true end
+		if C_QuestLog.IsQuestFlaggedCompleted(goal.quest) then return true end
 		local o = Objective(goal)
+		-- a quest ready to turn in counts its objectives done, as Zygor does: on retail the objective list can still
+		-- say 0/1 when the quest is complete (seen with "Arrive at Talonstrike Terrace"). Not a line the game doesn't
+		-- track, though: such a quest says complete from the start (resurrecting Henze Faulk with the Symbol of Life),
+		-- so the line waits for the turn-in.
+		if o and C_QuestLog.ReadyForTurnIn(goal.quest) then return true end
 		-- a line for part of the objective ("|count 3" in Zygor) is done once the objective has reached that many
 		if o and goal.need then return (o.numFulfilled or 0) >= goal.need end
 		return o and o.finished or false
