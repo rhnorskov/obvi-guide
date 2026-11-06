@@ -52,6 +52,7 @@ local BUDGET = 4        -- milliseconds a frame for gathering the names
 ---@field folder? ObviGuideFolder
 ---@field path? string    a column's folder: its path (Picker.RECENT for "Recent")
 ---@field guide? ObviGuideGuide
+---@field step? integer    a step of the guide the search found its quest or NPC in: opens the guide there
 ---@field count? integer
 ---@field open? boolean   a folder showing what's in it
 ---@field level? integer      the column it is in (the picker sets it)
@@ -185,6 +186,10 @@ function Picker.Rows(tree, open, words, recent, names)
 			if name then
 				if #rows - at + 1 < NAME_ROWS then
 					rows[#rows + 1] = { kind = "guide", guide = g, text = g.title, note = name, depth = 0 }
+					for _, s in ipairs(Picker.Steps(g, name)) do
+						rows[#rows + 1] = { kind = "guide", guide = g, step = s.index, note = "",
+							text = ("Step %d: %s"):format(s.index, s.text), depth = 1 }
+					end
 				else
 					more = more + 1
 				end
@@ -255,7 +260,7 @@ function Picker.Results(tree, words, names)
 				where[group] = where[group] or (group:gsub("\\", " / "))
 				row.note = where[group]
 			end
-			row.depth = 0
+			row.depth = row.step and 1 or 0   -- (a step found stays under its guide)
 			out[#out + 1] = row
 		end
 	end
@@ -294,6 +299,34 @@ end
 local function Plain(s)
 	s = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", ""):gsub("%s+", " ")
 	return (s:gsub("^ ", ""):gsub(" $", ""))
+end
+
+--- The steps of a guide whose quest or NPC line names `name` (the "In guides" find), at most five: each step's number
+--- and that line. A guide not read yet is read now (only guides the search found get here).
+---@param g ObviGuideGuide
+---@param name string
+---@return {index: integer, text: string}[]
+function Picker.Steps(g, name)
+	local out = {}
+	if not ns.Ready(g) then return out end
+	local want = name:lower()
+	for _, step in ipairs(g.steps or {}) do
+		local hit ---@type string?
+		for _, goals in ipairs({ step.goals, step.side }) do
+			for _, goal in ipairs(goals or {}) do
+				local kind = goal.kind
+				if not hit and (kind == "accept" or kind == "turnin" or kind == "talk") and goal.text then
+					local text = Plain(goal.text)
+					if text:lower():find(want, 1, true) then hit = text end
+				end
+			end
+		end
+		if hit then
+			out[#out + 1] = { index = step.index, text = hit }
+			if #out >= 5 then break end
+		end
+	end
+	return out
 end
 
 --- A guide's quest and NPC names. A guide read already: from its accept, turn-in and talk lines. One not read yet:
@@ -706,18 +739,21 @@ end
 local besides = false   -- the guide picked goes beside the ones open (Picker.Open(true)), not in place of the one shown
 
 --- Opens a guide and closes the picker: the guide's own if it's open already, or else beside the others or in place
---- of the one shown, from its first step (the engine moves on past the steps already done).
+--- of the one shown, from its first step (the engine moves on past the steps already done); or at a step the search
+--- found, held there as if chosen with the arrows.
 ---@param g ObviGuideGuide
-local function Load(g)
+---@param step? integer
+local function Load(g, step)
 	if frame then frame:Hide() end
 	ns.Engine.Open(g.name or g.title, besides)
+	if step and ns.Engine.Current() == g then ns.Engine.GoTo(step) end
 end
 
 ---@param self ObviGuidePickerButton
 local function RowClick(self)
 	local row = self.row
 	if row.kind == "guide" and row.guide then
-		Load(row.guide)
+		Load(row.guide, row.step)
 	elseif row.kind == "group" and row.level and row.path then
 		Choose(row.level, row.path)
 	end
@@ -826,13 +862,14 @@ local function InitRow(b, row)
 	b.hlM:SetDrawLayer(layer)
 	b.tab:SetShown(kind == "header")
 	b.glow:SetShown(isGuide)
-	b.icon:SetShown(isGuide)
-	local current = isGuide and row.guide ~= nil and row.guide == ns.Engine.Current()
+	b.icon:SetShown(isGuide and not row.step)
+	local current = isGuide and not row.step and row.guide ~= nil and row.guide == ns.Engine.Current()
 	b.box:SetShown(current)
 	b.check:SetShown(current)
 	b.count:SetText(row.count and tostring(row.count) or "")
 	-- the search: the guide's folder, or the quest or NPC it was found by, in grey after the title
-	b.label:SetText(row.note and (row.text .. "  |cff808080" .. row.note .. "|r") or row.text)
+	local note = row.note ~= "" and row.note or nil
+	b.label:SetText(note and (row.text .. "  |cff808080" .. note .. "|r") or row.text)
 	b.label:ClearAllPoints()
 	b:EnableMouse(isGroup or isGuide)
 	if kind == "header" then
@@ -845,6 +882,11 @@ local function InitRow(b, row)
 		b.label:SetFontObject("GameFontDisable")
 		b.label:SetTextColor(0.5, 0.5, 0.5)
 		b.label:SetPoint("LEFT", 8, 0)
+		b.label:SetPoint("RIGHT", -8, 0)
+	elseif row.step then
+		-- a step the search found, under its guide: indented past the guide's icon, smaller
+		b.label:SetFontObject("GameFontNormalSmall")
+		b.label:SetPoint("LEFT", 6 + ICON + 16, 0)
 		b.label:SetPoint("RIGHT", -8, 0)
 	elseif isGroup then
 		b.label:SetFontObject("GameFontNormal")
