@@ -1,5 +1,6 @@
--- Minimap pins, as Zygor has them: while a step is current, its path points are small quest-yellow dots on the minimap
--- and its destination a gold pin. The destination stays on the minimap's edge when it is farther away, so it shows
+-- Minimap pins, as Zygor has them: while a step is current, its path points are small dots on the minimap, coloured by
+-- what the step is about (StepColor), and its destination a gold pin. The destination stays on the minimap's edge when
+-- it is farther away, so it shows
 -- the way to go. Points on another continent (or anywhere while the player is in an instance) are not shown.
 local _, ns = ...
 ---@cast ns ObviGuideNS
@@ -12,7 +13,6 @@ local DOT, DEST = 7, 16              -- pin sizes in minimap pixels (tuned in ga
 local RIM = 1.5                      -- the dark rim around each dot
 local EDGE = 14                      -- the clamped destination sits this far inside the edge (clear of the ring art)
 local INTERVAL = 0.05                -- seconds between updates while pins are shown
-local DOTCOLOR = { 1, 0.82, 0 }      -- the game's own quest yellow (as quest titles and objectives are drawn)
 local GOLD = { 1, 0.82, 0 }
 -- the minimap's diameter in yards by zoom level (0..5), for clients without C_Minimap.GetViewRadius
 local OUTDOOR = { [0] = 466 + 2 / 3, 400, 333 + 1 / 3, 266 + 2 / 3, 200, 133 + 1 / 3 }
@@ -145,17 +145,42 @@ local function Circle(pin, layer, size, r, g, b, a)
 	return tex
 end
 
+--- The dots' colour: what the step's first open line is about, in the colours the window writes names in (red to
+--- kill, green for an NPC, blue to collect, purple to click), so they don't look like Shortest Path Forever's yellow
+--- route dots; white for anything else (a place to go).
+---@param s ObviGuideStep
+---@return number r, number g, number b
+local function StepColor(s)
+	local function Hex(c) return tonumber(c:sub(3, 4), 16) / 255, tonumber(c:sub(5, 6), 16) / 255, tonumber(c:sub(7, 8), 16) / 255 end
+	local C = ns.Colors
+	for _, g in ipairs(s.goals) do
+		if ns.Engine.IsVisible(g) and not ns.Engine.IsComplete(g, s) then
+			local k = g.kind
+			if k == "kill" or (g.target and g.target.enemy) then return Hex(C.ENEMY) end
+			if k == "collect" then return Hex(C.LOOT) end
+			if g.text and g.text:find("|c" .. C.PICK, 1, true) then return Hex(C.PICK) end
+			if k == "talk" or k == "accept" or k == "turnin" then return Hex(C.FRIENDLY) end
+			if k ~= "text" then break end
+		end
+	end
+	return 1, 1, 1
+end
+
 ---@return ObviGuidePin
-local function Dot()
+---@param r number
+---@param g number
+---@param b number
+local function Dot(r, g, b)
 	used = used + 1
 	if not dots[used] then
 		local pin = NewPin(DOT + RIM * 2, 25)
-		-- a quest-yellow dot with a dark rim, so it shows on any ground
+		-- a coloured dot with a dark rim, so it shows on any ground
 		Circle(pin, "BACKGROUND", DOT + RIM * 2, 0, 0, 0, 0.85)
 		pin.tex:Hide()
-		pin.tex = Circle(pin, "ARTWORK", DOT, DOTCOLOR[1], DOTCOLOR[2], DOTCOLOR[3], 1)
+		pin.tex = Circle(pin, "ARTWORK", DOT, 1, 1, 1, 1)
 		dots[used] = pin
 	end
+	dots[used].tex:SetVertexColor(r, g, b, 1)
 	return dots[used]
 end
 
@@ -211,8 +236,9 @@ function Pins.Refresh()
 	used = 0
 	-- the dots: the step's route points and its markers (where its mobs or things are)
 	if on and step then
-		for _, p in ipairs(step.path) do Place(Dot(), p) end
-		for _, p in ipairs(step.markers or {}) do Place(Dot(), p) end
+		local r, g, b = StepColor(step)
+		for _, p in ipairs(step.path) do Place(Dot(r, g, b), p) end
+		for _, p in ipairs(step.markers or {}) do Place(Dot(r, g, b), p) end
 	end
 	for i = used + 1, #dots do Place(dots[i], nil) end
 	if on and step and step.dest then Place(Dest(), step.dest) elseif dest then Place(dest, nil) end
