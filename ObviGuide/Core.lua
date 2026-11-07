@@ -30,6 +30,7 @@ local ADDON, ns = ...
 ---@field TargetMacro fun(name: string|string[], enemy?: boolean): string
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
+---@field DestroyCheapest fun()   asks to destroy the cheapest item in the bags (UI\Junk.lua)
 ---@field Catchup ObviGuideCatchup
 ---@field GuidePicker ObviGuidePicker
 ---@field Options ObviGuideOptions

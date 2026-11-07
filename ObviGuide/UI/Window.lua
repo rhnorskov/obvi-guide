@@ -538,6 +538,7 @@ local function SetupSettingsMenu(_, root)
 	root:CreateDivider()
 	root:CreateButton("Quest Catchup", function() ns.Catchup.Start() end)
 	root:CreateButton("Quest Cleanup", function() ns.Cleanup() end)
+	root:CreateButton("Destroy cheapest item", function() ns.DestroyCheapest() end)
 	root:CreateButton("Hide (/og shows it again)", function() frame:Hide() end)
 end
 

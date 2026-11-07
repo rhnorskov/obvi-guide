@@ -4,6 +4,9 @@
 
 - **Guide picker**: the gear beside the search is a menu now. Untick **Other faction's guides** to leave out the guides
   that are only for the other faction; **Settings** opens the settings as before.
+- **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before
+  destroying it (Enter says yes). Items a vendor won't buy and items the guide still needs are left alone. Bind a key
+  in Key Bindings > Obvi Guide, or use the window's gear menu or `/og junk`.
 
 ## v0.4.0
 

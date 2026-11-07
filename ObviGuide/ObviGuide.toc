@@ -23,6 +23,7 @@ UI\Minimap.lua
 UI\Arrow.lua
 UI\Copy.lua
 UI\Cleanup.lua
+UI\Junk.lua
 UI\GuidePicker.lua
 UI\Options.lua
 Commands.lua
