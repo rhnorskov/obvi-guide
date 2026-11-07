@@ -75,8 +75,9 @@ ObviGuide.Guide(function(g)
 
 	-- inside, the whole way through
 	g:Side("out", function(s)
+		s:Kill(g.Mob("Evolving Ectoplasm", 3640))
 		s:Collect(g.Item("Wailing Essence", 6464), { count = 6, quest = 1491, objective = 1 })
-		s:Note("From the ectoplasms throughout the dungeon.")
+		s:Note("Throughout the dungeon.")
 	end)
 
 	g:Side("out", function(s)

@@ -60,8 +60,10 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s)
 		s:Goto(WESTFALL, 54.4, 9.3)
+		s:Kill(g.Mob("Murloc Raider", 515))
+		s:Kill(g.Mob("Murloc Coastrunner", 126))
 		s:Collect(g.Item("Longshore Murloc Gill", 254548), { count = 7, quest = 92744, objective = 1 })
-		s:Note("From the murlocs along the north coast.")
+		s:Note("Along the north coast.")
 	end)
 
 	g:Step(function(s)
