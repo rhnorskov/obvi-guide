@@ -17,8 +17,8 @@ Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 ## Trying the newest version
 
 To play with the latest changes before they're released, paste this into PowerShell. It downloads this repo from
-GitHub and puts Obvi Guide, Dungeons, Professions and Extras in your game's AddOns folder (no git needed); run it again
-to update:
+GitHub and puts Obvi Guide, Dungeons, Professions, Extras and the Zygor bridge in your game's AddOns folder (no git
+needed); run it again to update:
 
 ```
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/rhnorskov/obvi-guide/main/tools/install.ps1)))
