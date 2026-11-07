@@ -1,11 +1,11 @@
 -- Excavation Site: Wetlands (24-29): the quests Attune lists for each faction. Alliance: Caitlin Grassman's chain
--- (Seeking Caitlin, Lost in the Thicket Things, Heartwoven), Daily Delivery and Highland Hides, Rethiel the
--- Greenwarden's chain up to Horrors in the Highland, Songblade Search and Fallen in the Fen, and Lost Relic Carry from
--- the Relic Guardian. Horde: Dragonmaw Rumors and Open the Maw, Changing Tastes, and Elder Knowledge from the Relic
--- Guardian. Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance
--- from DungeonJournal (Exehn). See README.md.
+-- (Lost in the Thicket Things, Heartwoven; Seeking Caitlin handed in if you have it), Daily Delivery and Highland
+-- Hides, Rethiel the Greenwarden's chain up to Horrors in the Highland, Songblade Search and Fallen in the Fen, and
+-- Lost Relic Carry from the Relic Guardian. Horde: Dragonmaw Rumors and Open the Maw, Changing Tastes, and Elder
+-- Knowledge from the Relic Guardian. Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's
+-- Forever data; the entrance from DungeonJournal (Exehn). See README.md.
 
-local WETLANDS, REDRIDGE, ASHENVALE = 1437, 1433, 1440
+local WETLANDS, REDRIDGE = 1437, 1433
 local ARATHI, ORGRIMMAR, THUNDER_BLUFF = 1417, 1454, 1456
 
 -- the dungeon portal: under a big tree in the hills south-east of Whelgar's Excavation
@@ -37,22 +37,14 @@ ObviGuide.Guide(function(g)
 		s:Note("Inside the building in Lakeshire.")
 	end)
 
-	-- a lead-in from Astranaar; Caitlin gives her quest without it
-	g:Step(function(s)
-		s.skip = "onquest 95647 or done 95647"
-		s:Goto(ASHENVALE, 35.0, 48.5)
-		s:Talk(g.Npc("Llana", 3970))
-		s:Accept(95737, "Seeking Caitlin")
-		s:Note("In Astranaar. Only worth it if you're nearby: the boat from Auberdine goes to Menethil Harbor. Otherwise skip this step.")
-	end)
-
-	-- Menethil Harbor
+	-- Menethil Harbor. (Seeking Caitlin, from Llana in Astranaar, only leads to her: she gives her quest without it,
+	-- so the guide doesn't send you across the sea for it, but hands it in if you have it.)
 	g:Step(function(s)
 		s:Goto(WETLANDS, 11.9, 58.8)
 		s:Talk(caitlin)
 		s:Turnin(95737, "Seeking Caitlin"):Only("onquest 95737")
 		s:Accept(95647, "Lost in the Thicket Things")
-		s:Note("Inside the building.")
+		s:Note("Inside the building. From Lakeshire, fly to Menethil Harbor if you have the flight path; otherwise fly to Ironforge and ride north through Loch Modan.")
 	end)
 
 	g:Step(function(s)
