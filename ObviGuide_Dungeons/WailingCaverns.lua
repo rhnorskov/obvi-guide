@@ -23,7 +23,7 @@ ObviGuide.Guide(function(g)
 		s:Goto(BARRENS, 62.4, 37.6)
 		s:Talk(mebok)
 		s:Accept(865, "Raptor Horns")
-		s:Note("In Ratchet. Smart Drinks, for the dungeon, comes after this one.")
+		s:Note("In Ratchet. Hand this in before the dungeon: it leads to Smart Drinks, which you need inside.")
 	end)
 
 	g:Step(function(s)
