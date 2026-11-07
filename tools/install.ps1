@@ -8,8 +8,8 @@
 #   -Addons "ObviGuide,ObviGuide_Dungeons"                            which addons (default: the four below)
 #   -Branch main                                                      which branch
 #
-# An addon already in AddOns is replaced. One that is a link (a developer's checkout) only loses the link; the
-# checkout it points at is left alone. Saved settings live in the WTF folder and are kept.
+# An addon already in AddOns is replaced, unless it's a link to a checkout (a developer's setup): that one is left as it
+# is. Saved settings live in the WTF folder and are kept.
 param(
     [string]$Path,
     [string]$Addons = "ObviGuide,ObviGuide_Dungeons,ObviGuide_Professions,ObviGuide_Extras",
@@ -61,8 +61,8 @@ try {
         if (-not (Test-Path (Join-Path $source "$name.toc"))) { Write-Warning "$name isn't in the download: skipped"; continue }
         $target = Join-Path $Path $name
         $item = Get-Item $target -Force -ErrorAction SilentlyContinue
-        if ($item -and $item.LinkType) { $item.Delete() }              # only the link, not what it points at
-        elseif ($item) { Remove-Item $target -Recurse -Force }         # the version installed before
+        if ($item -and $item.LinkType) { Write-Host "  $name is linked to a checkout: left as it is"; continue }
+        if ($item) { Remove-Item $target -Recurse -Force }             # the version installed before
         Copy-Item $source $target -Recurse
         Write-Host "  $name"
     }
