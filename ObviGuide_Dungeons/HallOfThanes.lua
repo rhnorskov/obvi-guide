@@ -115,3 +115,80 @@ ObviGuide.Guide(function(g)
 		s:Turnin(98423, "The Treaty of Understanding")
 	end)
 end)
+
+-- The Hall of Thanes (Horde, 13-15): the two quests Attune lists for the Horde, Important Heirlooms from Thom Filch by
+-- the portal and An Ancient Grudge inside. Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's Forever
+-- data; the Horde way into Ironforge from DungeonJournal (Exehn).
+
+local HILLSBRAD = 1424
+
+ObviGuide.Guide(function(g)
+	g.title = "The Hall of Thanes: Quests"
+	g.group = "Dungeons"
+	g.id    = "obvi-hall-of-thanes-horde"
+	g.next  = "obvi-ragefire-chasm-horde"
+	g.only  = "Horde"
+
+	local thom  = g.Npc("Thom Filch", 265003)
+	local ghost = g.Npc("Ghostly Attendant", 265002)
+
+	-- a long way into Alliance land: south from the Undercity, east through Arathi and the Wetlands to Dun Morogh
+	g:Step(function(s)
+		s:Goto(HILLSBRAD, 60.6, 20.3)
+		s:Say("From the Undercity (zeppelin from Orgrimmar if you're not Undead) go south through Silverpine Forest into Hillsbrad Foothills.")
+		s:Note("Pick up the flight path at Tarren Mill on the way: it saves time on the way home.")
+	end)
+
+	g:Step(function(s)
+		s:Path(IRONFORGE, 22.8, 77.5)
+		s:Path(IRONFORGE, 35.9, 72.5)
+		s:Path(IRONFORGE, 41.6, 63.6)
+		s:Goto(IRONFORGE, 43.5, 52.0)
+		s:Say("Ride east into Arathi Highlands, south over Thandol Span into the Wetlands, through Dun Algaz into Loch Modan and west through the tunnel to Dun Morogh.")
+		s:Say("In Ironforge, head for the High Seat and take the cobwebbed corridor on the left as you walk in.")
+		s:Note(g.Warn("The guards will kill you. Take your gear off before you go in, and come back to life out of their sight; the spirit healer is just outside the city."))
+	end)
+
+	g:Step(function(s)
+		s:Goto(IRONFORGE, 32.2, 44.9)
+		s:Talk(thom)
+		s:Accept(96403, "Important Heirlooms")
+		s:Note("Follow the stairs down to Old Ironforge; he stands on the bridge over the lava, by the dungeon portal.")
+	end)
+
+	g:Step(function(s)
+		s.skip = "ready 96403 or done 96403 or done 96395"   -- (been inside already)
+		s:Do("Enter the Hall of Thanes through the portal next to ", thom, ".")
+	end)
+
+	-- inside: the heirlooms along the way, up to the last boss
+	g:Side("out", function(s)
+		s:Collect(g.Item("Dwarven Heirloom", 274289), { count = 8, quest = 96403, objective = 1 })
+		s:Note("Click the ", g.Object("Dwarven Heirloom"), " objects along the halls.")
+	end)
+
+	g:Step(function(s)
+		s:Talk(ghost)
+		s:Accept(96395, "An Ancient Grudge")
+		s:Note("Past the first room.")
+	end)
+
+	g:Step(function(s)
+		s:Kill(g.Mob("Faldrim Anvilmar", 261306), { quest = 96395, objective = 1 })
+		s:Note("He walks Anvilmar's Rest.")
+	end)
+
+	g:Step(function(s)
+		s:Talk(ghost)
+		s:Turnin(96395, "An Ancient Grudge")
+	end)
+
+	-- back out through the portal
+	g:Step(function(s)
+		s.label = "out"
+		s:Goto(IRONFORGE, 32.2, 44.9)
+		s:Talk(thom)
+		s:Turnin(96403, "Important Heirlooms")
+		s:Note("Finish the heirlooms on the way to Durgen Dirgehammer, the last boss, then hand them in by the portal.")
+	end)
+end)

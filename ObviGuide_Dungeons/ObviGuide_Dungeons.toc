@@ -1,13 +1,39 @@
 ## Interface: 16001, 120105
 ## Title: Obvi Guide: Dungeons
 ## Version: @project-version@
-## Notes: Dungeon quest guides for Obvi Guide: The Hall of Thanes, Ruins of Lordaeron, The Deadmines and Wailing Caverns (Alliance).
+## Notes: Dungeon quest guides and dungeon key guides for Obvi Guide, Alliance and Horde, from The Hall of Thanes to Stratholme.
 ## Author: Rasmus Norskov
 ## Dependencies: ObviGuide
 ## X-License: GPL-3.0-or-later
 ## X-Curse-Project-ID: 1787748
 
 HallOfThanes.lua
+RagefireChasm.lua
 RuinsOfLordaeron.lua
 Deadmines.lua
 WailingCaverns.lua
+ShadowfangKeep.lua
+ExcavationSite.lua
+BlackfathomDeeps.lua
+Stockade.lua
+Dalaran.lua
+RazorfenKraul.lua
+Gnomeregan.lua
+ScarletMonastery.lua
+RazorfenDowns.lua
+Uldaman.lua
+ZulFarrak.lua
+Maraudon.lua
+TempleOfAtalHakkar.lua
+BlackrockDepths.lua
+DireMaul.lua
+LowerBlackrockSpire.lua
+UpperBlackrockSpire.lua
+Scholomance.lua
+Stratholme.lua
+
+KeyTomeOfDalaran.lua
+KeyDalaranSewer.lua
+KeyScarlet.lua
+KeyShadowforge.lua
+KeyScholomance.lua
