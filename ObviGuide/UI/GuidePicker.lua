@@ -551,7 +551,7 @@ function Picker.OtherFaction(c)
 end
 
 -- the gear menu's "Other faction's guides" (on unless turned off)
-local function ShowOtherFaction() return not (ns.db and ns.db.pickerHideOtherFaction) end
+local function ShowOtherFaction() return ns.db and ns.db.pickerShowOtherFaction or false end
 
 --- Builds the folder tree again: every guide (one whose "only" doesn't hold for this character is greyed out, see
 --- Paint), except the other faction's when the gear menu leaves them out. Pending guides are listed as they are; they
@@ -1144,7 +1144,7 @@ local function Build()
 	gear:SetupMenu(function(_, root)
 		root:CreateCheckbox("Other faction's guides", ShowOtherFaction, function()
 			if not ns.db then return end
-			ns.db.pickerHideOtherFaction = ShowOtherFaction() or nil
+			ns.db.pickerShowOtherFaction = not ShowOtherFaction() or nil
 			Rebuild()
 			Fill()
 		end)

@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- **Guide picker**: the gear beside the search is a menu now. Untick **Other faction's guides** to leave out the guides
-  that are only for the other faction; **Settings** opens the settings as before.
+- **Guide picker**: the gear beside the search is a menu now. The guides only for the other faction are left out;
+  tick **Other faction's guides** there to list them too. **Settings** opens the settings as before.
 - **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before
   destroying it (Enter says yes). Grey items go first. Tools (Blacksmith Hammer, Mining Pick, fishing poles...), items
   a vendor won't buy and items the guide still needs are left alone. Bind a key
