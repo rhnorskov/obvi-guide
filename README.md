@@ -14,6 +14,19 @@ addon, released as its own CurseForge project (except the Zygor bridge, which is
 
 Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 
+## Trying the newest version
+
+To play with the latest changes before they're released, paste this into PowerShell. It downloads this repo from
+GitHub and puts Obvi Guide, Dungeons, Professions and Extras in your game's AddOns folder (no git needed); run it again
+to update:
+
+```
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/rhnorskov/obvi-guide/main/tools/install.ps1)))
+```
+
+It finds the game by itself; add `-Path "<game folder>\_forever_\Interface\AddOns"` if it doesn't. See
+[tools/install.ps1](tools/install.ps1) for the other options.
+
 ## Development
 
 Link each addon folder into the game's `Interface\AddOns` (a junction per folder; the game needs each addon directly
