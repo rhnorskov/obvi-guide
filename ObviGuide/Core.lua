@@ -147,6 +147,7 @@ local ADDON, ns = ...
 ---@field what? string           what the progress counts, when the text doesn't say it ("Abandoned Belongings")
 ---@field target? ObviGuideTarget  who clicking the line (or its action key) targets
 ---@field targets? ObviGuideTarget[]  all of them, in order, when the line names several
+---@field box? ObviGuideGoal[]   a side task's line: all the lines of its side box (shown or hidden together)
 ---                                (target is the first)
 
 ---@alias ObviGuideCond table     a compiled condition tree, see Conditions.lua

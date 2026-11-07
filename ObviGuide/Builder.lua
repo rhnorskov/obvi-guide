@@ -526,6 +526,7 @@ local function Assemble(steps, ctx)
 			for _, g in ipairs(s.goals) do
 				local copy = setmetatable({}, { __index = g })
 				copy.cond = Conditions.All(s.cond, g.cond)
+				copy.box = side   -- the window shows a side box as a whole, or not at all (Engine.SideOpen)
 				table.insert(side, copy)
 			end
 			if #side > 0 then table.insert(active, { goals = side, last = lastOf(i, s.untilStep), keys = ObjectivesOf(s) }) end

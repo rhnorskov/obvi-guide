@@ -247,6 +247,22 @@ local function LaterNamesakeTaken(quest)
 	return false
 end
 
+--- Whether a side task (its box: the lines of one g:Side) is still shown: while one of its lines that can be done is
+--- shown and not done. Once they're done or hidden, the whole task goes, its notes and plain lines with it. A task
+--- with only notes and plain lines is always shown.
+---@param box ObviGuideGoal[]
+---@param step ObviGuideStep
+---@return boolean
+function Engine.SideOpen(box, step)
+	local any = false
+	for _, g in ipairs(box) do
+		if COMPLETABLE[g.kind] then
+			any = true
+			if Engine.IsVisible(g) and not Engine.IsComplete(g, step) then return true end
+		end
+	end
+	return not any
+end
 
 ---@param goal ObviGuideGoal
 ---@param step ObviGuideStep

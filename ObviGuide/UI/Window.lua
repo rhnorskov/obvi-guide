@@ -456,7 +456,12 @@ function Window.Refresh()
 	y = Goals(step, step.goals, y, false, false, step.tips)
 	-- side tasks
 	local open = {}
-	for _, g in ipairs(step.side) do if Engine.IsVisible(g) and not Engine.IsComplete(g, step) then table.insert(open, g) end end
+	local boxes = {} ---@type table<table, boolean>   each side box: still open (a done one goes with its notes)
+	for _, g in ipairs(step.side) do
+		local box = g.box or { g }
+		if boxes[box] == nil then boxes[box] = Engine.SideOpen(box, step) end
+		if boxes[box] and Engine.IsVisible(g) and not Engine.IsComplete(g, step) then table.insert(open, g) end
+	end
 	if #open > 0 then
 		y = y + STEP_GAP - LINE_GAP
 		frame.SideHeader:ClearAllPoints()

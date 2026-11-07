@@ -49,7 +49,8 @@ end)
   otherwise passed over) and `skip` (counts as done while it holds, e.g. "already in Valanaar"). A step is done when
   all of its lines that can be done are done.
 - **Side tasks** (`g:Side(untilStep, ...)`) are shown with each step from here up to and including the step labelled
-  `untilStep` (`"next"`: the next step). They never hold a step up and disappear early once done.
+  `untilStep` (`"next"`: the next step). They never hold a step up and disappear early once done: once its lines that
+  can be done are done (or hidden), the whole side task goes, its notes and plain lines with it.
 - **Lines** are added in the order you write them. Each returns the line, so options chain:
   `s:Accept(92703):Only("Alliance")`. A `s:Note(...)` follows the line above it.
 

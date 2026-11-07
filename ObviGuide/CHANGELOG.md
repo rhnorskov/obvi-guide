@@ -8,6 +8,7 @@
   destroying it (Enter says yes). Grey items go first. Tools (Blacksmith Hammer, Mining Pick, fishing poles...), items
   a vendor won't buy and items the guide still needs are left alone. Bind a key
   in Key Bindings > Obvi Guide, or use the window's gear menu or `/og junk`.
+- A finished side task now goes away whole: its notes and "kill these" lines no longer stay behind after it's done.
 
 ## v0.4.0
 
