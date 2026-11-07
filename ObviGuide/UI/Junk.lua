@@ -1,6 +1,7 @@
 -- Destroy the cheapest item: for full bags. Finds the bag item worth the least at a vendor (the whole stack's price)
--- and asks before destroying it. Leaves alone what can't be sold (quest items, hearthstone, keys...) and the items
--- the loaded guide still uses or collects. The key binding (Key Bindings > Obvi Guide), the window's gear menu, or
+-- and asks before destroying it; grey items first. Leaves alone what can't be sold (quest items, hearthstone,
+-- keys...), tools (Blacksmith Hammer, Mining Pick, fishing poles...) and the items the loaded guide still uses or
+-- collects. The key binding (Key Bindings > Obvi Guide), the window's gear menu, or
 -- "/og junk"; Enter in the question destroys it.
 local _, ns = ...
 ---@cast ns ObviGuideNS
@@ -25,6 +26,20 @@ local function GuideItems()
 	return keep
 end
 
+-- tools: cheap at a vendor, but needed in the bags (professions, fishing, lockpicking, fire)
+local TOOLS = {
+	[2901] = true,    -- Mining Pick
+	[5956] = true,    -- Blacksmith Hammer
+	[7005] = true,    -- Skinning Knife
+	[6219] = true,    -- Arclight Spanner
+	[10498] = true,   -- Gyromatic Micro-Adjustor
+	[9149] = true,    -- Philosopher's Stone
+	[4471] = true,    -- Flint and Tinder
+	[5060] = true,    -- Thieves' Tools
+	[6218] = true, [6339] = true, [11130] = true, [11145] = true, [16207] = true,   -- the runed enchanting rods
+	[6256] = true, [6365] = true, [6366] = true, [6367] = true, [12225] = true, [19022] = true, [19970] = true,   -- fishing poles
+}
+
 ---@class ObviGuideJunk
 ---@field bag integer
 ---@field slot integer
@@ -33,7 +48,7 @@ end
 ---@field value integer    the stack's vendor price, in copper
 ---@field quality integer
 
---- The bag slot with the cheapest item that can be sold (nil if none).
+--- The bag slot with the cheapest item that can be sold (nil if none). Grey items come first, whatever they're worth.
 ---@return ObviGuideJunk?
 local function Cheapest()
 	local keep = GuideItems()
@@ -41,13 +56,15 @@ local function Cheapest()
 	for bag = 0, 4 do   -- the backpack and the four bags
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
-			if info and info.itemID and not keep[info.itemID] and not info.isLocked then
+			if info and info.itemID and not keep[info.itemID] and not TOOLS[info.itemID] and not info.isLocked then
 				local quest = C_Container.GetContainerItemQuestInfo(bag, slot)
 				local price = select(11, C_Item.GetItemInfo(info.itemID))
 				if price and price > 0 and not (quest and (quest.isQuestItem or quest.questID)) then
 					local value = price * (info.stackCount or 1)
 					local quality = info.quality or 1
-					if not best or value < best.value or (value == best.value and quality < best.quality) then
+					local grey, bestGrey = quality == 0, best and best.quality == 0
+					if not best or (grey and not bestGrey)
+						or (grey == bestGrey and (value < best.value or (value == best.value and quality < best.quality))) then
 						best = { bag = bag, slot = slot, link = info.hyperlink, count = info.stackCount or 1, value = value,
 							quality = quality }
 					end
