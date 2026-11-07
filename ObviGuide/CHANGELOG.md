@@ -1,5 +1,10 @@
 # Obvi Guide
 
+## Unreleased
+
+- **Guide picker**: the gear beside the search is a menu now. Untick **Other faction's guides** to leave out the guides
+  that are only for the other faction; **Settings** opens the settings as before.
+
 ## v0.4.0
 
 - **Guide tabs**: several guides open at once, one shown. The title's menu lists them, with close buttons and Add guide.

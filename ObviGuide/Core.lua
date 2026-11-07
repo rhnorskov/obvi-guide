@@ -37,6 +37,7 @@ local ADDON, ns = ...
 ---@class ObviGuideDB
 ---@field window? {point: string, relPoint?: string, x: number, y: number, width: number, height: number}
 ---@field picker? {w: number, h: number, point?: string, relPoint?: string, x?: number, y?: number}   the guide picker's size and place
+---@field pickerHideOtherFaction? boolean   the guide picker leaves out guides only for the other faction (its gear menu)
 ---@field previewSteps? integer   how many upcoming steps the window shows dimmed (default 0)
 ---@field minimap? boolean        the step's points on the minimap (nil: on)
 ---@field waypoints? ObviGuideWaypoints   how the way is shown (nil: Obvi Guide's own arrow)

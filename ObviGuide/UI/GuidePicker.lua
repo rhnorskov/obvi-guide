@@ -537,11 +537,27 @@ local timer ---@type FunctionContainer?
 local names = {} ---@type table<ObviGuideGuide, ObviGuideNames>   the guides' quest and NPC names, kept for the session
 local indexer ---@type thread?   gathering them, while the picker is open
 
+--- Whether a guide is only for the other faction: its "only" asks for a faction this character isn't (alone, or as a
+--- part of an "and").
+---@param c any   a condition (see Conditions.lua)
+---@return boolean
+function Picker.OtherFaction(c)
+	if type(c) ~= "table" then return false end
+	if c[1] == "faction" then return c[2] ~= UnitFactionGroup("player") end
+	if c[1] == "and" then
+		for i = 2, #c do if Picker.OtherFaction(c[i]) then return true end end
+	end
+	return false
+end
+
+-- the gear menu's "Other faction's guides" (on unless turned off)
+local function ShowOtherFaction() return not (ns.db and ns.db.pickerHideOtherFaction) end
+
 --- Builds the folder tree again: every guide (one whose "only" doesn't hold for this character is greyed out, see
---- Paint, never left out). Pending guides are listed as they are; they are read only when opened. A chosen folder
---- that is gone now is let go, with those after it.
+--- Paint), except the other faction's when the gear menu leaves them out. Pending guides are listed as they are; they
+--- are read only when opened. A chosen folder that is gone now is let go, with those after it.
 local function Rebuild()
-	local t = Picker.Tree(ns.guides)
+	local t = Picker.Tree(ns.guides, not ShowOtherFaction() and function(g) return not Picker.OtherFaction(g.cond) end or nil)
 	tree = t
 	for i, path in ipairs(chosen) do
 		if path ~= Picker.RECENT and not t.folders[path] then
@@ -1112,8 +1128,9 @@ local function Build()
 		if g then Load(g) else self:ClearFocus() end
 	end)
 
-	-- the quest log's gear beside it: Obvi Guide's settings
-	local gear = CreateFrame("Button", nil, f)
+	-- the quest log's gear beside it: a menu, as the guide window's gear has, with the picker's own options and Obvi
+	-- Guide's settings
+	local gear = CreateFrame("DropdownButton", nil, f)
 	gear:SetSize(15, 16)
 	gear:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -2, 53)
 	local icon = gear:CreateTexture(nil, "ARTWORK")
@@ -1124,10 +1141,19 @@ local function Build()
 	Art(lit, "questlog-icon-setting", false, "Interface\\Buttons\\UI-OptionsButton")
 	lit:SetBlendMode("ADD")
 	lit:SetAlpha(0.4)
-	gear:SetScript("OnClick", function() f:Hide() ns.Options.Open() end)
+	gear:SetupMenu(function(_, root)
+		root:CreateCheckbox("Other faction's guides", ShowOtherFaction, function()
+			if not ns.db then return end
+			ns.db.pickerHideOtherFaction = ShowOtherFaction() or nil
+			Rebuild()
+			Fill()
+		end)
+		root:CreateDivider()
+		root:CreateButton("Settings", function() f:Hide() ns.Options.Open() end)
+	end)
 	gear:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText("Settings")
+		GameTooltip:SetText("Options")
 		GameTooltip:Show()
 	end)
 	gear:SetScript("OnLeave", function() GameTooltip:Hide() end)
