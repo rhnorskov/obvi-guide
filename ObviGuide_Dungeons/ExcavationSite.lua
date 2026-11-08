@@ -62,6 +62,7 @@ ObviGuide.Guide(function(g)
 
 	-- east along the road: Einar, then the Greenwarden
 	g:Step(function(s)
+		s.only = "not done 484 or onquest 469 or done 469"   -- (not offered once Young Crocolisk Skins is turned in)
 		s:Goto(WETLANDS, 49.9, 39.4)
 		s:Talk(g.Npc("Einar Stonegrip", 2093))
 		s:Accept(469, "Daily Delivery")
