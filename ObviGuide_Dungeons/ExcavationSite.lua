@@ -1,5 +1,5 @@
 -- Excavation Site: Wetlands (24-29): the quests Attune lists for each faction. Alliance: Caitlin Grassman's chain
--- (Lost in the Thicket Things, Heartwoven; Seeking Caitlin handed in if you have it), Daily Delivery and Highland
+-- (Lost in the Thicket Things, Heartwoven; Seeking Caitlin handed in if you have it), Young Crocolisk Skins and Highland
 -- Hides, Rethiel the Greenwarden's chain up to Horrors in the Highland, Songblade Search and Fallen in the Fen, and
 -- Lost Relic Carry from the Relic Guardian. Horde: Dragonmaw Rumors and Open the Maw, Changing Tastes, and Elder
 -- Knowledge from the Relic Guardian. Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's
@@ -51,8 +51,14 @@ ObviGuide.Guide(function(g)
 		s:Goto(WETLANDS, 8.6, 55.7)
 		s:Talk(halloran)
 		s:Accept(484, "Young Crocolisk Skins")
-		s:Accept(98815, "Highland Hides")
-		s:Note("He walks around the tannery.")
+		s:Note("He walks around the tannery. Highland Hides, which you need in the dungeon, comes after this one.")
+	end)
+
+	-- the skins while doing the rest, until Highland Hides is picked up back in Menethil
+	g:Side("hides", function(s)
+		s:Kill(g.Mob("Young Wetlands Crocolisk", 1417))
+		s:Collect(g.Item("Young Crocolisk Skin", 3397), { count = 4, quest = 484, objective = 1 })
+		s:Note("Along the rivers and lakes; plenty in the water north of Rethiel, around 53, 38.")
 	end)
 
 	g:Step(function(s)
@@ -61,15 +67,7 @@ ObviGuide.Guide(function(g)
 		s:Accept(463, "The Greenwarden")
 	end)
 
-	-- east along the road: Einar, then the Greenwarden
-	g:Step(function(s)
-		s.only = "not done 484 or onquest 469 or done 469"   -- (not offered once Young Crocolisk Skins is turned in)
-		s:Goto(WETLANDS, 49.9, 39.4)
-		s:Talk(g.Npc("Einar Stonegrip", 2093))
-		s:Accept(469, "Daily Delivery")
-		s:Note("Carry the bundle back to Menethil later.")
-	end)
-
+	-- east along the road to the Greenwarden
 	g:Step(function(s)
 		s:Goto(WETLANDS, 56.4, 40.4)
 		s:Talk(rethiel)
@@ -78,24 +76,11 @@ ObviGuide.Guide(function(g)
 		s:Note("He walks around.")
 	end)
 
-	g:Side("next", function(s)
-		s:Kill(g.Mob("Young Wetlands Crocolisk", 1417))
-		s:Collect(g.Item("Young Crocolisk Skin", 3397), { count = 4, quest = 484, objective = 1 })
-		s:Note("Along the rivers and lakes on the way south.")
-	end)
-
 	g:Step(function(s)
 		s:Goto(WETLANDS, 61.5, 66.0)
 		s:Kill(g.Mob("Mosshide Gnoll", 1007), { quest = 276, objective = 1 })
 		s:Kill(g.Mob("Mosshide Mongrel", 1008), { quest = 276, objective = 2 })
 		s:Note("South-east, from 60, 60 down to 63, 75.")
-	end)
-
-	g:Step(function(s)
-		s:Goto(WETLANDS, 53.4, 38.6)
-		s:Kill(g.Mob("Young Wetlands Crocolisk", 1417))
-		s:Collect(g.Item("Young Crocolisk Skin", 3397), { count = 4, quest = 484, objective = 1 })
-		s:Note("In the water north of Rethiel, if you still need some.")
 	end)
 
 	g:Step(function(s)
@@ -115,10 +100,11 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s.label = "hides"
 		s:Goto(WETLANDS, 8.6, 55.7)
 		s:Talk(halloran)
-		s:Turnin(469, "Daily Delivery")
 		s:Turnin(484, "Young Crocolisk Skins")
+		s:Accept(98815, "Highland Hides")
 	end)
 
 	g:Step(function(s)
