@@ -498,6 +498,7 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 ---@field override? boolean     "override": done means the step is done
 ---@field quests? integer[]     "multiq": several quests
 ---@field tips string[]
+---@field notinsticky? boolean   "notinsticky": its tips are left out where the step shows as a side box
 
 ---@class ObviGuideZygorCtx
 ---@field map? integer        the map the last coordinates were on (lines may leave the zone out)
@@ -610,6 +611,7 @@ local function ReadLine(line, step, ctx)
 			elseif ACTIONS[cmd] then
 				if not rec.action then rec.action, rec.params = cmd, params end
 				any = true
+			elseif cmd == "notinsticky" then rec.notinsticky = true
 			elseif IGNORE[cmd] then
 				-- nothing to do here
 			elseif cmd == "'" then
@@ -863,7 +865,7 @@ local function ParseStep(lines, sticky, ctx)
 							table.insert(step.goals, g)
 							last = g
 						else
-							table.insert(step.tips, { text = tip, after = goal or last })
+							table.insert(step.tips, { text = tip, after = goal or last, notSide = rec.notinsticky })
 						end
 					end
 				end
@@ -939,15 +941,30 @@ local function Assemble(steps)
 	local function Copies(s)
 		if copies[s] then return copies[s] end
 		local list, counted, loose = {}, {}, {}
+		-- the step's tips, as lines after the line they follow (a side box shows no notes); not the "notinsticky" ones
+		local function tips(after, cond)
+			for _, tip in ipairs(s.tips) do
+				if tip.after == after and not tip.notSide then
+					local t = { kind = "text", text = tip.text, cond = cond, box = list }
+					table.insert(list, t)
+					table.insert(loose, t)
+				end
+			end
+		end
+		tips(nil, s.cond)
 		for _, g in ipairs(s.goals) do
 			if g.kind ~= "goto" and g.text ~= "Continue when ready" then
 				local copy = setmetatable({}, { __index = g })
 				copy.cond = Conditions.All(s.cond, g.cond)
+				copy.box = list   -- one side task in the window (Engine.SideOpen)
 				table.insert(list, copy)
 				-- lines that finish by themselves (a quest's objective, a count of items, a quest to take or hand
 				-- in) and lines that don't ("kill Timber Wolf, Young Wolf": no count, no quest)
 				local finishes = g.quest or g.kind == "accept" or g.kind == "turnin" or (g.kind == "collect" and g.id)
 				table.insert(finishes and counted or loose, copy)
+				tips(g, copy.cond)
+			else
+				tips(g, Conditions.All(s.cond, g.cond))
 			end
 		end
 		-- as in Zygor, the box goes once its counted lines are done: the loose lines go with them

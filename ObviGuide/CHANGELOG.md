@@ -9,6 +9,7 @@
   a vendor won't buy and items the guide still needs are left alone. Bind a key
   in Key Bindings > Obvi Guide, or use the window's gear menu or `/og junk`.
 - A finished side task now goes away whole: its notes and "kill these" lines no longer stay behind after it's done.
+- Side tasks are set a little apart from each other, so you can tell where one ends and the next begins.
 
 ## v0.4.0
 

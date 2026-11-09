@@ -22,6 +22,7 @@ local LINE_GAP = 8    -- pixels between the goal lines of a step (about what Zyg
 local LEADING = 3     -- extra pixels between the rows of one wrapped line
 local INLINE_ICON_Y = -4 -- icons inside the text: the game draws them above the middle of the letters (measured in game)
 local SIDE_PAD = 10   -- pixels between the side tasks' line and the first task
+local SIDE_BOX_GAP = 6   -- extra pixels between two side tasks
 local STEP_GAP = 10   -- pixels after a step, before the side tasks and each previewed step (a bit more than LINE_GAP)
 local DONE = CreateColor(0.6, 0.6, 0.6)
 local TODO = CreateColor(1, 1, 1)
@@ -347,8 +348,11 @@ local function Goals(step, goals, y, dim, side, tips)
 		end
 	end
 	TipsAfter(nil)
+	local box   -- the side box of the last line shown: a gap before the next box's lines sets the tasks apart
 	for _, g in ipairs(goals) do
 		if Engine.IsVisible(g) then
+			if side and g.box and box and g.box ~= box then y = y + SIDE_BOX_GAP end
+			box = g.box or box
 			local line = Line()
 			line.goal, line.step, line.dim, line.side = g, step, dim, side
 			RenderLine(line)

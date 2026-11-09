@@ -112,6 +112,7 @@ local ADDON, ns = ...
 ---@class ObviGuideTip
 ---@field text string
 ---@field after? ObviGuideGoal    shown right after this goal's line, as the guide has it (nil: before the first)
+---@field notSide? boolean     left out where its step is shown as a side box (a reader for a format with side boxes made of steps)
 
 ---@class ObviGuidePoint
 ---@field map integer            uiMapID
