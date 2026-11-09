@@ -661,6 +661,10 @@ end
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
 	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true }
 
+-- the plain text lines that are only a way point ("Follow the path up |goto ... < 30"); ParseStep drops them before
+-- the step's last waypoint
+local travelLines = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGoal, boolean>
+
 --- A line -> a goal (nil when there's nothing to show).
 ---@param rec ObviGuideZygorLine
 ---@param step ObviGuideZygorStep
@@ -787,6 +791,8 @@ local function MakeGoal(rec, step, ctx)
 		goal = { kind = "confirm", text = text }
 	elseif text then
 		goal = { kind = "text", text = text }
+		-- "Follow the path up |goto 41.66,45.36 < 30": a way point, the step's lines come after it (ParseStep)
+		if rec.point and rec.point.radius and not rec.complete then travelLines[goal] = true end
 	end
 	if not goal then return nil end
 
@@ -884,6 +890,18 @@ local function ParseStep(lines, sticky, ctx)
 	end
 	for _, g in ipairs(step.goals) do
 		if not g.target and (g.kind == "objective" or g.kind == "collect") and step.target then g.target = step.target end
+	end
+
+	-- Zygor's travel lines ("Leave the camp", "Follow the path up", each a waypoint with a radius): before the step's
+	-- last waypoint they are the way there, not lines to do; their points stay as points along the way (the arrow and
+	-- the maps lead through them) and the lines go. A step that is only travel keeps its line (it becomes the goal).
+	local final = points[#points]
+	for i = #step.goals, 1, -1 do
+		local g = step.goals[i]
+		if travelLines[g] and final and final.goal ~= g then
+			table.remove(step.goals, i)
+			for _, tip in ipairs(step.tips) do if tip.after == g then tip.after = step.goals[i - 1] end end
+		end
 	end
 
 	-- destination: the last waypoint; the others (and path lines) are points along the way
