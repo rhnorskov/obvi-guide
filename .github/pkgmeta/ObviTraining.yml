@@ -1,0 +1,12 @@
+# What the BigWigs packager puts in Obvi Training's zip. The release workflow makes the ObviTraining folder the checkout's
+# root first, so the paths here are inside it.
+package-as: ObviTraining
+
+# the changelog is written by hand (CHANGELOG.md in the addon's folder), not made from commit messages
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# development files stay out of the zip
+ignore:
+  - .luarc.json

@@ -5,14 +5,14 @@
 #
 # Options (after the line above, or with  powershell -ExecutionPolicy Bypass -File install.ps1 ...):
 #   -Path "D:\Games\World of Warcraft\_forever_\Interface\AddOns"     where to install (found by itself otherwise)
-#   -Addons "ObviGuide,ObviGuide_Dungeons"                            which addons (default: the five below)
+#   -Addons "ObviGuide,ObviGuide_Dungeons"                            which addons (default: the six below)
 #   -Branch main                                                      which branch
 #
 # An addon already in AddOns is replaced, unless it's a link to a checkout (a developer's setup): that one is left as it
 # is. Saved settings live in the WTF folder and are kept.
 param(
     [string]$Path,
-    [string]$Addons = "ObviGuide,ObviGuide_Dungeons,ObviGuide_Professions,ObviGuide_Extras,ObviGuide_Zygor",
+    [string]$Addons = "ObviGuide,ObviGuide_Dungeons,ObviGuide_Professions,ObviGuide_Extras,ObviGuide_Zygor,ObviTraining",
     [string]$Branch = "main"
 )
 $ErrorActionPreference = "Stop"

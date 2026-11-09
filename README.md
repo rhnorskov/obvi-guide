@@ -1,7 +1,7 @@
 # Obvi Guide
 
-A guide viewer for World of Warcraft (retail and WoW Forever), plus the addons around it. Each folder is its own
-addon, released as its own CurseForge project (except the Zygor bridge, which is never released):
+A guide viewer for World of Warcraft (retail and WoW Forever), plus the addons around it, and Obvi Training. Each
+folder is its own addon, released as its own CurseForge project (except the Zygor bridge, which is never released):
 
 | Folder | Addon | What it is |
 |---|---|---|
@@ -11,14 +11,15 @@ addon, released as its own CurseForge project (except the Zygor bridge, which is
 | `ObviGuide_Professions` | Obvi Guide: Professions | Profession leveling guides. |
 | `ObviGuide_Extras` | Obvi Guide: Extras | Guides for other unlocks, such as the Aqual Quintessence and the Cozy Sleeping Bag. |
 | `ObviGuide_Zygor` | Obvi Guide: Zygor | Personal: reads the guides of your own installed Zygor addon in game (it brings its own Zygor reader). Not released. |
+| `ObviTraining` | Obvi Training | A "Train plan" button on the class trainer: trains only the spells worth the gold, from a plan for your class. Works without Obvi Guide. |
 
 Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 
 ## Trying the newest version
 
 To play with the latest changes before they're released, paste this into PowerShell. It downloads this repo from
-GitHub and puts Obvi Guide, Dungeons, Professions, Extras and the Zygor bridge in your game's AddOns folder (no git
-needed); run it again to update:
+GitHub and puts Obvi Guide, Dungeons, Professions, Extras, the Zygor bridge and Obvi Training in your game's AddOns
+folder (no git needed); run it again to update:
 
 ```
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/rhnorskov/obvi-guide/main/tools/install.ps1)))

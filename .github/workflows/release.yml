@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       max-parallel: 1   # one at a time
       matrix:
-        addon: [ObviGuide, ObviGuide_Scribe, ObviGuide_Dungeons, ObviGuide_Professions, ObviGuide_Extras]
+        addon: [ObviGuide, ObviGuide_Scribe, ObviGuide_Dungeons, ObviGuide_Professions, ObviGuide_Extras, ObviTraining]
     steps:
       - uses: actions/checkout@v7
         with:
