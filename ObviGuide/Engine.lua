@@ -329,8 +329,9 @@ function Engine.Progress(goal)
 		if o and (o.numRequired or 0) > 1 then return o.numFulfilled .. "/" .. o.numRequired end
 	elseif goal.kind == "skill" and not goal.cap and (goal.level or 1) > 1 then
 		return math.min(Conditions.Skill(goal.skill) or 0, goal.level) .. "/" .. goal.level
-	elseif goal.kind == "collect" and (goal.count or 1) > 1 then
-		return math.min(C_Item.GetItemCount(goal.id), goal.count) .. "/" .. goal.count
+	elseif goal.kind == "collect" and goal.id then   -- (also a count of 1: "Buy Soothing Spices (0/1)")
+		local need = goal.count or 1
+		return math.min(C_Item.GetItemCount(goal.id), need) .. "/" .. need
 	end
 end
 
