@@ -861,7 +861,7 @@ local function ParseStep(lines, sticky, ctx)
 				for _, tip in ipairs(rec.tips) do
 					if tip ~= "" and not skipTips then
 						if not goal and rec.cond then
-							local g = { kind = "text", text = tip, cond = rec.cond }
+							local g = { kind = "text", text = tip, cond = rec.cond, note = true }
 							table.insert(step.goals, g)
 							last = g
 						else
@@ -945,7 +945,7 @@ local function Assemble(steps)
 		local function tips(after, cond)
 			for _, tip in ipairs(s.tips) do
 				if tip.after == after and not tip.notSide then
-					local t = { kind = "text", text = tip.text, cond = cond, box = list }
+					local t = { kind = "text", text = tip.text, cond = cond, box = list, note = true }
 					table.insert(list, t)
 					table.insert(loose, t)
 				end

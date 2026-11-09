@@ -422,7 +422,7 @@ local function BuildStep(lines, untilStep, ctx)
 		elseif l.op == "Note" then
 			-- a note with a condition is a line of its own, as RestedXP's reader does it; so is any note in a side
 			-- box, as the window shows side boxes without notes
-			goal = { kind = "text", text = l.text }
+			goal = { kind = "text", text = l.text, note = true }
 		else
 			goal = Goal(l)
 		end

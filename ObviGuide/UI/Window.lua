@@ -317,6 +317,8 @@ local function RenderLine(line)
 		end
 	end
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
+	-- a note shown as a line of its own (in a side task, or with a condition) looks like the step's notes
+	if g.note and not dim then text = "|cffd0b070" .. text .. "|r" end
 	line.text:SetText(Inline(text))
 	line.text:SetTextColor((dim and DIM or done and DONE or TODO):GetRGB())
 	Icon(line, g, done)

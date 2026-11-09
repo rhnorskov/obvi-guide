@@ -149,6 +149,7 @@ local ADDON, ns = ...
 ---@field target? ObviGuideTarget  who clicking the line (or its action key) targets
 ---@field targets? ObviGuideTarget[]  all of them, in order, when the line names several
 ---@field box? ObviGuideGoal[]   a side task's line: all the lines of its side box (shown or hidden together)
+---@field note? boolean         a note shown as a line of its own (it looks like the step's notes)
 ---                                (target is the first)
 
 ---@alias ObviGuideCond table     a compiled condition tree, see Conditions.lua
