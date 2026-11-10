@@ -1,8 +1,9 @@
 -- City of Dalaran (28-32): the quests Attune lists for each faction. Alliance: A Green Sample and Power Overwhelming
--- from Stormwind, An Alarming Request from Southshore and Heart of Disruption. Horde: Source of Power from Undercity,
--- The Grave Knight, Magus Voidglare's chain from Prison Break In to Blood in the Streets, Heart of Disruption and
--- Shrewd Negotiations, and Opportunistic Education inside. Quest, NPC and item ids and positions from Attune
--- (CixiDelmont) and QuestieDB's Forever data; the way in from DungeonJournal (Exehn). See README.md.
+-- from Stormwind, An Alarming Request from Southshore, Heart of Disruption, Starving Arcane and Friend of the Kirin
+-- Tor. Horde: Source of Power from Undercity, The Grave Knight, Magus Voidglare's chain from Prison Break In to Blood
+-- in the Streets, Heart of Disruption and Shrewd Negotiations, and Opportunistic Education inside. Quest, NPC and
+-- item ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the way in from DungeonJournal
+-- (Exehn). See README.md.
 
 local STORMWIND, HILLSBRAD, SILVERPINE, ALTERAC, UNDERCITY = 1453, 1424, 1421, 1416, 1458
 
@@ -52,12 +53,20 @@ ObviGuide.Guide(function(g)
 		s:Talk(modera)
 		s:Turnin(92432, "An Alarming Request")
 		s:Accept(92458, "Heart of Disruption")
+		s:Accept(92457, "Starving Arcane")
 		s:Note("On the Lordamere Lake shore just west of Dalaran: north from Southshore, round the city.")
 	end)
 
 	g:Step(function(s) enter(s, "ready 92489 or done 92489") end)
 
-	-- inside, in the order the group meets them
+	-- inside, in the order the group meets them; the remnants and echoes all the way through
+	g:Side("shade", function(s)
+		s:Kill(g.Mob("Seeking Remnant", 247003), { count = 8, quest = 92457, objective = 1 })
+		s:Kill(g.Mob("Saturated Remnant", 247001), { count = 8, quest = 92457, objective = 2 })
+		s:Kill(g.Mob("Mana Echo", 246600), { count = 8, quest = 92457, objective = 3 })
+		s:Note("There may not be enough of them for it in one run.")
+	end)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Arcanic Enigma", 246016), { quest = 92489, objective = 1 })
 		s:Note("The fourth boss. Kill the Mana Phantoms around it first.")
@@ -69,6 +78,7 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s.label = "shade"
 		s:Kill(g.Mob("Shade of the Archmage", 246020))
 		s:Collect(g.Item("Arcane Mote", 251961), { quest = 92458, objective = 1 })
 		s:Note("The last boss.")
@@ -80,7 +90,15 @@ ObviGuide.Guide(function(g)
 		s:Goto(SILVERPINE, 68.6, 45.1)
 		s:Talk(modera)
 		s:Turnin(92458, "Heart of Disruption")
-		s:Note("Then back to Southshore and fly to Stormwind.")
+		s:Turnin(92457, "Starving Arcane")
+		s:Accept(92459, "Friend of the Kirin Tor")
+	end)
+
+	g:Step(function(s)
+		s:Goto(ALTERAC, 14.2, 60.1)
+		s:Talk(g.Npc("Archmage Celindra", 252085))
+		s:Turnin(92459, "Friend of the Kirin Tor")
+		s:Note("By Modera's image at the west edge of Dalaran. Then back to Southshore and fly to Stormwind.")
 	end)
 
 	g:Step(function(s)
