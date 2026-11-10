@@ -175,7 +175,7 @@ local function ClickAction(b, line)
 			tostring(b:GetAttribute("macrotext") or b:GetAttribute("item") or b:GetAttribute("spell")))
 	end
 	-- ticking off and showing the way happen after the click (PostClick), with or without a secure action
-	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.kind == "goto" or g.point ~= nil
+	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or (g.point or line.step.dest) ~= nil
 end
 
 --- "Darkshore 39.0, 86.0" for a point.
@@ -198,16 +198,17 @@ local function NewClick()
 		local g = self.line and self.line.goal
 		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
 		if g.kind == "confirm" then Engine.Tick(g) end
-		-- a line with its own spot sets the waypoint there (as Zygor does); a "go to" line without one, the step's
+		-- a line with its own spot sets the waypoint there; any other line, its step's spot
 		if g.point then ns.Travel.To(g.point, g.text)
-		elseif g.kind == "goto" then local _, step = Engine.Current() ns.Travel.Show(step) end
+		elseif self.line.step.dest then ns.Travel.Show(self.line.step) end
 	end)
-	-- hovering a line with its own spot says where clicking it sends you
+	-- hovering a line says where clicking it sends you
 	b:SetScript("OnEnter", function(self)
 		local g = self.line and self.line.goal
-		if not (g and g.point) or self.line.dim then return end
+		local p = g and (g.point or self.line.step.dest)
+		if not p or self.line.dim then return end
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:SetText("|cffffd100Click|r to set waypoint: |cffffd100" .. PlaceName(g.point) .. "|r")
+		GameTooltip:SetText("|cffffd100Click|r to set waypoint: |cffffd100" .. PlaceName(p) .. "|r")
 		GameTooltip:Show()
 	end)
 	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
