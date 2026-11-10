@@ -178,15 +178,19 @@ local function ClickAction(b, line)
 	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or (g.point or line.step.dest) ~= nil
 end
 
---- Where clicking a line sets the waypoint: its own spot, or the step's when the click does nothing else (a line
---- that targets the NPC or uses the item does just that).
+-- lines whose click is their own action (target the NPC or mob, use the item, cast): no waypoint from the step for them
+local ACTION_KINDS = { talk = true, kill = true, use = true, equip = true, hearth = true, cast = true }
+
+--- Where clicking a line sets the waypoint: its own spot, or the step's unless the line is about an action of its
+--- own ("Talk to", "Kill", "Use"). Accept and turn-in lines target the step's NPC too, but still set the waypoint.
 ---@param b ObviGuideClick
 ---@return ObviGuidePoint?
 local function ClickPoint(b)
 	local g = b.line and b.line.goal
 	if not g or b.line.dim then return nil end
 	if g.point then return g.point end
-	if not b:GetAttribute("type") then return b.line.step.dest end
+	if ACTION_KINDS[g.kind] or g.mobName then return nil end
+	return b.line.step.dest
 end
 
 --- "Darkshore 39.0, 86.0" for a point.
