@@ -178,6 +178,17 @@ local function ClickAction(b, line)
 	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or (g.point or line.step.dest) ~= nil
 end
 
+--- Where clicking a line sets the waypoint: its own spot, or the step's when the click does nothing else (a line
+--- that targets the NPC or uses the item does just that).
+---@param b ObviGuideClick
+---@return ObviGuidePoint?
+local function ClickPoint(b)
+	local g = b.line and b.line.goal
+	if not g or b.line.dim then return nil end
+	if g.point then return g.point end
+	if not b:GetAttribute("type") then return b.line.step.dest end
+end
+
 --- "Darkshore 39.0, 86.0" for a point.
 ---@param p ObviGuidePoint
 local function PlaceName(p)
@@ -198,15 +209,14 @@ local function NewClick()
 		local g = self.line and self.line.goal
 		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
 		if g.kind == "confirm" then Engine.Tick(g) end
-		-- a line with its own spot sets the waypoint there; any other line, its step's spot
-		if g.point then ns.Travel.To(g.point, g.text)
-		elseif self.line.step.dest then ns.Travel.Show(self.line.step) end
+		local p = ClickPoint(self)
+		if p and p == g.point then ns.Travel.To(p, g.text)
+		elseif p then ns.Travel.Show(self.line.step) end
 	end)
 	-- hovering a line says where clicking it sends you
 	b:SetScript("OnEnter", function(self)
-		local g = self.line and self.line.goal
-		local p = g and (g.point or self.line.step.dest)
-		if not p or self.line.dim then return end
+		local p = ClickPoint(self)
+		if not p then return end
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 		GameTooltip:SetText("|cffffd100Click|r to set waypoint: |cffffd100" .. PlaceName(p) .. "|r")
 		GameTooltip:Show()

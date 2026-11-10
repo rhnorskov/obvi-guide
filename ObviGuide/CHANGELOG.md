@@ -11,7 +11,8 @@
 - A finished side task now goes away whole: its notes and "kill these" lines no longer stay behind after it's done.
 - Side tasks are set a little apart from each other, so you can tell where one ends and the next begins.
 - Notes in side tasks look like the step's own notes (muted gold) rather than plain white lines.
-- Clicking any line in the step sets the waypoint: to the line's own spot when it has one, else to the step's.
+- Clicking a line in the step sets the waypoint: to the line's own spot when it has one, else to the step's. Lines
+  that target an NPC or use an item still just do that.
 - Buy and collect lines show how many you have of how many, also when it's just one: "Buy Soothing Spices (0/1)".
 
 ## v0.4.0
