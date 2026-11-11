@@ -16,7 +16,7 @@
   for WoW Forever's new chains it doesn't know yet, a quest given where one of the same name is turned in follows that
   one, and the Menethil Statuette chain (A Friend of the Family, The Shamed Lieutenant) is known. Click the line
   (**Catch up**) for a catch-up guide to it. When the quest before it is still in your log, it says "Finish ... first"
-  (The Night Watch). To have steps with nothing else to do skipped, tick **Skip quests you can't take yet** in the
+  (The Night Watch). To have steps with nothing else to do skipped, tick **Skip quests missing a prerequisite** in the
   settings; a quest still in your log keeps its step even then. Quests of the same name are told apart by their part: "The Night Watch (part
   2)".
 - **Quest Catchup** works for any quest, from all the guides: click a greyed "needs ..." line, or type

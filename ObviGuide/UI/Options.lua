@@ -79,9 +79,10 @@ local function Build()
 		"Accepts the quests of the current and next step when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
 	Checkbox("Auto turn in guide quests", "autoTurnin", true,
 		"Turns in the quests of the current and next step (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
-	Checkbox("Skip quests you can't take yet", "skipLocked", false,
-		"A step whose only quest needs earlier quests you haven't done (its chain began in a guide you skipped) is skipped. "
-		.. "Off, it stays with the quest greyed out, so you can click it for a catch-up guide or go on with the arrow. "
+	Checkbox("Skip quests missing a prerequisite", "skipLocked", false,
+		"A quest that needs an earlier quest you haven't done (its chain began in a guide you skipped): its step is skipped "
+		.. "when it has nothing else to do. Off, the step stays with the quest greyed out, so you can click it for a "
+		.. "catch-up guide or go on with the arrow. A prerequisite still in your quest log keeps the step either way. "
 		.. "Needs QuestieDB.",
 		function() ns.Engine.Advance() ns.Window.Refresh() end)
 

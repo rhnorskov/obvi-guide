@@ -548,7 +548,7 @@ function Engine.StepState(step)
 	-- alternatives (orGroup): how many more each group needs; once a group has enough, every alternative counts as
 	-- done (as Zygor has it)
 	local need, orOpen = {}, false
-	-- (the "Skip quests you can't take yet" setting off: such a quest's line keeps its step, greyed out)
+	-- (the "Skip quests missing a prerequisite" setting off: such a quest's line keeps its step, greyed out)
 	local keepLocked = not (ns.db and ns.db.skipLocked)
 	for _, g in ipairs(step.goals) do
 		local locked, waiting
