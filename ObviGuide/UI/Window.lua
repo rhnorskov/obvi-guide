@@ -367,18 +367,20 @@ local function RenderLine(line)
 		local pace = xp and xp > 0 and ns.Catchup.Pace(g.quest --[[@as integer]])
 		-- (the numbers with "Detailed catch-up numbers"; else just the verdict)
 		local worth = ""
+		-- "Needs Blessed Arm · Catch up: not worth it"
 		if ns.db and ns.db.catchupDetails then
 			if pace and xp then
-				worth = (" |cff888888(%s, ~%d min, %.1fx this guide's XP per minute)|r"):format(ns.Catchup.Bars(xp),
+				worth = (": %s, ~%d min, %.1fx this guide's XP per minute"):format(ns.Catchup.Bars(xp),
 					math.max(1, math.floor(pace.minutes + 0.5)), pace.ratio)
 			elseif xp and xp > 0 then
-				worth = (" |cff888888(%s)|r"):format(ns.Catchup.XPText(xp))
+				worth = ": " .. ns.Catchup.XPText(xp)
 			end
 		elseif pace then
-			worth = pace.ratio >= 1.2 and " |cff60d060(worth it)|r" or pace.ratio >= 0.8 and " |cffd0b070(about even)|r"
-				or " |cff888888(not worth it)|r"
+			worth = pace.ratio >= 1.2 and ": |cff60d060worth it|r" or pace.ratio >= 0.8 and ": |cffd0b070about even|r"
+				or ": not worth it"
 		end
-		line.sub:SetText(("%s  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)), worth))
+		line.sub:SetText(("%s  |cff666666·|r  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)),
+			worth))
 		line.sub:SetTextColor(0.6, 0.6, 0.6)
 		line.sub:Show()
 	end
