@@ -153,6 +153,7 @@ local function ClickAction(b, line)
 	b:SetAttribute("spell", nil)
 	b:SetAttribute("macrotext", nil)
 	local g = line.goal
+	if g and line.locked then return true end   -- a quest you can't take yet: Quest Catchup for it (PostClick)
 	if not g or line.dim or not line.step then return false end
 	local k = g.kind
 	-- the line's target, or all of them when it names several mobs (the macro takes the first one found)
@@ -206,7 +207,9 @@ local function NewClick()
 	hl:SetColorTexture(1, 1, 1, 0.06)
 	b:SetScript("PostClick", function(self, _, down)
 		local g = self.line and self.line.goal
-		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
+		if down or not g then return end   -- once per click: on the mouse-up
+		if self.line.locked then ns.Catchup.Start(g.quest) return end
+		if self.line.dim then return end
 		if g.kind == "confirm" then Engine.Tick(g) end
 		-- a challenge's line opens the guide for it, beside this one
 		if g.opens then Engine.Open(g.opens, true) return end
@@ -220,6 +223,12 @@ local function NewClick()
 	-- hovering a line says where clicking it sends you
 	b:SetScript("OnEnter", function(self)
 		local g = self.line and self.line.goal
+		if g and self.line.locked then
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:SetText("|cffffd100Click|r for a catch-up guide through " .. self.line.locked)
+			GameTooltip:Show()
+			return
+		end
 		if g and g.opens and not self.line.dim then
 			local guide = ns.FindGuide(g.opens)
 			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")

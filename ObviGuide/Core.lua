@@ -59,7 +59,7 @@ local ADDON, ns = ...
 ---@field marks? table<string, table<string, boolean>>  [guide title]["step:goal"] = ticked off / reached
 ---@field flights? table<string, boolean>   flight points seen known (lower-case names; flight maps opened, paths learned)
 ---@field recent? string[]       the guides opened last, newest first (name, or title), for the guide picker
----@field catchup? {guide: string, step: integer, quests: integer[]}   the open catch-up guide, to make it again after a reload
+---@field catchup? ObviGuideCatchupSaved   the open catch-up guide, to make it again after a reload
 
 ---@class ObviGuideParser
 ---@field Parse fun(text: string, source: string, meta?: table): ObviGuideGuide[], string[]   guides, and warnings for the chat
