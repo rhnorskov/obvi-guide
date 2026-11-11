@@ -35,7 +35,8 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field Body Frame
 ---@field Header Frame
 ---@field SideHeader Frame
----@field Continue Button|{text: FontString}   the guide end's "Continue with ..." button
+---@field Continue Button|{text: FontString, action: fun()}   a link under the lines: the guide end's "Continue with
+---...", or a step's "Catch up"
 ---@field Resize Button
 ---@field collapsed boolean
 local frame
@@ -471,6 +472,7 @@ function Window.Refresh()
 		Icon(line, nil, false)
 		local y = Place(line, TopPad(), 0)
 		if nextTitle then
+			frame.Continue.action = Engine.Continue
 			frame.Continue.text:SetText(("Continue with |cffffd100%s|r"):format(nextTitle))
 			frame.Continue:ClearAllPoints()
 			frame.Continue:SetPoint("TOPLEFT", frame.Body, "TOPLEFT", 10 + ICON + 4, -y)
@@ -496,6 +498,20 @@ function Window.Refresh()
 	end
 	local y = TopPad()
 	y = Goals(step, step.goals, y, false, false, step.tips)
+	-- a quest here you can't take yet: a link to Quest Catchup for it, under the lines
+	for _, g in ipairs(step.goals) do
+		if not Engine.IsVisible(g) and Engine.Locked(g) then
+			local quest = g.quest
+			frame.Continue.action = function() ns.Catchup.Start(quest) end
+			frame.Continue.text:SetText("|cffffd100Catch up|r: a short guide through what it needs")
+			frame.Continue:ClearAllPoints()
+			frame.Continue:SetPoint("TOPLEFT", frame.Body, "TOPLEFT", 10 + ICON + 4, -y)
+			frame.Continue:SetSize(Width() - 24 - ICON, frame.Continue.text:GetStringHeight() + 6)
+			frame.Continue:Show()
+			y = y + frame.Continue:GetHeight() + LINE_GAP
+			break
+		end
+	end
 	-- side tasks
 	local open = {}
 	local boxes = {} ---@type table<table, boolean>   each side box: still open (a done one goes with its notes)
@@ -783,7 +799,8 @@ local function Build()
 	sideLine:SetPoint("RIGHT", -8, 0)
 	frame.SideHeader:Hide()
 
-	-- the guide end's "Continue with <next guide>" (a plain button: it works in combat too)
+	-- a link under the lines: the guide end's "Continue with <next guide>", or a step's "Catch up" (a plain button:
+	-- it works in combat too)
 	frame.Continue = CreateFrame("Button", nil, frame.Body) --[[@as Button|{text: FontString}]]
 	frame.Continue.text = frame.Continue:CreateFontString(nil, "ARTWORK", LINE_FONT)
 	frame.Continue.text:SetPoint("LEFT", 0, 0)
@@ -793,7 +810,7 @@ local function Build()
 	contHl:SetPoint("TOPLEFT", -4, 2)
 	contHl:SetPoint("BOTTOMRIGHT", 2, -2)
 	contHl:SetColorTexture(1, 1, 1, 0.06)
-	frame.Continue:SetScript("OnClick", function() Engine.Continue() end)
+	frame.Continue:SetScript("OnClick", function(self) if self.action then self.action() end end)
 	frame.Continue:Hide()
 
 	-- the damage meter's resize handle, shown while the mouse is over the window; it changes the width
