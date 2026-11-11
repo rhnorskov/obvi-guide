@@ -233,7 +233,9 @@ function Travel.Show(step)
 	local dest = step and step.dest
 	local title
 	if step and dest then
-		for _, g in ipairs(step.goals) do if g.kind ~= "talk" then title = g.text break end end
+		for _, g in ipairs(step.goals) do
+			if g.kind ~= "talk" and not g.note and ns.Engine.IsVisible(g) then title = g.text break end
+		end
 	end
 	Place(dest, title, true)
 	objectiveText = dest and title or nil

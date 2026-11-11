@@ -222,8 +222,9 @@ function Engine.CanTake(q)
 	local pre = preQuests[q]
 	if pre == nil then
 		local DB = _G["LibQuestieDB"] ---@type table?
+		if not (DB and DB.Quest) then return true end   -- (not remembered: QuestieDB may come later)
 		pre = false
-		if DB and DB.Quest then
+		do
 			local ok, all, any = pcall(function() return DB.Quest.preQuestGroup(q), DB.Quest.preQuestSingle(q) end)
 			if ok then
 				local function keep(list)
@@ -806,6 +807,12 @@ function Engine.DebugStep()
 		out[#out + 1] = ("- [%s] %s | visible %s, complete %s, ticked %s%s"):format(goal.kind, tostring(goal.text),
 			tostring(Engine.IsVisible(goal)), tostring(Engine.IsComplete(goal, step)), tostring(key and Marks()[key]),
 			goal.done and ", has a done condition" or "")
+		if goal.kind == "accept" and goal.quest then
+			local pre = preQuests[goal.quest]
+			out[#out + 1] = ("  quest %d: can take %s, pre-quests all {%s} any {%s}%s"):format(goal.quest,
+				tostring(Engine.CanTake(goal.quest)), pre and table.concat(pre.all, ", ") or "-",
+				pre and table.concat(pre.any, ", ") or "-", _G["LibQuestieDB"] and "" or ", no QuestieDB")
+		end
 		if goal.flight then
 			local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
 			out[#out + 1] = ("  flight %q, map %s"):format(goal.flight, tostring(map))
