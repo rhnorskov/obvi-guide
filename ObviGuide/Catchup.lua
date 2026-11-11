@@ -132,7 +132,7 @@ end
 --- XP. Remembered until a quest is taken or turned in, or you level.
 local worth = {} ---@type table<integer, integer|false>
 local worthQuests = {} ---@type table<integer, table<integer, boolean>>   the quests each worth counts
-local paces = {} ---@type table<integer, {steps: integer, ratio: number}|false>
+local paces = {} ---@type table<integer, {minutes: number, ratio: number}|false>
 local rates = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, number|false>
 
 ---@param quest integer
@@ -241,46 +241,85 @@ end
 --- The steps for the `needed` quests, from the guides leading to `saved.guide`, its steps before `saved.step`, then any
 --- other guide: the catch-up guide, added to the guide list (in place of an earlier one). Returns it, and which needed
 --- quests no step has.
---- The guide's own pace: the XP (at your level) of the quests it turns in, per step. Nil when it has none.
+-- How long things take, roughly, the same for the catch-up and the guide so the two compare: a step's own doing,
+-- the way between steps at running speed (riding from 40), and a flat while for another continent (boat, tram).
+local STEP_SECONDS = 30
+local OTHER_CONTINENT = 300
+
+---@return number yards per second
+local function Speed() return UnitLevel("player") >= 40 and 11 or 7 end
+
+--- Seconds to go from one spot to the next (nil: no spot to go from or to: no way to count).
+---@param a? ObviGuidePoint|{continent: number, world: vector2}
+---@param b? ObviGuidePoint
+---@return number
+local function Way(a, b)
+	if not (a and b) then return 0 end
+	local c1, w1
+	if a.world then c1, w1 = a.continent, a.world else c1, w1 = ns.Travel.World(a --[[@as ObviGuidePoint]]) end
+	local c2, w2 = ns.Travel.World(b)
+	if not (w1 and w2) then return 0 end
+	if c1 ~= c2 then return OTHER_CONTINENT end
+	local dx, dy = w1.x - w2.x, w1.y - w2.y
+	return math.sqrt(dx * dx + dy * dy) / Speed()
+end
+
+--- The guide's own pace: the XP (at your level) of the quests it turns in, per second of following it (its steps,
+--- and the way between them). Nil when it has none.
 ---@param g ObviGuideGuide
 ---@return number?
 local function Rate(g)
 	if rates[g] == nil then
-		local total = 0
+		local total, seconds, last = 0, 0, nil
 		for _, s in ipairs(g.steps) do
 			for _, goal in ipairs(s.goals) do
 				if goal.kind == "turnin" and goal.quest then total = total + (Engine.QuestXP(goal.quest) or 0) end
 			end
+			seconds = seconds + STEP_SECONDS
+			if s.dest then seconds, last = seconds + Way(last, s.dest), s.dest end
 		end
-		rates[g] = total > 0 and #g.steps > 0 and total / #g.steps or false
+		rates[g] = total > 0 and seconds > 0 and total / seconds or false
 	end
 	return rates[g] or nil
 end
 
---- Whether catching up on a quest is worth the way: the steps it takes (the earlier quests' steps in the guides up to
---- this one, and the steps of the quest and its chain after it in this guide), and its XP per step against the
---- guide's own ("1.3": a third more XP per step than going on with the guide). Nil when it can't be told.
+--- Whether catching up on a quest is worth the time: roughly how long it takes (the way from here through the
+--- earlier quests' steps and back, and the steps of the quest and its chain after it in this guide, which are on the
+--- way anyway), and its XP per minute against the guide's own ("1.3": a third more XP per minute than going on with
+--- the guide). Nil when it can't be told.
 ---@param quest integer
----@return {steps: integer, ratio: number}?
+---@return {minutes: number, ratio: number}?
 function Catchup.Pace(quest)
 	if paces[quest] ~= nil then return paces[quest] or nil end
 	paces[quest] = false
 	local xp = Catchup.Worth(quest)
 	local quests = worthQuests[quest]
-	local g = Engine.Current()
-	local rate = g and g.name ~= NAME and Rate(g)
-	if not (xp and xp > 0 and quests and g and rate) then return nil end
-	local steps, from = 0, {}
+	local g, cur = Engine.Current()
+	local rate = g and cur and g.name ~= NAME and Rate(g)
+	if not (xp and xp > 0 and quests and g and cur and rate) then return nil end
+	local here = cur.dest ---@type ObviGuidePoint|{continent: number, world: vector2}|nil
+	do
+		local continent, world = ns.Travel.PlayerWorld()
+		if continent and world then here = { continent = continent, world = world } end
+	end
+	local steps, seconds, from, at = 0, 0, {}, here
+	local function detour(s, src)
+		if not Cut(s, quests, from, src) then return end
+		steps, seconds = steps + 1, seconds + STEP_SECONDS
+		if s.dest then seconds, at = seconds + Way(at, s.dest), s.dest end
+	end
 	-- (only the guides with one of the quests are read: a chain back to level 1 isn't read while the window draws)
 	for _, before in ipairs(Before(g, true)) do
-		local read = Mentions(before, quests) and ns.Ready(before)
-		for _, s in ipairs(read and read.steps or {}) do
-			if read and Cut(s, quests, from, read) then steps = steps + 1 end
-		end
+		local read = Mentions(before, quests) and ns.Ready(before) or nil
+		for _, s in ipairs(read and read.steps or {}) do if read then detour(s, read) end end
 	end
-	for _, s in ipairs(g.steps) do if Cut(s, quests, from, g) then steps = steps + 1 end end
-	if steps == 0 then return nil end
-	local pace = { steps = steps, ratio = (xp / steps) / rate }
+	for i = 1, cur.index - 1 do detour(g.steps[i], g) end
+	if steps > 0 then seconds = seconds + Way(at, cur.dest) end   -- and back
+	for i = cur.index, #g.steps do
+		if Cut(g.steps[i], quests, from, g) then steps, seconds = steps + 1, seconds + STEP_SECONDS end
+	end
+	if steps == 0 or seconds <= 0 then return nil end
+	local pace = { minutes = seconds / 60, ratio = (xp / seconds) / rate }
 	paces[quest] = pace
 	return pace
 end

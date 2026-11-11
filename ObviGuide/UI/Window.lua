@@ -367,8 +367,8 @@ local function RenderLine(line)
 		local pace = xp and xp > 0 and ns.Catchup.Pace(g.quest --[[@as integer]])
 		local worth = ""
 		if pace and xp then
-			worth = (" |cff888888(%s in %d steps, %.1fx this guide's XP per step)|r"):format(ns.Catchup.Bars(xp), pace.steps,
-				pace.ratio)
+			worth = (" |cff888888(%s, ~%d min, %.1fx this guide's XP per minute)|r"):format(ns.Catchup.Bars(xp),
+				math.max(1, math.floor(pace.minutes + 0.5)), pace.ratio)
 		elseif xp and xp > 0 then
 			worth = (" |cff888888(%s)|r"):format(ns.Catchup.XPText(xp))
 		end
