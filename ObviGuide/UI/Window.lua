@@ -363,7 +363,7 @@ local function RenderLine(line)
 	if line.locked then
 		-- with what it's worth: the XP of the catch-up, the quest, and its chain after it (missed if you go on)
 		local xp = g.quest and ns.Catchup.Worth(g.quest)
-		local worth = xp and xp > 0 and (" |cff888888(%s XP)|r"):format(ns.Catchup.Number(xp)) or ""
+		local worth = xp and xp > 0 and (" |cff888888(%s)|r"):format(ns.Catchup.XPText(xp)) or ""
 		line.sub:SetText(("%s  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)), worth))
 		line.sub:SetTextColor(0.6, 0.6, 0.6)
 		line.sub:Show()

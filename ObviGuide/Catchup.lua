@@ -159,6 +159,17 @@ ns:On("QUEST_TURNED_IN", Forget)
 ns:On("QUEST_ACCEPTED", Forget)
 ns:On("PLAYER_LEVEL_UP", Forget)
 
+--- XP as the game's XP bar counts it: "9,770 XP, 3.8 bars" (a bar: one of its 20 parts, at your level now).
+---@param xp integer
+---@return string
+function Catchup.XPText(xp)
+	local max = UnitXPMax("player")
+	if not max or max <= 0 then return Catchup.Number(xp) .. " XP" end
+	local bars = xp / (max / 20)
+	local count = bars >= 10 and tostring(math.floor(bars + 0.5)) or ("%.1f"):format(bars)
+	return ("%s XP, %s bar%s"):format(Catchup.Number(xp), count, count == "1.0" and "" or "s")
+end
+
 --- "12,345"
 ---@param n integer
 function Catchup.Number(n)
@@ -380,7 +391,7 @@ function Catchup.Start(quest)
 	if quest then
 		local xp = Catchup.Worth(quest --[[@as integer]])
 		ns.Print("Quest Catchup for %s: %s.%s", QuestName(DB, quest --[[@as integer]]), table.concat(names, ", "),
-			xp and xp > 0 and (" Worth %s XP with what follows it."):format(Catchup.Number(xp)) or "")
+			xp and xp > 0 and (" Worth %s with what follows it."):format(Catchup.XPText(xp)) or "")
 	else
 		ns.Print("Quest Catchup: %d skipped quest%s needed later: %s.", #list, #list == 1 and " is" or "s are",
 			table.concat(names, ", "))
