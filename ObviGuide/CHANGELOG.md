@@ -11,13 +11,14 @@
 - Guides whose steps can be done in any order (`g.nearest = true`) go to the first stop on the shortest way from where
   you are through the steps left, planned again each time a step is done and when the guide is opened.
 - A quest you can't take yet, because its chain began in a guide you skipped, is no longer asked for: its accept line
-  is greyed out with what it needs ("needs Blessed Arm"), and a step with nothing else to do is skipped (The Legend of
-  Stalvan in Duskwood, after doing dungeons instead). Needs QuestieDB, which knows each quest's pre-quests; for WoW
-  Forever's new chains it doesn't know yet, a quest given where one of the same name is turned in follows that one,
-  and the Menethil Statuette chain (A Friend of the Family, The Shamed Lieutenant) is known. Click the
-  greyed line, or **Catch up** under the step, for a catch-up guide to it. When the quest before it is still in your log, the line says "finish ...
-  first" and its step isn't skipped (The Night Watch). To have such steps stay rather than be skipped, untick **Skip quests you
-  can't take yet** in the settings.
+  is greyed out with what it needs under it ("Needs Blessed Arm"), and a step with nothing else to do is skipped (The
+  Legend of Stalvan in Duskwood, after doing dungeons instead). Needs QuestieDB, which knows each quest's pre-quests;
+  for WoW Forever's new chains it doesn't know yet, a quest given where one of the same name is turned in follows that
+  one, and the Menethil Statuette chain (A Friend of the Family, The Shamed Lieutenant) is known. Click the line
+  (**Catch up**) for a catch-up guide to it. When the quest before it is still in your log, it says "Finish ... first"
+  and its step isn't skipped (The Night Watch). To have such steps stay rather than be skipped, untick **Skip quests
+  you can't take yet** in the settings. Quests of the same name are told apart by their part: "The Night Watch (part
+  2)".
 - **Quest Catchup** works for any quest, from all the guides: click a greyed "needs ..." line, or type
   `/og catchup` with a quest's id, name or link. It takes the steps from the guides leading to yours first, then from
   any other guide that has them. Before, it found nothing to catch up on: it took every earlier quest for a

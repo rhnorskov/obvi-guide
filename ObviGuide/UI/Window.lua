@@ -35,8 +35,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field Body Frame
 ---@field Header Frame
 ---@field SideHeader Frame
----@field Continue Button|{text: FontString, action: fun()}   a link under the lines: the guide end's "Continue with
----...", or a step's "Catch up"
+---@field Continue Button|{text: FontString, action: fun()}   the guide end's "Continue with ..." link
 ---@field Resize Button
 ---@field collapsed boolean
 local frame
@@ -51,6 +50,7 @@ local frame
 ---@field dim? boolean      a previewed step: no action
 ---@field side? boolean     a side task: the step's own NPC/target is not its target
 ---@field locked? string    an accept line for a quest you can't take yet: what it waits for ("needs Blessed Arm")
+---@field sub FontString     a smaller line under the text: what a quest you can't take yet waits for, and Catch up
 
 ---@class ObviGuideClick : Button
 ---@field line? ObviGuideLine   the line it lies over
@@ -126,10 +126,15 @@ local function Line()
 		line.text:SetJustifyH("LEFT")
 		line.text:SetWordWrap(true)
 		line.text:SetSpacing(LEADING)
+		line.sub = line:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		line.sub:SetPoint("TOPLEFT", line.text, "BOTTOMLEFT", 0, -2)
+		line.sub:SetJustifyH("LEFT")
+		line.sub:SetWordWrap(true)
 		Flashes(line)
 		lines[used] = line
 	end
 	line.goal, line.step, line.dim, line.side, line.locked = nil, nil, nil, nil, nil
+	line.sub:Hide()
 	line:Show()
 	return line
 end
@@ -321,6 +326,10 @@ local function Place(line, y, indent)
 	line:SetPoint("TOPLEFT", frame.Body, "TOPLEFT", 10 + indent, -y)
 	line.text:SetWidth(w - 24 - ICON - indent)
 	local h = math.max(ICON, line.text:GetStringHeight())
+	if line.sub:IsShown() then
+		line.sub:SetWidth(w - 24 - ICON - indent)
+		h = h + 2 + line.sub:GetStringHeight()
+	end
 	line:SetSize(w - 20 - indent, h)
 	return y + h + LINE_GAP
 end
@@ -350,7 +359,12 @@ local function RenderLine(line)
 		end
 	end
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
-	if line.locked then text = text .. " (" .. line.locked .. ")" end
+	-- a quest you can't take yet: what it waits for, small, under it, and the catch-up the line's click starts
+	if line.locked then
+		line.sub:SetText(("%s  |cffffd100Catch up|r"):format((line.locked:gsub("^%l", string.upper))))
+		line.sub:SetTextColor(0.6, 0.6, 0.6)
+		line.sub:Show()
+	end
 	-- a note shown as a line of its own (in a side task, or with a condition) looks like the step's notes
 	if g.note and not dim then text = "|cffd0b070" .. text .. "|r" end
 	line.text:SetText(Inline(text))
@@ -498,20 +512,6 @@ function Window.Refresh()
 	end
 	local y = TopPad()
 	y = Goals(step, step.goals, y, false, false, step.tips)
-	-- a quest here you can't take yet: a link to Quest Catchup for it, under the lines
-	for _, g in ipairs(step.goals) do
-		if not Engine.IsVisible(g) and Engine.Locked(g) then
-			local quest = g.quest
-			frame.Continue.action = function() ns.Catchup.Start(quest) end
-			frame.Continue.text:SetText("|cffffd100Catch up|r: a short guide through what it needs")
-			frame.Continue:ClearAllPoints()
-			frame.Continue:SetPoint("TOPLEFT", frame.Body, "TOPLEFT", 10 + ICON + 4, -y)
-			frame.Continue:SetSize(Width() - 24 - ICON, frame.Continue.text:GetStringHeight() + 6)
-			frame.Continue:Show()
-			y = y + frame.Continue:GetHeight() + LINE_GAP
-			break
-		end
-	end
 	-- side tasks
 	local open = {}
 	local boxes = {} ---@type table<table, boolean>   each side box: still open (a done one goes with its notes)
@@ -799,8 +799,7 @@ local function Build()
 	sideLine:SetPoint("RIGHT", -8, 0)
 	frame.SideHeader:Hide()
 
-	-- a link under the lines: the guide end's "Continue with <next guide>", or a step's "Catch up" (a plain button:
-	-- it works in combat too)
+	-- the guide end's "Continue with <next guide>" (a plain button: it works in combat too)
 	frame.Continue = CreateFrame("Button", nil, frame.Body) --[[@as Button|{text: FontString}]]
 	frame.Continue.text = frame.Continue:CreateFontString(nil, "ARTWORK", LINE_FONT)
 	frame.Continue.text:SetPoint("LEFT", 0, 0)
