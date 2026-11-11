@@ -280,6 +280,20 @@ function Lines:Train(profession, cap)
 	end
 	return Add(self, { op = "Train", skill = profession, cap = cap })
 end
+function Lines:Explore(achievement, name, ids)
+	if type(achievement) ~= "number" or type(name) ~= "string" then
+		error("Explore needs the challenge's id and the area's name (and the area's criterion ids)", 2)
+	end
+	if type(ids) == "number" then ids = { ids } end
+	return Add(self, { op = "Explore", achievement = achievement, name = name, ids = ids or {} })
+end
+function Lines:Challenge(achievement, guide, ...)
+	if type(achievement) ~= "number" or type(guide) ~= "string" then
+		error("Challenge needs the challenge's id and the guide (id or title) that leads through it", 2)
+	end
+	local text, mob = Text(...)
+	return Add(self, { op = "Challenge", achievement = achievement, guide = guide, text = text, mob = mob })
+end
 function Lines:Do(...) local text, mob = Text(...) return Add(self, { op = "Do", text = text, mob = mob }) end
 function Lines:Say(...) local text, mob = Text(...) return Add(self, { op = "Say", text = text, mob = mob }) end
 function Lines:Note(...) local text, mob = Text(...) return Add(self, { op = "Note", text = text, mob = mob }) end
@@ -289,6 +303,7 @@ function Lines:Note(...) local text, mob = Text(...) return Add(self, { op = "No
 ---@field group? string
 ---@field next? string
 ---@field id? string
+---@field challenge? integer
 ---@field only? any
 ---@field _items {lines: ObviGuideLinesImpl, untilStep?: string}[]   steps and side boxes, in order
 
@@ -321,7 +336,7 @@ function Guide.Buy(...) return TextMarker("buy", ...) end
 
 -- lines a step waits for (as RestedXP's reader counts them; arriving at a goto counts only on its own)
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
-	cast = true, learn = true, level = true, home = true, hearth = true, confirm = true, skill = true }
+	cast = true, learn = true, level = true, home = true, hearth = true, confirm = true, skill = true, challenge = true }
 
 -- profession ranks by the skill cap they bring
 local RANKS = { [75] = "Apprentice", [150] = "Journeyman", [225] = "Expert", [300] = "Artisan" }
@@ -381,6 +396,14 @@ local function Goal(l)
 		local text = "Learn " .. l.skill
 		if l.cap then text = RANKS[l.cap] and ("Train " .. RANKS[l.cap] .. " " .. l.skill) or ("Train %s up to %d"):format(l.skill, l.cap) end
 		return { kind = "skill", skill = l.skill, level = not l.cap and 1 or nil, cap = l.cap, text = text }
+	elseif op == "Explore" then
+		-- done once the game counts the area as found (a criterion of the exploration challenge); ticked off by hand
+		-- where the game has no achievements
+		return { kind = "confirm", text = "Explore " .. l.name, done = { "explored", l.achievement, l.ids, l.name } }
+	elseif op == "Challenge" then
+		-- a challenge still to finish, which opens the guide for it; shown only until it is finished
+		return { kind = "challenge", text = l.text ~= "" and l.text or l.guide, opens = l.guide,
+			done = { "achieved", l.achievement } }
 	elseif op == "Do" then
 		return { kind = "confirm", text = l.text }
 	elseif op == "Say" then
@@ -428,6 +451,8 @@ local function BuildStep(lines, untilStep, ctx)
 		end
 		if goal then
 			goal.cond = cond
+			-- a challenge's line goes once it is finished, so the step lists what is left
+			if goal.kind == "challenge" then goal.cond = cond and { "and", cond, { "not", goal.done } } or { "not", goal.done } end
 			if (goal.kind == "accept" or goal.kind == "turnin") and talk then goal.target = talk end
 			if goal.kind == "talk" then
 				talk = goal.target
@@ -562,6 +587,7 @@ local function Finish(g, source)
 		group = g.group or "Obvi Guide",
 		next = g.next,
 		cond = Cond(g.only, ctx),
+		challenge = type(g.challenge) == "number" and g.challenge or nil,
 		format = "obviguide",
 		source = source,
 		steps = steps,

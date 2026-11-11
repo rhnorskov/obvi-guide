@@ -25,5 +25,6 @@ UI\Copy.lua
 UI\Cleanup.lua
 UI\Junk.lua
 UI\GuidePicker.lua
+UI\Challenges.lua
 UI\Options.lua
 Commands.lua

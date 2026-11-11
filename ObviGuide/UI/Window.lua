@@ -175,7 +175,7 @@ local function ClickAction(b, line)
 			tostring(b:GetAttribute("macrotext") or b:GetAttribute("item") or b:GetAttribute("spell")))
 	end
 	-- ticking off and showing the way happen after the click (PostClick), with or without a secure action
-	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or (g.point or line.step.dest) ~= nil
+	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.opens ~= nil or (g.point or line.step.dest) ~= nil
 end
 
 --- Where clicking a line sets the waypoint: its own spot, or else the step's.
@@ -207,6 +207,8 @@ local function NewClick()
 		local g = self.line and self.line.goal
 		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
 		if g.kind == "confirm" then Engine.Tick(g) end
+		-- a challenge's line opens the guide for it, beside this one
+		if g.opens then Engine.Open(g.opens, true) return end
 		-- (not when the way is shown there already, or you're there: clicking a "Talk to" line again and again to
 		-- target the NPC shouldn't set the waypoint anew each time)
 		local p = ClickPoint(self)
@@ -216,6 +218,14 @@ local function NewClick()
 	end)
 	-- hovering a line says where clicking it sends you
 	b:SetScript("OnEnter", function(self)
+		local g = self.line and self.line.goal
+		if g and g.opens and not self.line.dim then
+			local guide = ns.FindGuide(g.opens)
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:SetText("|cffffd100Click|r to open the guide |cffffd100" .. (guide and guide.title or g.opens) .. "|r")
+			GameTooltip:Show()
+			return
+		end
 		local p = ClickPoint(self)
 		if not p then return end
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")

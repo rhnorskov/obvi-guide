@@ -17,7 +17,8 @@ local guide ---@type ObviGuideGuide?
 local index = 1
 
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
-	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true, skill = true }
+	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true, skill = true,
+	challenge = true }
 
 -- manual ticks and reached waypoints: charDB.marks[guide title]["step:goal"] = true
 local function Marks()
@@ -188,10 +189,69 @@ local function Distance(p)
 	return math.sqrt(dx * dx + dy * dy)
 end
 
+-- Whether a quest can be taken as far as its pre-quests go (QuestieDB knows them; without it, always). A pre-quest in
+-- the log counts: the guide turns it in first, often in the same step. Breadcrumbs and pre-quests for other races and
+-- classes don't count. Of alternatives, one is enough. So a chain begun in a guide you skipped (The Legend of Stalvan,
+-- for one who did dungeons instead) isn't asked for later on.
+local preQuests = {} ---@type table<integer, {all: integer[], any: integer[]}|false>
+
+---@param q integer
+local function Had(q) return C_QuestLog.IsQuestFlaggedCompleted(q) or C_QuestLog.IsOnQuest(q) end
+
+--- Whether QuestieDB has the quest for this character's race and class (nothing said: for everyone).
+---@param DB table
+---@param q integer
+function Engine.ForMe(DB, q)
+	local races = DB.Quest.requiredRaces(q)
+	if races and races ~= 0 then
+		local _, _, raceId = UnitRace("player")
+		local mask = DB.Enum.raceMaskById[raceId]
+		if mask and bit.band(races, mask) == 0 then return false end
+	end
+	local classes = DB.Quest.requiredClasses(q)
+	if classes and classes ~= 0 then
+		local _, _, classId = UnitClass("player")
+		if bit.band(classes, bit.lshift(1, classId - 1)) == 0 then return false end
+	end
+	return true
+end
+
+---@param q integer
+---@return boolean
+function Engine.CanTake(q)
+	local pre = preQuests[q]
+	if pre == nil then
+		local DB = _G["LibQuestieDB"] ---@type table?
+		pre = false
+		if DB and DB.Quest then
+			local ok, all, any = pcall(function() return DB.Quest.preQuestGroup(q), DB.Quest.preQuestSingle(q) end)
+			if ok then
+				local function keep(list)
+					local out = {}
+					for _, p in ipairs(list or {}) do
+						if not DB.Quest.breadcrumbForQuestId(p) and Engine.ForMe(DB, p) then out[#out + 1] = p end
+					end
+					return out
+				end
+				pre = { all = keep(all), any = keep(any) }
+			end
+		end
+		preQuests[q] = pre
+	end
+	if not pre then return true end
+	for _, p in ipairs(pre.all) do if not Had(p) then return false end end
+	if #pre.any == 0 then return true end
+	for _, p in ipairs(pre.any) do if Had(p) then return true end end
+	return false
+end
+
 ---@param goal ObviGuideGoal
 ---@return boolean
 function Engine.IsVisible(goal)
 	if not Conditions.Eval(goal.cond) then return false end
+	if goal.kind == "accept" and goal.quest and not Had(goal.quest) and not Engine.CanTake(goal.quest) then
+		return false
+	end
 	if goal.quest and (goal.kind == "objective" or goal.kind == "kill" or (goal.kind == "collect" and goal.objective)) then
 		-- hidden for a quest you haven't got; one already turned in still counts (as done), so its step is a step
 		-- you can go back to rather than one that "doesn't apply"

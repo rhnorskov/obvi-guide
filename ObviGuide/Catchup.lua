@@ -53,24 +53,6 @@ local function Before(g)
 	return list
 end
 
---- Whether QuestieDB has the quest for this character's race and class (nothing said: for everyone).
----@param DB table
----@param q integer
-local function ForMe(DB, q)
-	local races = DB.Quest.requiredRaces(q)
-	if races and races ~= 0 then
-		local _, _, raceId = UnitRace("player")
-		local mask = DB.Enum.raceMaskById[raceId]
-		if mask and bit.band(races, mask) == 0 then return false end
-	end
-	local classes = DB.Quest.requiredClasses(q)
-	if classes and classes ~= 0 then
-		local _, _, classId = UnitClass("player")
-		if bit.band(classes, bit.lshift(1, classId - 1)) == 0 then return false end
-	end
-	return true
-end
-
 --- The pre-quests of `q` not done yet, and theirs, into `out`. Breadcrumbs are never needed. Of alternatives (any one
 --- will do) the first one the earlier guides accept is taken, or all of them when none is there.
 ---@param DB table
@@ -81,7 +63,7 @@ end
 local function Missing(DB, q, out, offered, depth)
 	if depth > 40 then return end
 	local function add(p)
-		if Done(p) or out[p] or DB.Quest.breadcrumbForQuestId(p) or not ForMe(DB, p) then return end
+		if Done(p) or out[p] or DB.Quest.breadcrumbForQuestId(p) or not Engine.ForMe(DB, p) then return end
 		out[p] = true
 		Missing(DB, p, out, offered, depth + 1)
 	end
@@ -183,7 +165,7 @@ function Catchup.Start()
 
 	local needed = {} ---@type table<integer, boolean>
 	for _, q in ipairs(ahead) do
-		if not Done(q) and not C_QuestLog.IsOnQuest(q) and ForMe(DB, q) then Missing(DB, q, needed, offered, 0) end
+		if not Done(q) and not C_QuestLog.IsOnQuest(q) and Engine.ForMe(DB, q) then Missing(DB, q, needed, offered, 0) end
 	end
 	if not next(needed) then
 		ns.Print("Quest Catchup: nothing skipped that the rest of this guide needs.")

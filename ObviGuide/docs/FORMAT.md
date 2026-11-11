@@ -44,7 +44,8 @@ end)
 ```
 
 - **The guide** has a `title` (required), and optionally a `group` (the folder in the guide list), the `next` guide,
-  an `id` other guides' `next` may use, and `only` (who it is listed for).
+  an `id` other guides' `next` may use, and `only` (who it is listed for). A guide for a challenge (an
+  achievement) says which with `challenge = id`: the game's challenges window gets a button on it that opens the guide.
 - **A step** (`g:Step`) is a few lines done together. It may have a `label`, `only` (shown only while it holds;
   otherwise passed over) and `skip` (counts as done while it holds, e.g. "already in Valanaar"). A step is done when
   all of its lines that can be done are done.
@@ -76,6 +77,8 @@ end)
 | `Level(level, xp?)` | Reach a level (and XP into it). | You are there. |
 | `Skill(profession, level)` | Reach a skill level in a profession (`"Mining"`, by its English name). | Your skill is that high. |
 | `Train(profession, cap?)` | Learn a profession, or train the rank that raises its cap (75, 150, 225, 300). | You have it / your cap is that high. |
+| `Explore(achievement, name, ids?)` | Discover an area of an exploration challenge (found in its list by id, or else by name). | The game counts it as found. |
+| `Challenge(achievement, guide, text...)` | A challenge still to finish; shown only until it is, and clicking it opens `guide` (id or title) in a tab of its own. | The challenge is finished. |
 | `Do(text...)` | An instruction the player ticks off by clicking it. | Clicked. |
 | `Say(text...)` | Plain text: an instruction with nothing to tick off. | - |
 | `Note(text...)` | A note, shown right after the line above it. | - |

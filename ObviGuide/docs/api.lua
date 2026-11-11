@@ -81,6 +81,8 @@ function ObviGuide.Read(guide) end
 ---@field next? string                 the guide that follows when this one ends (its title or id)
 ---@field id? string                   another name `next` may use for this guide
 ---@field only? ObviGuideCondition      the guide is listed only for characters that match
+---@field challenge? integer           the challenge (achievement) the guide leads through: the game's challenges window
+---                                    gets a button on it that opens the guide
 local Guide = {}
 
 --- A step: a few lines done together, in one place. `build` fills it in.
@@ -267,6 +269,23 @@ function Lines:Skill(profession, level) end
 ---@param cap? integer
 ---@return ObviGuideLine
 function Lines:Train(profession, cap) end
+
+--- Discover an area: one criterion of an exploration challenge ("Explore Alterac Mountains"). Done once the game
+--- counts the area as found; where the game has no achievements, the player ticks it off. The area is found in the
+--- challenge's list by one of its ids, or else by its name (which only matches in an English game).
+---@param achievement integer           the challenge's (achievement's) id
+---@param name string                   the area's name, as the challenge lists it
+---@param ids? integer|integer[]        the area's criteria tree id and/or criterion id
+---@return ObviGuideLine
+function Lines:Explore(achievement, name, ids) end
+
+--- A challenge (achievement) still to finish, as one of the parts of a bigger one: shown only until it is finished,
+--- and clicking it opens the guide that leads through it, in a tab of its own. Done once the challenge is finished.
+---@param achievement integer   the challenge's (achievement's) id
+---@param guide string          the guide's id or title
+---@param ... ObviGuideText      the line's text (default: the guide)
+---@return ObviGuideLine
+function Lines:Challenge(achievement, guide, ...) end
 
 --- An instruction the player ticks off by clicking it.
 ---@param ... ObviGuideText

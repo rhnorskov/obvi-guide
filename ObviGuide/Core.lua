@@ -75,6 +75,7 @@ local ADDON, ns = ...
 ---@field group string           a folder for the guide list, e.g. "RestedXP Forever Guide (A)"
 ---@field next? string           the title of the guide that follows
 ---@field cond? ObviGuideCond     listed only for characters this holds for
+---@field challenge? integer     the challenge (achievement) it leads through: the challenges window offers it
 ---@field format string          the format it came in ("obviguide", "rxp", or one an addon added)
 ---@field source string          which pack added it
 ---@field steps ObviGuideStep[]   (empty while the guide is still pending)
@@ -120,7 +121,7 @@ local ADDON, ns = ...
 ---@field y number               0..1
 ---@field radius? number         yards; arriving this close completes a 'goto' goal
 
----@alias ObviGuideGoalKind "text"|"goto"|"talk"|"hearth"|"accept"|"turnin"|"objective"|"collect"|"kill"|"use"|"cast"|"learn"|"level"|"home"|"fly"|"equip"|"confirm"|"skill"
+---@alias ObviGuideGoalKind "text"|"goto"|"talk"|"hearth"|"accept"|"turnin"|"objective"|"collect"|"kill"|"use"|"cast"|"learn"|"level"|"home"|"fly"|"equip"|"confirm"|"skill"|"challenge"
 
 ---@class ObviGuideGoal
 ---@field kind ObviGuideGoalKind
@@ -132,6 +133,7 @@ local ADDON, ns = ...
 ---@field finishes? boolean      once this line is done, so is the step (Zygor's confirm lines)
 ---@field with? ObviGuideGoal[]   done once these are (a sticky's "kill wolves" with its "collect 8 meat")
 ---@field closes? "trainer"|"vendor"   done once its target's trainer or merchant window is closed again
+---@field opens? string         clicking the line opens this guide (its id or title) in a tab of its own
 ---@field quest? integer
 ---@field objective? integer
 ---@field id? integer            npc, item or spell id, by kind

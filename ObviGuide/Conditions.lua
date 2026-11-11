@@ -13,6 +13,8 @@
 --   {"rep", factionID or name, reaction}                (at least that standing: 1 Hated .. 4 Neutral .. 8 Exalted)
 --   {"vehicle"}  {"achieved", achievementID, criteria?}  (in a vehicle; the achievement, or one of its criteria by
 --                                                        number or id, done)
+--   {"explored", achievementID, ids, name}               (one area of an exploration challenge found: the criterion
+--                                                        whose id is one of ids, or else whose text is name)
 --   {"skill>=", profession, n}  {"skill<", profession, n}   (a profession's skill, by its English name; a profession
 --                                                        the character hasn't got counts as 0)
 --   {"skillmax>=", profession, n}  {"skillmax<", profession, n}   (its cap, what has been trained: Zygor's skillmax;
@@ -212,6 +214,22 @@ local tests = {
 			if not c[3] then return select(4, GetAchievementInfo(c[2])) end
 			if c[3] <= GetAchievementNumCriteria(c[2]) then return select(3, GetAchievementCriteriaInfo(c[2], c[3])) end
 			return select(3, GetAchievementCriteriaInfoByID(c[2], c[3]))
+		end)
+		return ok and done
+	end,
+	-- the game lists an exploration challenge's areas in an order its data doesn't keep, so the area is found in the
+	-- list by its id (the criteria tree's or the criterion's, whichever the game gives) or, failing that, by name
+	explored = function(c)
+		local ok, done = pcall(function()
+			local ids, name = c[3], c[4]
+			for i = 1, GetAchievementNumCriteria(c[2]) do
+				local text, _, completed, _, _, _, _, _, _, id = GetAchievementCriteriaInfo(c[2], i)
+				for _, want in ipairs(ids) do
+					if id == want then return completed end
+				end
+				if text == name then return completed end
+			end
+			return false
 		end)
 		return ok and done
 	end,

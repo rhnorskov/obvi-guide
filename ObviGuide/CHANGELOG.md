@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Guides can have exploration lines (`s:Explore(challenge, area)`), done once the game counts the area as found in that
+  exploration challenge.
+- Guides can list the parts of a bigger challenge still to finish (`s:Challenge(challenge, guide)`): each line goes once
+  its part is finished, and clicking it opens that part's guide in a tab of its own.
+- **Guide buttons in the legacy challenges window** (WoW Forever): a challenge a guide leads through gets a Guide
+  button that opens it in a tab of its own. Guides say which challenge with `g.challenge = id`.
+- A quest you can't take yet, because its chain began in a guide you skipped, is no longer asked for: its accept line
+  is left out, and a step with nothing else to do is skipped (The Legend of Stalvan in Duskwood, after doing dungeons
+  instead). Needs QuestieDB, which knows each quest's pre-quests. Quest Catchup (`/og catchup`) still leads you
+  through the skipped quests if you want them.
 - **Guide picker**: the gear beside the search is a menu now. The guides only for the other faction are left out;
   tick **Other faction's guides** there to list them too. **Settings** opens the settings as before.
 - **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before

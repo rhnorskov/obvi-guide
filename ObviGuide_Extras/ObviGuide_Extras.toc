@@ -1,10 +1,11 @@
 ## Interface: 16001, 120105
 ## Title: Obvi Guide: Extras
 ## Version: @project-version@
-## Notes: Guides for Obvi Guide that aren't dungeons: the Aqual Quintessence and the Cozy Sleeping Bag.
+## Notes: Guides for Obvi Guide that aren't dungeons: the Aqual Quintessence, the Cozy Sleeping Bag and the exploration challenges.
 ## Author: Rasmus Norskov
 ## Dependencies: ObviGuide
 ## X-License: GPL-3.0-or-later
 
 AqualQuintessence.lua
 CozySleepingBag.lua
+Exploration.lua
