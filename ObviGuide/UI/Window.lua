@@ -374,7 +374,10 @@ local function RenderLine(line)
 				worth = (": %s, ~%d min, %.1fx this guide's XP per minute"):format(ns.Catchup.Bars(xp),
 					math.max(1, math.floor(pace.minutes + 0.5)), pace.ratio)
 				local behind = ns.Catchup.Behind()
-				if behind and behind >= 0.05 then worth = worth .. (", %.1f levels behind the guide"):format(behind) end
+				if behind then
+					worth = worth .. (behind >= 0.05 and (", %.1f levels behind the guide"):format(behind)
+						or behind <= -0.05 and (", %.1f levels ahead of the guide"):format(-behind) or ", on the guide's pace")
+				end
 			elseif xp and xp > 0 then
 				worth = ": " .. ns.Catchup.XPText(xp)
 			end
