@@ -45,7 +45,7 @@ local ADDON, ns = ...
 ---@field arrow? {point: string, relPoint: string, x: number, y: number}   where the arrow was dragged
 ---@field flip? boolean           the window's header at the bottom (it grows upwards)
 ---@field autoAccept? boolean     accept the guide's quests when talking to the NPC (nil: on)
----@field skipLocked? boolean     skip steps whose quest needs pre-quests you haven't had (nil: on)
+---@field skipLocked? boolean     skip steps whose quest needs pre-quests you haven't had (nil: off)
 ---@field autoTurnin? boolean     turn in the guide's quests, no choice of rewards (nil: on)
 
 ---@class ObviGuideTab

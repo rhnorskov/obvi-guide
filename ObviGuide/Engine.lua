@@ -549,7 +549,7 @@ function Engine.StepState(step)
 	-- done (as Zygor has it)
 	local need, orOpen = {}, false
 	-- (the "Skip quests you can't take yet" setting off: such a quest's line keeps its step, greyed out)
-	local keepLocked = ns.db and ns.db.skipLocked == false
+	local keepLocked = not (ns.db and ns.db.skipLocked)
 	for _, g in ipairs(step.goals) do
 		local locked, waiting
 		if not Engine.IsVisible(g) then locked, waiting = Engine.Locked(g) end
