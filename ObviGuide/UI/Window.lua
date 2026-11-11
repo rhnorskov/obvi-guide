@@ -373,13 +373,16 @@ local function RenderLine(line)
 			if pace and xp then
 				worth = (": %s, ~%d min, %.1fx this guide's XP per minute"):format(ns.Catchup.Bars(xp),
 					math.max(1, math.floor(pace.minutes + 0.5)), pace.ratio)
+				local behind = ns.Catchup.Behind()
+				if behind and behind >= 0.05 then worth = worth .. (", %.1f levels behind the guide"):format(behind) end
 			elseif xp and xp > 0 then
 				worth = ": " .. ns.Catchup.XPText(xp)
 			end
 		elseif pace then
-			local verdict = ns.Catchup.Verdict(g.quest --[[@as integer]])
+			local verdict, behind = ns.Catchup.Verdict(g.quest --[[@as integer]])
 			worth = verdict == "worth" and ": |cff60d060worth it|r" or verdict == "even" and ": |cffd0b070about even|r"
 				or ": not worth it"
+			if behind then worth = worth .. " |cff888888(you're behind the guide)|r" end
 		end
 		line.sub:SetText(("%s  |cff666666·|r  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)),
 			worth))

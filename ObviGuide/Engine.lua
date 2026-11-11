@@ -392,7 +392,12 @@ end
 ---@return string?, boolean?
 function Engine.Locked(goal)
 	if not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
-	if goal.kind == "turnin" then return "not in your quest log", false end
+	if goal.kind == "turnin" then
+		-- (not when this guide gives it on the way: at this step or later, before the turn-in)
+		local a, at = Engine.AcceptedAt(goal.quest), Engine.StepOf(goal)
+		if a and at and a <= at and a >= index then return nil end
+		return "not in your quest log", false
+	end
 	if goal.kind ~= "accept" then return nil end
 	if Engine.CanTake(goal.quest) then return nil end
 	local pre = PreOf(goal.quest)
@@ -410,6 +415,36 @@ function Engine.Locked(goal)
 	if waiting then return "finish " .. list .. " first", true end
 	return "needs " .. list, false
 end
+
+-- Per guide: the step each goal is in, and the first step that accepts each quest; worked out the first time asked.
+local places = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, {goal: table<ObviGuideGoal, integer>, accept: table<integer, integer>}>
+
+---@return {goal: table<ObviGuideGoal, integer>, accept: table<integer, integer>}?
+local function Places()
+	if not guide then return nil end
+	local p = places[guide]
+	if not p then
+		p = { goal = {}, accept = {} }
+		for i, s in ipairs(guide.steps) do
+			for _, g in ipairs(s.goals) do
+				p.goal[g] = i
+				if g.kind == "accept" and g.quest and not p.accept[g.quest] then p.accept[g.quest] = i end
+			end
+		end
+		places[guide] = p
+	end
+	return p
+end
+
+--- The step of the current guide a goal is in (nil: not one of its steps).
+---@param goal ObviGuideGoal
+---@return integer?
+function Engine.StepOf(goal) local p = Places() return p and p.goal[goal] end
+
+--- The first step of the current guide that accepts a quest (nil: none).
+---@param quest integer
+---@return integer?
+function Engine.AcceptedAt(quest) local p = Places() return p and p.accept[quest] end
 
 --- The "Quests missing a prerequisite" setting: "show" them (the default), skip them when catching up is "notworth"
 --- it, or skip "all" of them. (Once a checkbox: ticked was skipping them all.)

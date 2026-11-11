@@ -29,7 +29,8 @@
   breadcrumb. Next to Catch up it says whether it's worth it: its XP per minute (the quests it does, the quest and the
   rest of its chain; the way there and back counted) against the guide's own: **worth it**, **about even** or **not
   worth it**. Tick **Detailed catch-up numbers** in the settings for the numbers themselves ("5.4 bars, ~40 min, 0.8x
-  this guide's XP per minute"). Needs QuestieDB, which knows the XP.
+  this guide's XP per minute"). Behind the guide's pace (a quarter of a level or more short of where its level range
+  says you should be by now), catching up is worth it: you'll need the XP anyway. Needs QuestieDB, which knows the XP.
 - **Guide picker**: the gear beside the search is a menu now. The guides only for the other faction are left out;
   tick **Other faction's guides** there to list them too. **Settings** opens the settings as before.
 - **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before

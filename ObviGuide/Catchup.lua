@@ -327,11 +327,66 @@ end
 --- The verdict on catching up on a quest, by its pace against the guide's: "worth" (at least 1.2x the guide's XP per
 --- minute), "even" (0.8x to 1.2x) or "not"; nil when it can't be told.
 ---@param quest integer
----@return "worth"|"even"|"not"|nil
+---@return "worth"|"even"|"not"|nil, boolean? behind   (true: worth it because you're behind the guide's pace)
 function Catchup.Verdict(quest)
 	local pace = Catchup.Pace(quest)
 	if not pace then return nil end
+	-- behind the guide's pace you'll need the XP anyway, and quests beat grinding: worth it
+	local behind = Catchup.Behind()
+	if behind and behind >= 0.25 then return "worth", true end
 	return pace.ratio >= 1.2 and "worth" or pace.ratio >= 0.8 and "even" or "not"
+end
+
+--- A guide's levels from its title: "Duskwood & Stranglethorn Vale (30-32)" -> 30, 32.
+---@param g? ObviGuideGuide
+---@return integer?, integer?
+local function Levels(g)
+	local a, b = (g and g.title or ""):match("%((%d+)%-(%d+)%)%s*$")
+	return tonumber(a), tonumber(b)
+end
+
+local shares = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, number[]>
+
+--- How far behind the guide's pace you are, in levels (0.6: six tenths of a level), or nil when it can't be told. The
+--- guide should take you from its first level to the level the next guide starts at (else its own last), along the
+--- way as its quest XP goes: a step with half the guide's quest XP before it is halfway. Mob kills are in that pace
+--- already (the guide's levels count on them). Negative: ahead.
+---@return number?
+function Catchup.Behind()
+	local g, cur = Engine.Current()
+	if not (g and cur) or g.name == NAME then return nil end
+	local from, to = Levels(g)
+	-- (the next guide by its title only: not read for this)
+	local nextGuide
+	for _, other in ipairs(ns.guides) do
+		if g.next and (other.title == g.next or other.name == g.next) then nextGuide = other break end
+	end
+	local nextFrom = Levels(nextGuide)
+	to = nextFrom or to
+	if not (from and to and to > from) then return nil end
+	local share = shares[g]
+	if not share then
+		-- the guide's quest XP before each step, as a share of all of it (at the guide's own levels: each quest's base XP)
+		share = {}
+		local DB = _G["LibQuestieDB"] ---@type table?
+		local ok, xpdb = pcall(function() return DB and DB.Support.Get("QuestXP").db end)
+		local sum, before = 0, {}
+		for i, s in ipairs(g.steps) do
+			before[i] = sum
+			for _, goal in ipairs(s.goals) do
+				local e = ok and xpdb and goal.kind == "turnin" and goal.quest and xpdb[goal.quest]
+				if type(e) == "table" and e[2] then sum = sum + e[2] end
+			end
+		end
+		for i = 1, #g.steps do share[i] = sum > 0 and before[i] / sum or 0 end
+		shares[g] = sum > 0 and share or {}
+		share = shares[g]
+	end
+	local p = share[cur.index]
+	if not p then return nil end
+	local max = UnitXPMax("player")
+	local level = UnitLevel("player") + (max and max > 0 and UnitXP("player") / max or 0)
+	return from + p * (to - from) - level
 end
 
 ---@param saved ObviGuideCatchupSaved
