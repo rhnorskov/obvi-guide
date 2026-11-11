@@ -324,6 +324,37 @@ end
 Engine.PreQuests = PreOf
 
 ---@param q integer
+local function NameOf(q)
+	local DB = _G["LibQuestieDB"] ---@type table?
+	return (DB and DB.Quest and DB.Quest.name(q)) or C_QuestLog.GetTitleForQuestID(q) or ("quest " .. q)
+end
+
+--- A quest's name as Obvi Guide says it, with its place when it's one of a chain of quests of the same name (as
+--- Wowhead's series has it): "The Night Watch (part 2)". The part is counted back through its pre-quests of that
+--- name; the first one is "part 1" when the next in its chain has the name too.
+---@param q integer
+---@return string
+function Engine.QuestLabel(q)
+	local name = NameOf(q)
+	local part, cur = 1, q
+	for _ = 1, 20 do
+		local pre, back = PreOf(cur), nil
+		for _, list in ipairs(pre and { pre.all, pre.any } or {}) do
+			for _, p in ipairs(list) do if NameOf(p) == name then back = p break end end
+			if back then break end
+		end
+		if not back then break end
+		part, cur = part + 1, back
+	end
+	if part == 1 then
+		local DB = _G["LibQuestieDB"] ---@type table?
+		local ok, after = pcall(function() return DB and DB.Quest.nextQuestInChain(q) end)
+		if not (ok and type(after) == "number" and after > 0 and NameOf(after) == name) then return name end
+	end
+	return ("%s (part %d)"):format(name, part)
+end
+
+---@param q integer
 ---@return boolean
 function Engine.CanTake(q)
 	local pre = PreOf(q)
@@ -343,11 +374,8 @@ function Engine.Locked(goal)
 	if goal.kind ~= "accept" or not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
 	if Engine.CanTake(goal.quest) then return nil end
 	local pre = PreOf(goal.quest)
-	local DB = _G["LibQuestieDB"] ---@type table?
 	local names = {}
-	local function add(p)
-		names[#names + 1] = (DB and DB.Quest.name(p)) or C_QuestLog.GetTitleForQuestID(p) or ("quest " .. p)
-	end
+	local function add(p) names[#names + 1] = Engine.QuestLabel(p) end
 	local waiting = false
 	for _, p in ipairs(pre and pre.all or {}) do
 		if not PreDone(p) then add(p) waiting = waiting or C_QuestLog.IsOnQuest(p) end

@@ -210,11 +210,10 @@ local function Build(saved)
 	return cg, lost
 end
 
----@param DB table?
+-- (with its place in a chain of quests of the same name: "The Night Watch (part 2)")
+---@param _ table?
 ---@param q integer
-local function QuestName(DB, q)
-	return (DB and DB.Quest.name(q)) or C_QuestLog.GetTitleForQuestID(q) or ("quest " .. q)
-end
+local function QuestName(_, q) return Engine.QuestLabel(q) end
 
 -- a line's quest title, lower case, without colours and "Accept"
 ---@param text? string
@@ -224,13 +223,15 @@ local function Title(text)
 end
 
 --- The quest "/og catchup <quest>" names: its id, a link to it, or its name as a guide accepts it (the guides with the
---- name in their text are read to find its id).
+--- name in their text are read to find its id). Several quests of that name (a chain: The Night Watch 56, 57, 58):
+--- the first one, in the guides' order, not done yet.
 ---@param arg string
 ---@return integer?
 local function QuestFrom(arg)
 	local id = tonumber(arg) or tonumber(arg:match("|Hquest:(%d+)"))
 	if id then return id end
-	local want = Title(arg:gsub("^%[", ""):gsub("%]$", ""))
+	local want = Title((arg:gsub("^%[", ""):gsub("%]$", "")))
+	local first ---@type integer?
 	for _, guide in ipairs(ns.guides) do
 		if guide.name ~= NAME and ns.Conditions.Eval(guide.cond) then
 			local p, maybe = guide.pending, true
@@ -241,11 +242,15 @@ local function QuestFrom(arg)
 			local read = maybe and ns.Ready(guide)
 			for _, s in ipairs(read and read.steps or {}) do
 				for _, goal in ipairs(s.goals) do
-					if goal.kind == "accept" and goal.quest and Title(goal.text) == want then return goal.quest end
+					if goal.kind == "accept" and goal.quest and Title(goal.text) == want then
+						if not Done(goal.quest) then return goal.quest end
+						first = first or goal.quest
+					end
 				end
 			end
 		end
 	end
+	return first   -- (all done)
 end
 
 --- Works out the skipped quests and opens the catch-up guide for them: for the quests the guide still has for you,
