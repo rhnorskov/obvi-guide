@@ -19,6 +19,8 @@
   (The Night Watch). To have steps with nothing else to do skipped, tick **Skip quests missing a prerequisite** in the
   settings; a quest still in your log keeps its step even then. Quests of the same name are told apart by their part: "The Night Watch (part
   2)".
+- **Skip hearthstone steps** (in the settings): leaves out the "Hearth to ..." lines, and skips a step with nothing
+  else to do. For when your Hearthstone is on cooldown or set elsewhere, or you would rather fly.
 - **Quest Catchup** works for any quest, from all the guides: click a greyed "needs ..." line, or type
   `/og catchup` with a quest's id, name or link. It takes the steps from the guides leading to yours first, then from
   any other guide that has them. Before, it found nothing to catch up on: it took every earlier quest for a

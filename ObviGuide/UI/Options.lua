@@ -85,6 +85,10 @@ local function Build()
 		.. "catch-up guide or go on with the arrow. A prerequisite still in your quest log keeps the step either way. "
 		.. "Needs QuestieDB.",
 		function() ns.Engine.Advance() ns.Window.Refresh() end)
+	Checkbox("Skip hearthstone steps", "skipHearth", false,
+		"Leaves out the guide's \"Hearth to ...\" lines, and skips a step that has nothing else to do: for when your "
+		.. "Hearthstone is on cooldown or set somewhere else, or you'd rather fly or walk.",
+		function() ns.Engine.Advance() ns.Window.Refresh() end)
 
 	Header("Troubleshooting")
 	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",
