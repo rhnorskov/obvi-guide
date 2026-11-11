@@ -63,7 +63,7 @@ end
 local function Missing(DB, q, out, offered, depth)
 	if depth > 40 then return end
 	local function add(p)
-		if Done(p) or out[p] or DB.Quest.breadcrumbForQuestId(p) or not Engine.ForMe(DB, p) then return end
+		if Done(p) or out[p] or Engine.Breadcrumb(DB, p) or not Engine.ForMe(DB, p) then return end
 		out[p] = true
 		Missing(DB, p, out, offered, depth + 1)
 	end

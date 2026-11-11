@@ -204,6 +204,15 @@ local function Had(q) return C_QuestLog.IsQuestFlaggedCompleted(q) or C_QuestLog
 ---@param flag number
 local function HasFlag(mask, flag) return math.floor(mask / flag) % 2 == 1 end
 
+--- Whether QuestieDB has the quest as a breadcrumb (it leads to another quest and is never needed). Not set, it says
+--- 0, which Lua counts as true: a quest id it must be.
+---@param DB table
+---@param q integer
+function Engine.Breadcrumb(DB, q)
+	local b = DB.Quest.breadcrumbForQuestId(q)
+	return type(b) == "number" and b > 0
+end
+
 --- Whether QuestieDB has the quest for this character's race and class (nothing said: for everyone).
 ---@param DB table
 ---@param q integer
@@ -236,7 +245,7 @@ function Engine.CanTake(q)
 				local function keep(list)
 					local out = {}
 					for _, p in ipairs(list or {}) do
-						if not DB.Quest.breadcrumbForQuestId(p) and Engine.ForMe(DB, p) then out[#out + 1] = p end
+						if not Engine.Breadcrumb(DB, p) and Engine.ForMe(DB, p) then out[#out + 1] = p end
 					end
 					return out
 				end
@@ -907,7 +916,9 @@ function Engine.DebugStep()
 			if DB and DB.Quest then
 				local raw = {}
 				for _, p in ipairs(DB.Quest.preQuestSingle(goal.quest) or {}) do
-					raw[#raw + 1] = ("%d (races %s, for me %s, had %s)"):format(p, tostring(DB.Quest.requiredRaces(p)),
+					raw[#raw + 1] = ("%d (races %s, breadcrumb %s, for me %s, had %s)"):format(p,
+						tostring(DB.Quest.requiredRaces(p)),
+						tostring(DB.Quest.breadcrumbForQuestId(p)),
 						tostring(Engine.ForMe(DB, p)), tostring(Had(p)))
 				end
 				local _, _, raceId = UnitRace("player")
