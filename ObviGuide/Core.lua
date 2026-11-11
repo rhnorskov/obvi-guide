@@ -47,6 +47,7 @@ local ADDON, ns = ...
 ---@field autoAccept? boolean     accept the guide's quests when talking to the NPC (nil: on)
 ---@field skipLocked? boolean     skip steps whose quest needs pre-quests you haven't had (nil: off)
 ---@field skipHearth? boolean     leave out the hearth and set-hearth lines; a step with nothing else is skipped (nil: off)
+---@field catchupDetails? boolean show the catch-up's XP, time and pace, not only whether it's worth it (nil: off)
 ---@field autoTurnin? boolean     turn in the guide's quests, no choice of rewards (nil: on)
 
 ---@class ObviGuideTab

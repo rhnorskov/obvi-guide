@@ -89,6 +89,11 @@ local function Build()
 		"Leaves out the guide's \"Hearth to ...\" and \"Set your Hearthstone to ...\" lines, and skips a step that has "
 		.. "nothing else to do: for when you'd rather fly or walk, or keep your Hearthstone where it is.",
 		function() ns.Engine.Advance() ns.Window.Refresh() end)
+	Checkbox("Detailed catch-up numbers", "catchupDetails", false,
+		"Beside Catch up on a quest you can't take yet: the XP it's worth (in bars of your XP bar), roughly how long it "
+		.. "takes, and its XP per minute against the guide's. Off, just whether it's worth it (at least 1.2x the guide's "
+		.. "XP per minute), about even, or not.",
+		function() ns.Window.Refresh() end)
 
 	Header("Troubleshooting")
 	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",
