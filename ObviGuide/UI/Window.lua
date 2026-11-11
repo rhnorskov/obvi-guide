@@ -361,7 +361,10 @@ local function RenderLine(line)
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
 	-- a quest you can't take yet: what it waits for, small, under it, and the catch-up the line's click starts
 	if line.locked then
-		line.sub:SetText(("%s  |cffffd100Catch up|r"):format((line.locked:gsub("^%l", string.upper))))
+		-- with what it's worth: the XP of the catch-up, the quest, and its chain after it (missed if you go on)
+		local xp = g.quest and ns.Catchup.Worth(g.quest)
+		local worth = xp and xp > 0 and (" |cff888888(%s XP)|r"):format(ns.Catchup.Number(xp)) or ""
+		line.sub:SetText(("%s  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)), worth))
 		line.sub:SetTextColor(0.6, 0.6, 0.6)
 		line.sub:Show()
 	end

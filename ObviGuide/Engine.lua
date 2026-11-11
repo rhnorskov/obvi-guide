@@ -323,6 +323,25 @@ end
 
 Engine.PreQuests = PreOf
 
+-- the share of a quest's XP a character gets that is this many levels above the quest (classic rules: full up to 5)
+local XP_SHARE = { [6] = 0.8, [7] = 0.6, [8] = 0.4, [9] = 0.2 }
+
+--- The XP a quest gives this character now (QuestieDB's quest XP, less for a quest far below your level), or nil when
+--- it isn't known. None at the level cap.
+---@param q integer
+---@return integer?
+function Engine.QuestXP(q)
+	local DB = _G["LibQuestieDB"] ---@type table?
+	if not DB then return nil end
+	local ok, entry = pcall(function() return DB.Support.Get("QuestXP").db[q] end)
+	if not (ok and type(entry) == "table" and entry[2]) then return nil end
+	local me = UnitLevel("player")
+	if me >= (GetMaxPlayerLevel and GetMaxPlayerLevel() or 60) then return 0 end
+	local above = me - (entry[1] or me)
+	local share = above <= 5 and 1 or XP_SHARE[above] or 0.1
+	return math.floor(entry[2] * share + 0.5)
+end
+
 ---@param q integer
 local function NameOf(q)
 	local DB = _G["LibQuestieDB"] ---@type table?

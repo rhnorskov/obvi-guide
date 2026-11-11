@@ -25,7 +25,8 @@
 - **Quest Catchup** works for any quest, from all the guides: click a greyed "needs ..." line, or type
   `/og catchup` with a quest's id, name or link. It takes the steps from the guides leading to yours first, then from
   any other guide that has them. Before, it found nothing to catch up on: it took every earlier quest for a
-  breadcrumb.
+  breadcrumb. Next to Catch up it says what it's worth: the XP of the quests it does, the quest and the rest of its
+  chain, at your level ("Catch up (9,770 XP)"). Needs QuestieDB, which knows the XP.
 - **Guide picker**: the gear beside the search is a menu now. The guides only for the other faction are left out;
   tick **Other faction's guides** there to list them too. **Settings** opens the settings as before.
 - **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before

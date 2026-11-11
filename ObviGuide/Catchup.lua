@@ -125,6 +125,51 @@ local function Missing(DB, q, out, offered, depth, guides)
 	end
 end
 
+--- What catching up on a quest is worth: the XP (at your level) of the quests it would do, the quest itself, and the
+--- quests after it in its chain (QuestieDB's next quest) that you'd otherwise miss too. Nil without QuestieDB's quest
+--- XP. Remembered until a quest is taken or turned in, or you level.
+local worth = {} ---@type table<integer, integer|false>
+
+---@param quest integer
+---@return integer?
+function Catchup.Worth(quest)
+	if worth[quest] ~= nil then return worth[quest] or nil end
+	local DB = _G["LibQuestieDB"] ---@type table?
+	if not (DB and DB.Quest) then return nil end
+	local quests = {} ---@type table<integer, boolean>
+	local g = Engine.Current()
+	Missing(DB, quest, quests, {}, 0, g and { g } or {})
+	quests[quest] = true
+	local after = quest
+	for _ = 1, 10 do
+		local ok, nxt = pcall(DB.Quest.nextQuestInChain, after)
+		if not (ok and type(nxt) == "number" and nxt > 0) or Done(nxt) or quests[nxt] then break end
+		quests[nxt], after = true, nxt
+	end
+	local total, known = 0, false
+	for q in pairs(quests) do
+		local xp = not Done(q) and Engine.QuestXP(q)
+		if xp then total, known = total + xp, true end
+	end
+	worth[quest] = known and total or false
+	return known and total or nil
+end
+local function Forget() worth = {} end
+ns:On("QUEST_TURNED_IN", Forget)
+ns:On("QUEST_ACCEPTED", Forget)
+ns:On("PLAYER_LEVEL_UP", Forget)
+
+--- "12,345"
+---@param n integer
+function Catchup.Number(n)
+	local s = tostring(n)
+	while true do
+		local k
+		s, k = s:gsub("^(%d+)(%d%d%d)", "%1,%2")
+		if k == 0 then return s end
+	end
+end
+
 --- What a line does for its quest ("322 accept"), so the same line from another guide isn't taken twice.
 ---@param g ObviGuideGoal
 ---@param q integer
@@ -333,7 +378,9 @@ function Catchup.Start(quest)
 	local names = {}
 	for _, q in ipairs(list) do names[#names + 1] = QuestName(DB, q) end
 	if quest then
-		ns.Print("Quest Catchup for %s: %s.", QuestName(DB, quest --[[@as integer]]), table.concat(names, ", "))
+		local xp = Catchup.Worth(quest --[[@as integer]])
+		ns.Print("Quest Catchup for %s: %s.%s", QuestName(DB, quest --[[@as integer]]), table.concat(names, ", "),
+			xp and xp > 0 and (" Worth %s XP with what follows it."):format(Catchup.Number(xp)) or "")
 	else
 		ns.Print("Quest Catchup: %d skipped quest%s needed later: %s.", #list, #list == 1 and " is" or "s are",
 			table.concat(names, ", "))
