@@ -86,8 +86,8 @@ local function Build()
 		.. "Needs QuestieDB.",
 		function() ns.Engine.Advance() ns.Window.Refresh() end)
 	Checkbox("Skip hearthstone steps", "skipHearth", false,
-		"Leaves out the guide's \"Hearth to ...\" lines, and skips a step that has nothing else to do: for when your "
-		.. "Hearthstone is on cooldown or set somewhere else, or you'd rather fly or walk.",
+		"Leaves out the guide's \"Hearth to ...\" and \"Set your Hearthstone to ...\" lines, and skips a step that has "
+		.. "nothing else to do: for when you'd rather fly or walk, or keep your Hearthstone where it is.",
 		function() ns.Engine.Advance() ns.Window.Refresh() end)
 
 	Header("Troubleshooting")

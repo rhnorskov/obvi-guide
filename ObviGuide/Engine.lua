@@ -393,8 +393,9 @@ end
 ---@return boolean
 function Engine.IsVisible(goal)
 	if not Conditions.Eval(goal.cond) then return false end
-	-- (the "Skip hearthstone steps" setting: hearth lines left out, so a step with nothing else is skipped)
-	if goal.kind == "hearth" and ns.db and ns.db.skipHearth then return false end
+	-- (the "Skip hearthstone steps" setting: hearth and set-hearth lines left out, so a step with nothing else is
+	-- skipped)
+	if (goal.kind == "hearth" or goal.kind == "home") and ns.db and ns.db.skipHearth then return false end
 	if goal.kind == "accept" and goal.quest and not Had(goal.quest) and not Engine.CanTake(goal.quest) then
 		return false
 	end
