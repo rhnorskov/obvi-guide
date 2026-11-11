@@ -362,8 +362,16 @@ local function RenderLine(line)
 	-- a quest you can't take yet: what it waits for, small, under it, and the catch-up the line's click starts
 	if line.locked then
 		-- with what it's worth: the XP of the catch-up, the quest, and its chain after it (missed if you go on)
+		-- and against the guide's own XP per step: worth the way or not
 		local xp = g.quest and ns.Catchup.Worth(g.quest)
-		local worth = xp and xp > 0 and (" |cff888888(%s)|r"):format(ns.Catchup.XPText(xp)) or ""
+		local pace = xp and xp > 0 and ns.Catchup.Pace(g.quest --[[@as integer]])
+		local worth = ""
+		if pace and xp then
+			worth = (" |cff888888(%s in %d steps, %.1fx this guide's XP per step)|r"):format(ns.Catchup.Bars(xp), pace.steps,
+				pace.ratio)
+		elseif xp and xp > 0 then
+			worth = (" |cff888888(%s)|r"):format(ns.Catchup.XPText(xp))
+		end
 		line.sub:SetText(("%s  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)), worth))
 		line.sub:SetTextColor(0.6, 0.6, 0.6)
 		line.sub:Show()

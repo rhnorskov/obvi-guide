@@ -26,8 +26,9 @@
   `/og catchup` with a quest's id, name or link. It takes the steps from the guides leading to yours first, then from
   any other guide that has them. Before, it found nothing to catch up on: it took every earlier quest for a
   breadcrumb. Next to Catch up it says what it's worth: the XP of the quests it does, the quest and the rest of its
-  chain, at your level, and in bars of the XP bar ("Catch up (9,770 XP, 3.8 bars)"). Needs QuestieDB, which knows
-  the XP.
+  chain, in bars of the XP bar at your level, and how its XP per step compares with the guide's own ("Catch up (3.8
+  bars in 14 steps, 1.3x this guide's XP per step)": above 1x it beats going on with the guide). Needs QuestieDB, which
+  knows the XP.
 - **Guide picker**: the gear beside the search is a menu now. The guides only for the other faction are left out;
   tick **Other faction's guides** there to list them too. **Settings** opens the settings as before.
 - **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before

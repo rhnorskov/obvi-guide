@@ -34,10 +34,12 @@ local function QuestOf(g)
 	for _, w in ipairs(g.with or {}) do if w.quest and QUEST_LINES[w.kind] then return w.quest end end
 end
 
---- The guides leading to `g` (each one whose next is the one after it, for this character), earliest first; read.
+--- The guides leading to `g` (each one whose next is the one after it, for this character), earliest first; read,
+--- unless `unread` (then as they are: a guide's title and next are known before it's read).
 ---@param g ObviGuideGuide
+---@param unread? boolean
 ---@return ObviGuideGuide[]
-local function Before(g)
+local function Before(g, unread)
 	local list, seen, cur = {}, { [g] = true }, g
 	while true do
 		local prev
@@ -50,7 +52,7 @@ local function Before(g)
 		end
 		if not prev then break end
 		seen[prev] = true
-		local read = ns.Ready(prev)
+		local read = unread and prev or ns.Ready(prev)
 		if not read then break end
 		table.insert(list, 1, read)
 		cur = read
@@ -129,6 +131,9 @@ end
 --- quests after it in its chain (QuestieDB's next quest) that you'd otherwise miss too. Nil without QuestieDB's quest
 --- XP. Remembered until a quest is taken or turned in, or you level.
 local worth = {} ---@type table<integer, integer|false>
+local worthQuests = {} ---@type table<integer, table<integer, boolean>>   the quests each worth counts
+local paces = {} ---@type table<integer, {steps: integer, ratio: number}|false>
+local rates = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, number|false>
 
 ---@param quest integer
 ---@return integer?
@@ -151,10 +156,10 @@ function Catchup.Worth(quest)
 		local xp = not Done(q) and Engine.QuestXP(q)
 		if xp then total, known = total + xp, true end
 	end
-	worth[quest] = known and total or false
+	worth[quest], worthQuests[quest] = known and total or false, quests
 	return known and total or nil
 end
-local function Forget() worth = {} end
+local function Forget() worth, worthQuests, paces = {}, {}, {} rates = setmetatable({}, { __mode = "k" }) end
 ns:On("QUEST_TURNED_IN", Forget)
 ns:On("QUEST_ACCEPTED", Forget)
 ns:On("PLAYER_LEVEL_UP", Forget)
@@ -168,6 +173,17 @@ function Catchup.XPText(xp)
 	local bars = xp / (max / 20)
 	local count = bars >= 10 and tostring(math.floor(bars + 0.5)) or ("%.1f"):format(bars)
 	return ("%s XP, %s bar%s"):format(Catchup.Number(xp), count, count == "1.0" and "" or "s")
+end
+
+--- XP as bars of the game's XP bar only: "3.8 bars" (a bar: one of its 20 parts, at your level now).
+---@param xp integer
+---@return string
+function Catchup.Bars(xp)
+	local max = UnitXPMax("player")
+	if not max or max <= 0 then return Catchup.Number(xp) .. " XP" end
+	local bars = xp / (max / 20)
+	local count = bars >= 10 and tostring(math.floor(bars + 0.5)) or ("%.1f"):format(bars)
+	return ("%s bar%s"):format(count, count == "1.0" and "" or "s")
 end
 
 --- "12,345"
@@ -225,6 +241,50 @@ end
 --- The steps for the `needed` quests, from the guides leading to `saved.guide`, its steps before `saved.step`, then any
 --- other guide: the catch-up guide, added to the guide list (in place of an earlier one). Returns it, and which needed
 --- quests no step has.
+--- The guide's own pace: the XP (at your level) of the quests it turns in, per step. Nil when it has none.
+---@param g ObviGuideGuide
+---@return number?
+local function Rate(g)
+	if rates[g] == nil then
+		local total = 0
+		for _, s in ipairs(g.steps) do
+			for _, goal in ipairs(s.goals) do
+				if goal.kind == "turnin" and goal.quest then total = total + (Engine.QuestXP(goal.quest) or 0) end
+			end
+		end
+		rates[g] = total > 0 and #g.steps > 0 and total / #g.steps or false
+	end
+	return rates[g] or nil
+end
+
+--- Whether catching up on a quest is worth the way: the steps it takes (the earlier quests' steps in the guides up to
+--- this one, and the steps of the quest and its chain after it in this guide), and its XP per step against the
+--- guide's own ("1.3": a third more XP per step than going on with the guide). Nil when it can't be told.
+---@param quest integer
+---@return {steps: integer, ratio: number}?
+function Catchup.Pace(quest)
+	if paces[quest] ~= nil then return paces[quest] or nil end
+	paces[quest] = false
+	local xp = Catchup.Worth(quest)
+	local quests = worthQuests[quest]
+	local g = Engine.Current()
+	local rate = g and g.name ~= NAME and Rate(g)
+	if not (xp and xp > 0 and quests and g and rate) then return nil end
+	local steps, from = 0, {}
+	-- (only the guides with one of the quests are read: a chain back to level 1 isn't read while the window draws)
+	for _, before in ipairs(Before(g, true)) do
+		local read = Mentions(before, quests) and ns.Ready(before)
+		for _, s in ipairs(read and read.steps or {}) do
+			if read and Cut(s, quests, from, read) then steps = steps + 1 end
+		end
+	end
+	for _, s in ipairs(g.steps) do if Cut(s, quests, from, g) then steps = steps + 1 end end
+	if steps == 0 then return nil end
+	local pace = { steps = steps, ratio = (xp / steps) / rate }
+	paces[quest] = pace
+	return pace
+end
+
 ---@param saved ObviGuideCatchupSaved
 ---@return ObviGuideGuide, integer[]
 local function Build(saved)
