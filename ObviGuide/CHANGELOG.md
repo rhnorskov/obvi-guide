@@ -15,7 +15,8 @@
   Stalvan in Duskwood, after doing dungeons instead). Needs QuestieDB, which knows each quest's pre-quests; for WoW
   Forever's new chains it doesn't know yet, a quest given where one of the same name is turned in follows that one,
   and the Menethil Statuette chain (A Friend of the Family, The Shamed Lieutenant) is known. Click the
-  greyed line for a catch-up guide to it. To have such steps stay rather than be skipped, untick **Skip quests you
+  greyed line for a catch-up guide to it. When the quest before it is still in your log, the line says "finish ...
+  first" and its step isn't skipped (The Night Watch). To have such steps stay rather than be skipped, untick **Skip quests you
   can't take yet** in the settings.
 - **Quest Catchup** works for any quest, from all the guides: click a greyed "needs ..." line, or type
   `/og catchup` with a quest's id, name or link. It takes the steps from the guides leading to yours first, then from

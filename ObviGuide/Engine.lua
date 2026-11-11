@@ -198,6 +198,13 @@ local preQuests = {} ---@type table<integer, {all: integer[], any: integer[]}|fa
 ---@param q integer
 local function Had(q) return C_QuestLog.IsQuestFlaggedCompleted(q) or C_QuestLog.IsOnQuest(q) end
 
+-- a pre-quest is done once it's turned in, or ready to be (the guide turns it in first, often in the same step); one
+-- still in progress is not (The Night Watch 57 in the log: 58 isn't given until it's turned in)
+---@param q integer
+local function PreDone(q)
+	return C_QuestLog.IsQuestFlaggedCompleted(q) or (C_QuestLog.IsOnQuest(q) and C_QuestLog.ReadyForTurnIn(q))
+end
+
 -- whether a mask has a flag (one bit), in plain arithmetic: QuestieDB's race masks go past 32 bits (4294967373 for
 -- the Alliance), where bit.band would cut them off
 ---@param mask number
@@ -321,16 +328,17 @@ Engine.PreQuests = PreOf
 function Engine.CanTake(q)
 	local pre = PreOf(q)
 	if not pre then return true end
-	for _, p in ipairs(pre.all) do if not Had(p) then return false end end
+	for _, p in ipairs(pre.all) do if not PreDone(p) then return false end end
 	if #pre.any == 0 then return true end
-	for _, p in ipairs(pre.any) do if Had(p) then return true end end
+	for _, p in ipairs(pre.any) do if PreDone(p) then return true end end
 	return false
 end
 
---- For an accept line left out because the quest can't be taken yet: the pre-quests it waits for, by name ("Blessed
---- Arm"), so the window can show the line greyed out with them. Nil for any other line.
+--- For an accept line left out because the quest can't be taken yet: what it waits for, so the window can show the
+--- line greyed out with it: "needs Blessed Arm", or "finish The Night Watch first" when that one is in the log (then
+--- also true: its step isn't skipped, you're on the way). Nil for any other line.
 ---@param goal ObviGuideGoal
----@return string?
+---@return string?, boolean?
 function Engine.Locked(goal)
 	if goal.kind ~= "accept" or not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
 	if Engine.CanTake(goal.quest) then return nil end
@@ -340,10 +348,17 @@ function Engine.Locked(goal)
 	local function add(p)
 		names[#names + 1] = (DB and DB.Quest.name(p)) or C_QuestLog.GetTitleForQuestID(p) or ("quest " .. p)
 	end
-	for _, p in ipairs(pre and pre.all or {}) do if not Had(p) then add(p) end end
-	if #names > 0 then return table.concat(names, " and ") end
-	for _, p in ipairs(pre and pre.any or {}) do add(p) end
-	return table.concat(names, " or ")
+	local waiting = false
+	for _, p in ipairs(pre and pre.all or {}) do
+		if not PreDone(p) then add(p) waiting = waiting or C_QuestLog.IsOnQuest(p) end
+	end
+	local list = table.concat(names, " and ")
+	if #names == 0 then
+		for _, p in ipairs(pre and pre.any or {}) do add(p) waiting = waiting or C_QuestLog.IsOnQuest(p) end
+		list = table.concat(names, " or ")
+	end
+	if waiting then return "finish " .. list .. " first", true end
+	return "needs " .. list, false
 end
 
 ---@param goal ObviGuideGoal
@@ -508,7 +523,9 @@ function Engine.StepState(step)
 	-- (the "Skip quests you can't take yet" setting off: such a quest's line keeps its step, greyed out)
 	local keepLocked = ns.db and ns.db.skipLocked == false
 	for _, g in ipairs(step.goals) do
-		if keepLocked and not Engine.IsVisible(g) and Engine.Locked(g) then
+		local locked, waiting
+		if not Engine.IsVisible(g) then locked, waiting = Engine.Locked(g) end
+		if locked and (keepLocked or waiting) then
 			any, done = true, false
 		elseif COMPLETABLE[g.kind] and Engine.IsVisible(g) then
 			any = true
@@ -1005,10 +1022,10 @@ function Engine.DebugStep()
 			if DB and DB.Quest then
 				local raw = {}
 				for _, p in ipairs(DB.Quest.preQuestSingle(goal.quest) or {}) do
-					raw[#raw + 1] = ("%d (races %s, breadcrumb %s, for me %s, had %s)"):format(p,
+					raw[#raw + 1] = ("%d (races %s, breadcrumb %s, for me %s, done %s)"):format(p,
 						tostring(DB.Quest.requiredRaces(p)),
 						tostring(DB.Quest.breadcrumbForQuestId(p)),
-						tostring(Engine.ForMe(DB, p)), tostring(Had(p)))
+						tostring(Engine.ForMe(DB, p)), tostring(PreDone(p)))
 				end
 				local _, _, raceId = UnitRace("player")
 				out[#out + 1] = ("  race %s (flag %s); single pre-quests: %s"):format(tostring(raceId),

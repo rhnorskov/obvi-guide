@@ -49,7 +49,7 @@ local frame
 ---@field step? ObviGuideStep
 ---@field dim? boolean      a previewed step: no action
 ---@field side? boolean     a side task: the step's own NPC/target is not its target
----@field locked? string    an accept line for a quest you can't take yet: the pre-quests it waits for
+---@field locked? string    an accept line for a quest you can't take yet: what it waits for ("needs Blessed Arm")
 
 ---@class ObviGuideClick : Button
 ---@field line? ObviGuideLine   the line it lies over
@@ -225,7 +225,7 @@ local function NewClick()
 		local g = self.line and self.line.goal
 		if g and self.line.locked then
 			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-			GameTooltip:SetText("|cffffd100Click|r for a catch-up guide through " .. self.line.locked)
+			GameTooltip:SetText("|cffffd100Click|r for a catch-up guide to this quest: " .. self.line.locked)
 			GameTooltip:Show()
 			return
 		end
@@ -349,7 +349,7 @@ local function RenderLine(line)
 		end
 	end
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
-	if line.locked then text = text .. " (needs " .. line.locked .. ")" end
+	if line.locked then text = text .. " (" .. line.locked .. ")" end
 	-- a note shown as a line of its own (in a side task, or with a condition) looks like the step's notes
 	if g.note and not dim then text = "|cffd0b070" .. text .. "|r" end
 	line.text:SetText(Inline(text))
