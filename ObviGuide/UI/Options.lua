@@ -79,6 +79,11 @@ local function Build()
 		"Accepts the quests of the current and next step when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
 	Checkbox("Auto turn in guide quests", "autoTurnin", true,
 		"Turns in the quests of the current and next step (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
+	Checkbox("Skip quests you can't take yet", "skipLocked", true,
+		"A step whose only quest needs earlier quests you haven't done (its chain began in a guide you skipped) is skipped. "
+		.. "Off, it stays with the quest greyed out, so you can click it for a catch-up guide or go on with the arrow. "
+		.. "Needs QuestieDB.",
+		function() ns.Engine.Advance() ns.Window.Refresh() end)
 
 	Header("Troubleshooting")
 	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",

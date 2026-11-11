@@ -13,7 +13,8 @@
 - A quest you can't take yet, because its chain began in a guide you skipped, is no longer asked for: its accept line
   is greyed out with what it needs ("needs Blessed Arm"), and a step with nothing else to do is skipped (The Legend of
   Stalvan in Duskwood, after doing dungeons instead). Needs QuestieDB, which knows each quest's pre-quests. Click the
-  greyed line for a catch-up guide to it.
+  greyed line for a catch-up guide to it. To have such steps stay rather than be skipped, untick **Skip quests you
+  can't take yet** in the settings.
 - **Quest Catchup** works for any quest, from all the guides: click a greyed "needs ..." line, or type
   `/og catchup` with a quest's id, name or link. It takes the steps from the guides leading to yours first, then from
   any other guide that has them. Before, it found nothing to catch up on: it took every earlier quest for a

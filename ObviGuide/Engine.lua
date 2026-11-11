@@ -439,8 +439,12 @@ function Engine.StepState(step)
 	-- alternatives (orGroup): how many more each group needs; once a group has enough, every alternative counts as
 	-- done (as Zygor has it)
 	local need, orOpen = {}, false
+	-- (the "Skip quests you can't take yet" setting off: such a quest's line keeps its step, greyed out)
+	local keepLocked = ns.db and ns.db.skipLocked == false
 	for _, g in ipairs(step.goals) do
-		if COMPLETABLE[g.kind] and Engine.IsVisible(g) then
+		if keepLocked and not Engine.IsVisible(g) and Engine.Locked(g) then
+			any, done = true, false
+		elseif COMPLETABLE[g.kind] and Engine.IsVisible(g) then
 			any = true
 			local complete = Engine.IsComplete(g, step)
 			if complete and g.finishes then return true, true end
