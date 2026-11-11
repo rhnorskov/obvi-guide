@@ -50,6 +50,7 @@ local frame
 ---@field dim? boolean      a previewed step: no action
 ---@field side? boolean     a side task: the step's own NPC/target is not its target
 ---@field locked? string    an accept line for a quest you can't take yet: what it waits for ("needs Blessed Arm")
+---@field quiet? boolean     a locked line whose quest a locked line below it needs: greyed, the reason left to that one
 ---@field sub FontString     a smaller line under the text: what a quest you can't take yet waits for, and Catch up
 
 ---@class ObviGuideClick : Button
@@ -133,7 +134,7 @@ local function Line()
 		Flashes(line)
 		lines[used] = line
 	end
-	line.goal, line.step, line.dim, line.side, line.locked = nil, nil, nil, nil, nil
+	line.goal, line.step, line.dim, line.side, line.locked, line.quiet = nil, nil, nil, nil, nil, nil
 	line.sub:Hide()
 	line:Show()
 	return line
@@ -360,7 +361,7 @@ local function RenderLine(line)
 	end
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
 	-- a quest you can't take yet: what it waits for, small, under it, and the catch-up the line's click starts
-	if line.locked then
+	if line.locked and not line.quiet then
 		-- with what it's worth: the XP of the catch-up, the quest, and its chain after it (missed if you go on)
 		-- and against the guide's own XP per step: worth the way or not
 		local xp = g.quest and ns.Catchup.Worth(g.quest)
@@ -418,6 +419,17 @@ local function Goals(step, goals, y, dim, side, tips)
 		end
 	end
 	TipsAfter(nil)
+	-- the quests a locked accept here waits for: a locked line for one of them (turn in Blessed Arm, accept Armed and
+	-- Ready) is shown greyed but quiet, so one chain says its reason and Catch up once, on the quest it leads to
+	local waitedFor = {} ---@type table<integer, boolean>
+	for _, g in ipairs(goals) do
+		if g.kind == "accept" and g.quest and not Engine.IsVisible(g) and Engine.Locked(g) then
+			local pre = Engine.PreQuests(g.quest)
+			for _, list in ipairs(pre and { pre.all, pre.any } or {}) do
+				for _, q in ipairs(list) do waitedFor[q] = true end
+			end
+		end
+	end
 	local box   -- the side box of the last line shown: a gap before the next box's lines sets the tasks apart
 	for _, g in ipairs(goals) do
 		-- a quest you can't take yet (its chain began in a guide you skipped) shows greyed out, with what it waits for
@@ -428,6 +440,7 @@ local function Goals(step, goals, y, dim, side, tips)
 			local line = Line()
 			line.goal, line.step, line.dim, line.side = g, step, dim or locked ~= nil, side
 			line.locked = locked
+			line.quiet = locked ~= nil and g.quest ~= nil and waitedFor[g.quest] or nil
 			RenderLine(line)
 			y = Place(line, y, 0)
 		end
