@@ -231,15 +231,67 @@ function Engine.ForMe(DB, q)
 	return true
 end
 
+-- The guide's own word, for a quest QuestieDB knows no pre-quests of (WoW Forever's new chains, "A Friend of the Family"
+-- 98191): a quest accepted in the step that turns in a quest of the same title continues that one. Per guide: each such
+-- quest's namesakes turned in beside it, worked out the first time it's asked.
+local chained = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, table<integer, integer[]>>
+
+---@param text? string
+local function LineTitle(text)
+	text = (text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
+	return (text:gsub("^Accept%s+", ""):gsub("^Turn in%s+", ""):lower())
+end
+
 ---@param q integer
----@return boolean
-function Engine.CanTake(q)
+---@param g? ObviGuideGuide   (the current guide when not given)
+---@return integer[]?
+function Engine.ChainedIn(q, g)
+	local of = g or guide
+	if not of then return nil end
+	local map = chained[of]
+	if not map then
+		map = {}
+		for _, s in ipairs(of.steps) do
+			local turnins = {} ---@type table<string, integer[]>
+			for _, g in ipairs(s.goals) do
+				if g.kind == "turnin" and g.quest then
+					local t = LineTitle(g.text)
+					turnins[t] = turnins[t] or {}
+					table.insert(turnins[t], g.quest)
+				end
+			end
+			for _, g in ipairs(s.goals) do
+				local before = g.kind == "accept" and g.quest and turnins[LineTitle(g.text)]
+				if before then
+					for _, p in ipairs(before) do
+						if p ~= g.quest then map[g.quest] = map[g.quest] or {} table.insert(map[g.quest], p) end
+					end
+				end
+			end
+		end
+		chained[of] = map
+	end
+	return map[q]
+end
+
+-- WoW Forever's chains QuestieDB doesn't link up yet (from Wowhead's series), where the guide's titles don't tell
+-- either: quest -> its pre-quest
+local KNOWN = {
+	[98189] = 286,     -- Return the Statuette, after Return the Statuette (Menethil)
+	[98190] = 98189,   -- A Friend of the Family, after Return the Statuette
+	[98191] = 98190,   -- A Friend of the Family, after A Friend of the Family
+	[98219] = 98191,   -- The Shamed Lieutenant, after A Friend of the Family
+}
+
+--- A quest's pre-quests: all of `all`, and one of `any` (if any); nil when nothing is known.
+---@param q integer
+---@return {all: integer[], any: integer[]}?
+local function PreOf(q)
 	local pre = preQuests[q]
 	if pre == nil then
 		local DB = _G["LibQuestieDB"] ---@type table?
-		if not (DB and DB.Quest) then return true end   -- (not remembered: QuestieDB may come later)
-		pre = false
-		do
+		if DB and DB.Quest then
+			pre = false
 			local ok, all, any = pcall(function() return DB.Quest.preQuestGroup(q), DB.Quest.preQuestSingle(q) end)
 			if ok then
 				local function keep(list)
@@ -251,9 +303,23 @@ function Engine.CanTake(q)
 				end
 				pre = { all = keep(all), any = keep(any) }
 			end
+			preQuests[q] = pre
 		end
-		preQuests[q] = pre
+		-- (without QuestieDB nothing is remembered: it may come later)
 	end
+	if pre and (#pre.all > 0 or #pre.any > 0) then return pre end
+	if KNOWN[q] then return { all = { KNOWN[q] }, any = {} } end
+	local inGuide = Engine.ChainedIn(q)
+	if inGuide then return { all = {}, any = inGuide } end
+	return nil
+end
+
+Engine.PreQuests = PreOf
+
+---@param q integer
+---@return boolean
+function Engine.CanTake(q)
+	local pre = PreOf(q)
 	if not pre then return true end
 	for _, p in ipairs(pre.all) do if not Had(p) then return false end end
 	if #pre.any == 0 then return true end
@@ -268,7 +334,7 @@ end
 function Engine.Locked(goal)
 	if goal.kind ~= "accept" or not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
 	if Engine.CanTake(goal.quest) then return nil end
-	local pre = preQuests[goal.quest]
+	local pre = PreOf(goal.quest)
 	local DB = _G["LibQuestieDB"] ---@type table?
 	local names = {}
 	local function add(p)
@@ -931,7 +997,7 @@ function Engine.DebugStep()
 			tostring(Engine.IsVisible(goal)), tostring(Engine.IsComplete(goal, step)), tostring(key and Marks()[key]),
 			goal.done and ", has a done condition" or "")
 		if goal.kind == "accept" and goal.quest then
-			local pre = preQuests[goal.quest]
+			local pre = PreOf(goal.quest)
 			out[#out + 1] = ("  quest %d: can take %s, pre-quests all {%s} any {%s}%s"):format(goal.quest,
 				tostring(Engine.CanTake(goal.quest)), pre and table.concat(pre.all, ", ") or "-",
 				pre and table.concat(pre.any, ", ") or "-", _G["LibQuestieDB"] and "" or ", no QuestieDB")

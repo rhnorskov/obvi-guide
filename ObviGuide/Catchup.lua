@@ -99,16 +99,26 @@ end
 ---@param out table<integer, boolean>
 ---@param offered table<integer, boolean>   the quests the earlier guides accept
 ---@param depth integer
-local function Missing(DB, q, out, offered, depth)
+---@param guides ObviGuideGuide[]   the guides up to this one, for chains QuestieDB doesn't know
+local function Missing(DB, q, out, offered, depth, guides)
 	if depth > 40 then return end
 	local function add(p)
 		if Done(p) or out[p] or Engine.Breadcrumb(DB, p) or not Engine.ForMe(DB, p) then return end
 		out[p] = true
-		Missing(DB, p, out, offered, depth + 1)
+		Missing(DB, p, out, offered, depth + 1, guides)
 	end
-	for _, p in ipairs(DB.Quest.preQuestGroup(q) or {}) do add(p) end
-	local single = DB.Quest.preQuestSingle(q)
-	if single and #single > 0 then
+	-- QuestieDB's, or the guide's word for a chain it doesn't know (Engine.PreQuests), here or in the guides before
+	local pre = Engine.PreQuests(q)
+	if not pre then
+		for _, g in ipairs(guides) do
+			local inGuide = Engine.ChainedIn(q, g)
+			if inGuide then pre = { all = {}, any = inGuide } break end
+		end
+	end
+	if not pre then return end
+	for _, p in ipairs(pre.all) do add(p) end
+	local single = pre.any
+	if #single > 0 then
 		for _, p in ipairs(single) do if Done(p) then return end end
 		for _, p in ipairs(single) do if offered[p] then add(p) return end end
 		for _, p in ipairs(single) do add(p) end
@@ -276,8 +286,13 @@ function Catchup.Start(quest)
 	local function offers(s)
 		for _, goal in ipairs(s.goals) do if goal.kind == "accept" and goal.quest then offered[goal.quest] = true end end
 	end
+	local chain = {} ---@type ObviGuideGuide[]   this guide and the ones leading to it, latest first
 	if g and cur then
-		for _, before in ipairs(Before(g)) do for _, s in ipairs(before.steps) do offers(s) end end
+		chain[1] = g
+		for _, before in ipairs(Before(g)) do
+			table.insert(chain, 2, before)
+			for _, s in ipairs(before.steps) do offers(s) end
+		end
 		for i = 1, cur.index - 1 do offers(g.steps[i]) end
 	end
 
@@ -286,14 +301,14 @@ function Catchup.Start(quest)
 		---@cast quest integer
 		local name = QuestName(DB, quest)
 		if Done(quest) then ns.Print("Quest Catchup: you've done %s already.", name) return end
-		Missing(DB, quest, needed, offered, 0)
+		Missing(DB, quest, needed, offered, 0, chain)
 		local later = false
 		for _, q in ipairs(ahead) do if q == quest then later = true end end
 		if not later and not C_QuestLog.IsOnQuest(quest) then needed[quest] = true end
 		if not next(needed) then ns.Print("Quest Catchup: nothing to do before %s; you can take it.", name) return end
 	else
 		for _, q in ipairs(ahead) do
-			if not Done(q) and not C_QuestLog.IsOnQuest(q) and Engine.ForMe(DB, q) then Missing(DB, q, needed, offered, 0) end
+			if not Done(q) and not C_QuestLog.IsOnQuest(q) and Engine.ForMe(DB, q) then Missing(DB, q, needed, offered, 0, chain) end
 		end
 		if not next(needed) then
 			ns.Print("Quest Catchup: nothing skipped that the rest of this guide needs.")
