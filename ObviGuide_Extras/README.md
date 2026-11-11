@@ -7,11 +7,12 @@ list under **Extras**.
   Molten Core.
 - **Cozy Sleeping Bag** (Alliance and Horde).
 - **Exploration**: a guide per exploration challenge ("Explore Alterac Mountains"), under **Legacy Challenges /
-  Adventure / Eastern Kingdoms** and **Kalimdor**, as the game files them. A step per area, in an order that goes
-  round the zone; each ticks off once the game counts the area as found, so the areas you have already found are
-  passed over. Under **Explorer**, Explore Eastern Kingdoms, Kalimdor and Azeroth list the parts you haven't finished
-  yet; click one to open its guide in a tab of its own.
-  In the game's legacy challenges window, each of these challenges has a **Guide** button that opens its guide.
+  Adventure / Eastern Kingdoms** and **Kalimdor**, as the game files them. A step per area, each ticking off once the
+  game counts the area as found. Start anywhere: the guide plans the shortest way from where you are through the areas
+  you haven't found, and sends you to the first; again each time you find one.
+- Under **Explorer**, Explore Eastern Kingdoms, Kalimdor and Azeroth list the parts you haven't finished yet; click one
+  to open its guide in a tab of its own.
+- In the game's legacy challenges window, each of these challenges has a **Guide** button that opens its guide.
 
 ## Sources
 

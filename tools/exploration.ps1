@@ -229,6 +229,7 @@ $lines += @(
     "`t`tg.id    = ""obvi-explore-"" .. z.id"
     "`t`tg.only  = z.only"
     "`t`tg.challenge = z.id"
+    "`t`tg.nearest = true"
     "`t`tfor _, a in ipairs(z.areas) do"
     "`t`t`tg:Step(function(s)"
     "`t`t`t`ts:Goto(a[6] or z.map, a[2], a[3])"

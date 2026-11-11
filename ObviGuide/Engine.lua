@@ -479,6 +479,77 @@ end
 -- on finishing it moves on as usual), so a finished step you went back to stays put.
 local paused = false
 
+-- a guide in any order (guide.nearest): the route is planned again when the guide is opened
+local replan = false
+
+--- Where a map point is in the world: the continent and yards, or nil where the game can't say.
+---@param map integer
+---@param x number   0-1
+---@param y number   0-1
+---@return integer?, number?, number?
+local function World(map, x, y)
+	local ok, continent, pos = pcall(C_Map.GetWorldPosFromMapPos, map, CreateVector2D(x, y))
+	if ok and continent and pos then return continent, pos.x, pos.y end
+end
+
+--- For a guide whose steps can be done in any order: the step to go to first on the shortest way from where you
+--- are through all the steps left to do. The way is planned as the guide's maker plans it: always on to the
+--- nearest, then untangled (any stretch turned round where that makes it shorter). nil when no step is left; the
+--- first step left, in the guide's order, when where you are or where they are isn't known.
+---@param g ObviGuideGuide
+---@return integer?
+local function FirstStop(g)
+	local left = {} ---@type {i: integer, x: number?, y: number?}[]
+	for i, s in ipairs(g.steps) do
+		local applies, done = Engine.StepState(s)
+		if applies and not done then table.insert(left, { i = i }) end
+	end
+	if #left == 0 then return nil end
+	local here = C_Map.GetBestMapForUnit("player") --[[@as integer?]]
+	local at = here and C_Map.GetPlayerMapPosition(here, "player")
+	local continent, px, py
+	if here and at then continent, px, py = World(here, at.x, at.y) end
+	if not continent then return left[1].i end
+	-- the steps on this continent (with a spot); the others wait until you get there
+	local stops = {} ---@type {i: integer, x: number, y: number}[]
+	for _, l in ipairs(left) do
+		local d = g.steps[l.i].dest
+		local c, x, y
+		if d then c, x, y = World(d.map, d.x, d.y) end
+		if c == continent then table.insert(stops, { i = l.i, x = x, y = y }) end
+	end
+	if #stops == 0 then return left[1].i end
+	local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+	-- nearest first, from here
+	local route, from = { { x = px, y = py } }, { x = px, y = py }
+	while #stops > 0 do
+		local best, bestD = 1, math.huge
+		for k, s in ipairs(stops) do
+			local dd = dist(from, s)
+			if dd < bestD then best, bestD = k, dd end
+		end
+		from = table.remove(stops, best)
+		table.insert(route, from)
+	end
+	-- untangle: turn round the stretch i..j when its ends join up shorter that way (here, route[1], stays first)
+	local n, better, rounds = #route, true, 0
+	while better and rounds < 50 do
+		better, rounds = false, rounds + 1
+		for i = 2, n - 1 do
+			for j = i + 1, n do
+				local gain = dist(route[i - 1], route[i]) - dist(route[i - 1], route[j])
+				if j < n then gain = gain + dist(route[j], route[j + 1]) - dist(route[i], route[j + 1]) end
+				if gain > 0.01 then
+					local a, b = i, j
+					while a < b do route[a], route[b] = route[b], route[a] a, b = a + 1, b - 1 end
+					better = true
+				end
+			end
+		end
+	end
+	return route[2].i
+end
+
 --- Whether the guide is finished, and the title of the guide that follows it (when we have it).
 ---@return boolean ended, string? nextTitle
 function Engine.Ended()
@@ -506,6 +577,19 @@ function Engine.Advance()
 		local applies, done = Engine.StepState(guide.steps[index])
 		if applies and not done then paused = false end
 		return
+	end
+	-- a guide in any order (exploration): once the step is done, or the guide has just been opened, on to the first
+	-- stop of the shortest way from here through the steps left
+	if guide.nearest then
+		local applies, done = Engine.StepState(guide.steps[index])
+		if replan or not applies or done then
+			replan = false
+			local to = FirstStop(guide)
+			if to then
+				if to ~= index then index = to Changed() end
+				return
+			end
+		end
 	end
 	local start = index
 	local landed = {}   -- each jump target once, so two done steps can't send us round in circles
@@ -549,6 +633,7 @@ function Engine.Load(title, step)
 	if not g then ns.Print("no guide called '%s'", title) return end
 	guide, index = g, math.max(1, math.min(step or 1, #g.steps))
 	paused, ended = false, false
+	replan = true
 	ns:Fire("OBVIGUIDE_LOADED", g)   -- (the guide picker's "Recent")
 	Changed()
 	Engine.Advance()

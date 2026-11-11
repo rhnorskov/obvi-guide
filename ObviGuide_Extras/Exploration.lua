@@ -704,6 +704,7 @@ for _, z in ipairs(ZONES) do
 		g.id    = "obvi-explore-" .. z.id
 		g.only  = z.only
 		g.challenge = z.id
+		g.nearest = true
 		for _, a in ipairs(z.areas) do
 			g:Step(function(s)
 				s:Goto(a[6] or z.map, a[2], a[3])

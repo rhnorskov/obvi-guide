@@ -46,6 +46,8 @@ end)
 - **The guide** has a `title` (required), and optionally a `group` (the folder in the guide list), the `next` guide,
   an `id` other guides' `next` may use, and `only` (who it is listed for). A guide for a challenge (an
   achievement) says which with `challenge = id`: the game's challenges window gets a button on it that opens the guide.
+  With `nearest = true` its steps can be done in any order: it goes to the first stop on the shortest way from where
+  you are through the steps left, planned again each time a step is done.
 - **A step** (`g:Step`) is a few lines done together. It may have a `label`, `only` (shown only while it holds;
   otherwise passed over) and `skip` (counts as done while it holds, e.g. "already in Valanaar"). A step is done when
   all of its lines that can be done are done.

@@ -83,6 +83,9 @@ function ObviGuide.Read(guide) end
 ---@field only? ObviGuideCondition      the guide is listed only for characters that match
 ---@field challenge? integer           the challenge (achievement) the guide leads through: the game's challenges window
 ---                                    gets a button on it that opens the guide
+---@field nearest? boolean            the steps can be done in any order (exploring a zone): the guide plans the shortest
+---                                    way from where you are through the steps left, and goes to its first stop; again
+---                                    each time a step is done
 local Guide = {}
 
 --- A step: a few lines done together, in one place. `build` fills it in.

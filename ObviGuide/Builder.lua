@@ -304,6 +304,7 @@ function Lines:Note(...) local text, mob = Text(...) return Add(self, { op = "No
 ---@field next? string
 ---@field id? string
 ---@field challenge? integer
+---@field nearest? boolean
 ---@field only? any
 ---@field _items {lines: ObviGuideLinesImpl, untilStep?: string}[]   steps and side boxes, in order
 
@@ -588,6 +589,7 @@ local function Finish(g, source)
 		next = g.next,
 		cond = Cond(g.only, ctx),
 		challenge = type(g.challenge) == "number" and g.challenge or nil,
+		nearest = g.nearest == true or nil,
 		format = "obviguide",
 		source = source,
 		steps = steps,

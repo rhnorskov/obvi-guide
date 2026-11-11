@@ -8,6 +8,8 @@
   its part is finished, and clicking it opens that part's guide in a tab of its own.
 - **Guide buttons in the legacy challenges window** (WoW Forever): a challenge a guide leads through gets a Guide
   button that opens it in a tab of its own. Guides say which challenge with `g.challenge = id`.
+- Guides whose steps can be done in any order (`g.nearest = true`) go to the first stop on the shortest way from where
+  you are through the steps left, planned again each time a step is done and when the guide is opened.
 - A quest you can't take yet, because its chain began in a guide you skipped, is no longer asked for: its accept line
   is left out, and a step with nothing else to do is skipped (The Legend of Stalvan in Duskwood, after doing dungeons
   instead). Needs QuestieDB, which knows each quest's pre-quests. Quest Catchup (`/og catchup`) still leads you

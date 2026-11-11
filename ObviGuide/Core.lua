@@ -76,6 +76,8 @@ local ADDON, ns = ...
 ---@field next? string           the title of the guide that follows
 ---@field cond? ObviGuideCond     listed only for characters this holds for
 ---@field challenge? integer     the challenge (achievement) it leads through: the challenges window offers it
+---@field nearest? boolean     its steps can be done in any order: it goes to the nearest first, on the shortest way
+---                             from where you are (exploration)
 ---@field format string          the format it came in ("obviguide", "rxp", or one an addon added)
 ---@field source string          which pack added it
 ---@field steps ObviGuideStep[]   (empty while the guide is still pending)
