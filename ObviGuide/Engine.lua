@@ -386,11 +386,14 @@ end
 
 --- For an accept line left out because the quest can't be taken yet: what it waits for, so the window can show the
 --- line greyed out with it: "needs Blessed Arm", or "finish The Night Watch first" when that one is in the log (then
---- also true: its step isn't skipped, you're on the way). Nil for any other line.
+--- also true: its step isn't skipped, you're on the way). A turn-in line left out because the quest isn't in your log
+--- (it was given in a guide you skipped): "not in your quest log". Nil for any other line.
 ---@param goal ObviGuideGoal
 ---@return string?, boolean?
 function Engine.Locked(goal)
-	if goal.kind ~= "accept" or not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
+	if not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
+	if goal.kind == "turnin" then return "not in your quest log", false end
+	if goal.kind ~= "accept" then return nil end
 	if Engine.CanTake(goal.quest) then return nil end
 	local pre = PreOf(goal.quest)
 	local names = {}
