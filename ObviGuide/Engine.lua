@@ -198,6 +198,12 @@ local preQuests = {} ---@type table<integer, {all: integer[], any: integer[]}|fa
 ---@param q integer
 local function Had(q) return C_QuestLog.IsQuestFlaggedCompleted(q) or C_QuestLog.IsOnQuest(q) end
 
+-- whether a mask has a flag (one bit), in plain arithmetic: QuestieDB's race masks go past 32 bits (4294967373 for
+-- the Alliance), where bit.band would cut them off
+---@param mask number
+---@param flag number
+local function HasFlag(mask, flag) return math.floor(mask / flag) % 2 == 1 end
+
 --- Whether QuestieDB has the quest for this character's race and class (nothing said: for everyone).
 ---@param DB table
 ---@param q integer
@@ -205,13 +211,13 @@ function Engine.ForMe(DB, q)
 	local races = DB.Quest.requiredRaces(q)
 	if races and races ~= 0 then
 		local _, _, raceId = UnitRace("player")
-		local mask = DB.Enum.raceMaskById[raceId]
-		if mask and bit.band(races, mask) == 0 then return false end
+		local flag = DB.Enum.raceMaskById[raceId]
+		if flag and not HasFlag(races, flag) then return false end
 	end
 	local classes = DB.Quest.requiredClasses(q)
 	if classes and classes ~= 0 then
 		local _, _, classId = UnitClass("player")
-		if bit.band(classes, bit.lshift(1, classId - 1)) == 0 then return false end
+		if not HasFlag(classes, 2 ^ (classId - 1)) then return false end
 	end
 	return true
 end
@@ -897,6 +903,17 @@ function Engine.DebugStep()
 			out[#out + 1] = ("  quest %d: can take %s, pre-quests all {%s} any {%s}%s"):format(goal.quest,
 				tostring(Engine.CanTake(goal.quest)), pre and table.concat(pre.all, ", ") or "-",
 				pre and table.concat(pre.any, ", ") or "-", _G["LibQuestieDB"] and "" or ", no QuestieDB")
+			local DB = _G["LibQuestieDB"] ---@type table?
+			if DB and DB.Quest then
+				local raw = {}
+				for _, p in ipairs(DB.Quest.preQuestSingle(goal.quest) or {}) do
+					raw[#raw + 1] = ("%d (races %s, for me %s, had %s)"):format(p, tostring(DB.Quest.requiredRaces(p)),
+						tostring(Engine.ForMe(DB, p)), tostring(Had(p)))
+				end
+				local _, _, raceId = UnitRace("player")
+				out[#out + 1] = ("  race %s (flag %s); single pre-quests: %s"):format(tostring(raceId),
+					tostring(DB.Enum.raceMaskById[raceId]), #raw > 0 and table.concat(raw, "; ") or "none")
+			end
 		end
 		if goal.flight then
 			local map = (goal.point and goal.point.map) or (step.dest and step.dest.map)
