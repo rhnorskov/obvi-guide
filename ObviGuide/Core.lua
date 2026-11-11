@@ -45,7 +45,8 @@ local ADDON, ns = ...
 ---@field arrow? {point: string, relPoint: string, x: number, y: number}   where the arrow was dragged
 ---@field flip? boolean           the window's header at the bottom (it grows upwards)
 ---@field autoAccept? boolean     accept the guide's quests when talking to the NPC (nil: on)
----@field skipLocked? boolean     skip steps whose quest needs pre-quests you haven't had (nil: off)
+---@field skipMissing? "notworth"|"all"   skip steps whose quest misses a prerequisite: when not worth catching up, or all (nil: show them)
+---@field skipLocked? boolean     (before skipMissing) true: skip them all
 ---@field skipHearth? boolean     leave out the hearth and set-hearth lines; a step with nothing else is skipped (nil: off)
 ---@field catchupDetails? boolean show the catch-up's XP, time and pace, not only whether it's worth it (nil: off)
 ---@field autoTurnin? boolean     turn in the guide's quests, no choice of rewards (nil: on)

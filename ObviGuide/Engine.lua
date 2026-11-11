@@ -411,6 +411,15 @@ function Engine.Locked(goal)
 	return "needs " .. list, false
 end
 
+--- The "Quests missing a prerequisite" setting: "show" them (the default), skip them when catching up is "notworth"
+--- it, or skip "all" of them. (Once a checkbox: ticked was skipping them all.)
+---@return "show"|"notworth"|"all"
+function Engine.SkipMissing()
+	local db = ns.db
+	if not db then return "show" end
+	return db.skipMissing or (db.skipLocked and "all") or "show"
+end
+
 ---@param goal ObviGuideGoal
 ---@return boolean
 function Engine.IsVisible(goal)
@@ -573,12 +582,19 @@ function Engine.StepState(step)
 	-- alternatives (orGroup): how many more each group needs; once a group has enough, every alternative counts as
 	-- done (as Zygor has it)
 	local need, orOpen = {}, false
-	-- (the "Skip quests missing a prerequisite" setting off: such a quest's line keeps its step, greyed out)
-	local keepLocked = not (ns.db and ns.db.skipLocked)
+	-- a quest missing a prerequisite keeps its step, greyed out, as the "Quests missing a prerequisite" setting says:
+	-- shown (the default), skipped when catching up isn't worth it, or skipped; one whose prerequisite is in the log,
+	-- always
+	local mode = Engine.SkipMissing()
+	local function keep(g, waiting)
+		if waiting or mode == "show" then return true end
+		if mode == "all" then return false end
+		return not (ns.Catchup and g.quest and ns.Catchup.Verdict(g.quest) == "not")
+	end
 	for _, g in ipairs(step.goals) do
 		local locked, waiting
 		if not Engine.IsVisible(g) then locked, waiting = Engine.Locked(g) end
-		if locked and (keepLocked or waiting) then
+		if locked and keep(g, waiting) then
 			any, done = true, false
 		elseif COMPLETABLE[g.kind] and Engine.IsVisible(g) then
 			any = true

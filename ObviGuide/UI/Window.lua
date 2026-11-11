@@ -376,7 +376,8 @@ local function RenderLine(line)
 				worth = ": " .. ns.Catchup.XPText(xp)
 			end
 		elseif pace then
-			worth = pace.ratio >= 1.2 and ": |cff60d060worth it|r" or pace.ratio >= 0.8 and ": |cffd0b070about even|r"
+			local verdict = ns.Catchup.Verdict(g.quest --[[@as integer]])
+			worth = verdict == "worth" and ": |cff60d060worth it|r" or verdict == "even" and ": |cffd0b070about even|r"
 				or ": not worth it"
 		end
 		line.sub:SetText(("%s  |cff666666·|r  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)),

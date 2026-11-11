@@ -324,6 +324,16 @@ function Catchup.Pace(quest)
 	return pace
 end
 
+--- The verdict on catching up on a quest, by its pace against the guide's: "worth" (at least 1.2x the guide's XP per
+--- minute), "even" (0.8x to 1.2x) or "not"; nil when it can't be told.
+---@param quest integer
+---@return "worth"|"even"|"not"|nil
+function Catchup.Verdict(quest)
+	local pace = Catchup.Pace(quest)
+	if not pace then return nil end
+	return pace.ratio >= 1.2 and "worth" or pace.ratio >= 0.8 and "even" or "not"
+end
+
 ---@param saved ObviGuideCatchupSaved
 ---@return ObviGuideGuide, integer[]
 local function Build(saved)

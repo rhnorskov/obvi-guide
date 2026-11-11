@@ -79,12 +79,26 @@ local function Build()
 		"Accepts the quests of the current and next step when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
 	Checkbox("Auto turn in guide quests", "autoTurnin", true,
 		"Turns in the quests of the current and next step (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
-	Checkbox("Skip quests missing a prerequisite", "skipLocked", false,
-		"A quest that needs an earlier quest you haven't done (its chain began in a guide you skipped): its step is skipped "
-		.. "when it has nothing else to do. Off, the step stays with the quest greyed out, so you can click it for a "
-		.. "catch-up guide or go on with the arrow. A prerequisite still in your quest log keeps the step either way. "
-		.. "Needs QuestieDB.",
-		function() ns.Engine.Advance() ns.Window.Refresh() end)
+	local missing = Settings.RegisterProxySetting(category, "ObviGuide_skipMissing", Settings.VarType.String,
+		"Quests missing a prerequisite", "show",
+		function() return ns.Engine.SkipMissing() end,
+		function(value)
+			if not ns.db then return end
+			ns.db.skipMissing, ns.db.skipLocked = value ~= "show" and value or nil, nil
+			ns.Engine.Advance()
+			ns.Window.Refresh()
+		end)
+	Settings.CreateDropdown(category, missing, function()
+		local options = Settings.CreateControlTextContainer()
+		options:Add("show", "Show them")
+		options:Add("notworth", "Skip when not worth catching up")
+		options:Add("all", "Skip them")
+		return options:GetData()
+	end, "A quest that needs an earlier quest you haven't done (its chain began in a guide you skipped), or a turn-in for "
+		.. "a quest you don't have. Shown, its step stays with the quest greyed out, so you can click it for a catch-up "
+		.. "guide or go on with the arrow. Skipped, a step with nothing else to do is passed by: always, or only when "
+		.. "catching up gives less XP per minute than the guide. A prerequisite still in your quest log keeps the step "
+		.. "either way. Needs QuestieDB.")
 	Checkbox("Skip hearthstone steps", "skipHearth", false,
 		"Leaves out the guide's \"Hearth to ...\" and \"Set your Hearthstone to ...\" lines, and skips a step that has "
 		.. "nothing else to do: for when you'd rather fly or walk, or keep your Hearthstone where it is.",
