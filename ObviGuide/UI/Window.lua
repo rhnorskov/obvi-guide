@@ -178,19 +178,13 @@ local function ClickAction(b, line)
 	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or (g.point or line.step.dest) ~= nil
 end
 
--- lines whose click is their own action (target the NPC or mob, use the item, cast): no waypoint from the step for them
-local ACTION_KINDS = { talk = true, kill = true, use = true, equip = true, hearth = true, cast = true }
-
---- Where clicking a line sets the waypoint: its own spot, or the step's unless the line is about an action of its
---- own ("Talk to", "Kill", "Use"). Accept and turn-in lines target the step's NPC too, but still set the waypoint.
+--- Where clicking a line sets the waypoint: its own spot, or else the step's.
 ---@param b ObviGuideClick
 ---@return ObviGuidePoint?
 local function ClickPoint(b)
 	local g = b.line and b.line.goal
 	if not g or b.line.dim then return nil end
-	if g.point then return g.point end
-	if ACTION_KINDS[g.kind] or g.mobName then return nil end
-	return b.line.step.dest
+	return g.point or b.line.step.dest
 end
 
 --- "Darkshore 39.0, 86.0" for a point.
@@ -213,9 +207,12 @@ local function NewClick()
 		local g = self.line and self.line.goal
 		if down or not g or self.line.dim then return end   -- once per click: on the mouse-up
 		if g.kind == "confirm" then Engine.Tick(g) end
+		-- (not when the way is shown there already, or you're there: clicking a "Talk to" line again and again to
+		-- target the NPC shouldn't set the waypoint anew each time)
 		local p = ClickPoint(self)
-		if p and p == g.point then ns.Travel.To(p, g.text)
-		elseif p then ns.Travel.Show(self.line.step) end
+		if not p or ns.Travel.Already(p) then return end
+		if p == g.point then ns.Travel.To(p, g.text)
+		else ns.Travel.Show(self.line.step) end
 	end)
 	-- hovering a line says where clicking it sends you
 	b:SetScript("OnEnter", function(self)

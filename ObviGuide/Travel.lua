@@ -14,6 +14,7 @@ ns.Travel = Travel
 local OWNER = "ObviGuide"   -- Shortest Path keeps one journey per owner
 local ourPin               -- the user waypoint we set, so we never clear someone else's
 local ourTomTom            -- the TomTom waypoint we set (its uid)
+local placed               ---@type ObviGuidePoint?   the point we last showed the way to
 
 -- Whether the journey Shortest Path guides is ours. Its own route bookkeeping can't say: it ends our route whenever the
 -- journey's point is swapped (a replan to the same place, an arrival held) while it keeps guiding there, and our journey
@@ -171,6 +172,7 @@ end
 ---@param step? boolean    a step's destination (a journey the player planned in Shortest Path is then left alone)
 local function Place(p, title, step)
 	local kind = Travel.Provider()
+	placed = p
 	ClearOthers(kind)
 	if kind == "arrow" then
 		ns.Arrow.Set(p, title)
@@ -206,6 +208,23 @@ function Travel.To(p, title)
 	Place(p, title, false)
 	objectiveText = title
 	ShowObjective()
+end
+
+local CLOSE = 20   -- yards: as good as there
+
+--- Whether clicking a line for point p would change nothing: the way is shown there already (in Shortest Path, our
+--- journey is still on), or the player is there. So clicking again and again doesn't ask Shortest Path to plan anew
+--- each time.
+---@param p ObviGuidePoint
+---@return boolean
+function Travel.Already(p)
+	local same = placed and placed.map == p.map and math.abs(placed.x - p.x) < 1e-4 and math.abs(placed.y - p.y) < 1e-4
+	if same and (Travel.Provider() ~= "spf" or ourJourney) then return true end
+	local c1, w1 = Travel.PlayerWorld()
+	local c2, w2 = Travel.World(p)
+	if not (w1 and w2) or c1 ~= c2 then return false end
+	local dx, dy = w1.x - w2.x, w1.y - w2.y
+	return math.sqrt(dx * dx + dy * dy) <= math.max(CLOSE, p.radius or 0)
 end
 
 --- Shows the way to a step's destination, or clears ours when the step has none.
