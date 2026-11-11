@@ -261,6 +261,25 @@ function Engine.CanTake(q)
 	return false
 end
 
+--- For an accept line left out because the quest can't be taken yet: the pre-quests it waits for, by name ("Blessed
+--- Arm"), so the window can show the line greyed out with them. Nil for any other line.
+---@param goal ObviGuideGoal
+---@return string?
+function Engine.Locked(goal)
+	if goal.kind ~= "accept" or not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
+	if Engine.CanTake(goal.quest) then return nil end
+	local pre = preQuests[goal.quest]
+	local DB = _G["LibQuestieDB"] ---@type table?
+	local names = {}
+	local function add(p)
+		names[#names + 1] = (DB and DB.Quest.name(p)) or C_QuestLog.GetTitleForQuestID(p) or ("quest " .. p)
+	end
+	for _, p in ipairs(pre and pre.all or {}) do if not Had(p) then add(p) end end
+	if #names > 0 then return table.concat(names, " and ") end
+	for _, p in ipairs(pre and pre.any or {}) do add(p) end
+	return table.concat(names, " or ")
+end
+
 ---@param goal ObviGuideGoal
 ---@return boolean
 function Engine.IsVisible(goal)

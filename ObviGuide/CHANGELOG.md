@@ -11,9 +11,9 @@
 - Guides whose steps can be done in any order (`g.nearest = true`) go to the first stop on the shortest way from where
   you are through the steps left, planned again each time a step is done and when the guide is opened.
 - A quest you can't take yet, because its chain began in a guide you skipped, is no longer asked for: its accept line
-  is left out, and a step with nothing else to do is skipped (The Legend of Stalvan in Duskwood, after doing dungeons
-  instead). Needs QuestieDB, which knows each quest's pre-quests. Quest Catchup (`/og catchup`) still leads you
-  through the skipped quests if you want them.
+  is greyed out with what it needs ("needs Blessed Arm"), and a step with nothing else to do is skipped (The Legend of
+  Stalvan in Duskwood, after doing dungeons instead). Needs QuestieDB, which knows each quest's pre-quests. Quest
+  Catchup (`/og catchup`) still leads you through the skipped quests if you want them.
 - **Guide picker**: the gear beside the search is a menu now. The guides only for the other faction are left out;
   tick **Other faction's guides** there to list them too. **Settings** opens the settings as before.
 - **Destroy cheapest item**, for full bags: finds the item in your bags worth the least at a vendor and asks before

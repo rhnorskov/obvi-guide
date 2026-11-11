@@ -49,6 +49,7 @@ local frame
 ---@field step? ObviGuideStep
 ---@field dim? boolean      a previewed step: no action
 ---@field side? boolean     a side task: the step's own NPC/target is not its target
+---@field locked? string    an accept line for a quest you can't take yet: the pre-quests it waits for
 
 ---@class ObviGuideClick : Button
 ---@field line? ObviGuideLine   the line it lies over
@@ -127,7 +128,7 @@ local function Line()
 		Flashes(line)
 		lines[used] = line
 	end
-	line.goal, line.step, line.dim, line.side = nil, nil, nil, nil
+	line.goal, line.step, line.dim, line.side, line.locked = nil, nil, nil, nil, nil
 	line:Show()
 	return line
 end
@@ -339,6 +340,7 @@ local function RenderLine(line)
 		end
 	end
 	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
+	if line.locked then text = text .. " (needs " .. line.locked .. ")" end
 	-- a note shown as a line of its own (in a side task, or with a condition) looks like the step's notes
 	if g.note and not dim then text = "|cffd0b070" .. text .. "|r" end
 	line.text:SetText(Inline(text))
@@ -374,11 +376,14 @@ local function Goals(step, goals, y, dim, side, tips)
 	TipsAfter(nil)
 	local box   -- the side box of the last line shown: a gap before the next box's lines sets the tasks apart
 	for _, g in ipairs(goals) do
-		if Engine.IsVisible(g) then
+		-- a quest you can't take yet (its chain began in a guide you skipped) shows greyed out, with what it waits for
+		local locked = not Engine.IsVisible(g) and Engine.Locked(g) or nil
+		if locked or Engine.IsVisible(g) then
 			if side and g.box and box and g.box ~= box then y = y + SIDE_BOX_GAP end
 			box = g.box or box
 			local line = Line()
-			line.goal, line.step, line.dim, line.side = g, step, dim, side
+			line.goal, line.step, line.dim, line.side = g, step, dim or locked ~= nil, side
+			line.locked = locked
 			RenderLine(line)
 			y = Place(line, y, 0)
 		end
