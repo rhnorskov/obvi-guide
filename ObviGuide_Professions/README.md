@@ -30,6 +30,7 @@ tested on the beta.
 
 ## Other sources
 
+- **WhatsTraining**: the cooking recipes' spell ids, so a recipe you already know isn't on the shopping list.
 - **QuestieDB** (Forever data): trainer and vendor ids and positions, item and quest ids, and the ore vein spawns behind each
   mining zone's waypoint (a spot where that ore's veins are dense; it is not the site's route).
 - The fishing spots' waypoints (Crystal Lake, Iceflow Lake, Lake Al'Ameth, Stormwind's canals, Mystral Lake) are our own

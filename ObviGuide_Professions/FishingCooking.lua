@@ -81,9 +81,18 @@ ObviGuide.Guide(function(g)
 		end)
 	end
 	local EARLY = "skill " .. FISH .. " >= 75"
-	-- each purchase only while the skill it's for still needs it: the fish recipes until Cooking 100 (the fish you
-	-- catch until 75 are cooked up to there), the pole while you have none
-	local RECIPES, NO_POLE = "skill " .. COOK .. " < 100", "items 6256 < 1"
+	-- each purchase only while you still need it: a recipe while you don't know it, the pole while you have none
+	local NO_POLE = "items 6256 < 1"
+	-- the recipes' spells (a recipe you've learned is a spell you know), from WhatsTraining's Classic recipe list
+	local SPELLS = { ["Brilliant Smallfish"] = 7751, ["Longjaw Mud Snapper"] = 7753, ["Bristle Whisker Catfish"] = 7755,
+		["Mithril Head Trout"] = 20916, ["Filet of Redgill"] = 18241, ["Nightfin Soup"] = 18243,
+		["Poached Sunscale Salmon"] = 18244, ["Spotted Yellowtail"] = 18238, ["Baked Salmon"] = 18247 }
+	--- A recipe to buy, shown only while you don't know it.
+	---@param s ObviGuideStepBuilder
+	---@param name string
+	local function Recipe(s, name)
+		s:Do(g.Buy("Buy Recipe: " .. name), "."):Only("not knows " .. SPELLS[name])
+	end
 	---@param s ObviGuideStepBuilder
 	local function Gear(s)
 		s:Do(g.Buy("Buy a "), pole, " and a ", bauble, "."):Only(NO_POLE)
@@ -92,22 +101,23 @@ ObviGuide.Guide(function(g)
 	-- Fishing 1-75: the starting zone
 	Start(IN_ELW, ELWYNN, { npc = g.Npc("Lee Brown", 1651), x = 47.61, y = 62.32 }, function()
 		Buy(IN_ELW, EARLY, ELWYNN, 41.82, 67.16, g.Npc("Tharynn Bouden", 66), function(s)
-			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish and Recipe: Longjaw Mud Snapper"), "."):Only(RECIPES)
+			Recipe(s, "Brilliant Smallfish")
+			Recipe(s, "Longjaw Mud Snapper")
 			Gear(s)
 		end)
 	end, { x = 49.5, y = 63.5, text = "Fish in Crystal Lake, by Lee Brown." })
 
 	Start(IN_DM, DUNMOROGH, { npc = g.Npc("Paxton Ganter", 1700), x = 35.48, y = 40.22 }, function()
 		Buy(IN_DM, EARLY, DUNMOROGH, 31.53, 44.65, g.Npc("Gretta Ganter", 8508), function(s)
-			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish"), "."):Only(RECIPES)
-			s:Note("Recipe: Longjaw Mud Snapper comes later, from Tharynn Bouden in Goldshire.")
+			Recipe(s, "Brilliant Smallfish")
 			Gear(s)
 		end)
 	end, { x = 35.0, y = 42.5, text = "Fish in Iceflow Lake." })
 
 	Start(IN_TEL, TELDRASSIL, { npc = g.Npc("Astaia", 4156), map = DARNASSUS, x = 47.89, y = 56.65 }, function()
 		Buy(IN_TEL, "skill " .. COOK .. " >= 100", TELDRASSIL, 57.19, 61.26, g.Npc("Nyoma", 4265), function(s)
-			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish and Recipe: Longjaw Mud Snapper"), ".")
+			Recipe(s, "Brilliant Smallfish")
+			Recipe(s, "Longjaw Mud Snapper")
 		end)
 		Buy(IN_TEL, EARLY, TELDRASSIL, 55.27, 57.15, g.Npc("Narret Shadowgrove", 3614), function(s)
 			Gear(s)
@@ -121,7 +131,8 @@ ObviGuide.Guide(function(g)
 		end)
 	end, { x = 45.0, y = 48.4, text = "Fish in any lake or river on Zephras Isle, e.g. by Fenn Fairweather." })
 	Buy(IN_ZEP, "skill " .. COOK .. " >= 100", ZEPHRAS, 60.64, 72.66, g.Npc("Nyalah Brightfire", 257006), function(s)
-		s:Do(g.Buy("Buy Recipe: Brilliant Smallfish and Recipe: Longjaw Mud Snapper"), " in Valanaar.")
+		Recipe(s, "Brilliant Smallfish")
+		Recipe(s, "Longjaw Mud Snapper")
 	end)
 
 	-- Fishing 75-130 and Cooking 1-100: Stormwind
@@ -132,8 +143,8 @@ ObviGuide.Guide(function(g)
 		s:Note("Cooking takes no profession slot in Forever. You learn Basic Campfire Kit with it, to cook anywhere.")
 	end)
 	Buy(nil, "skill " .. COOK .. " >= 175", SW, 55.09, 69.76, g.Npc("Catherine Leland", 5494), function(s)
-		s:Do(g.Buy("Buy Recipe: Bristle Whisker Catfish"), ".")
-		s:Note("No Recipe: Longjaw Mud Snapper yet? Tharynn Bouden in Goldshire sells it.")
+		Recipe(s, "Bristle Whisker Catfish")
+		s:Note("No Recipe: Longjaw Mud Snapper yet? Tharynn Bouden in Goldshire sells it."):Only("not knows " .. SPELLS["Longjaw Mud Snapper"])
 	end)
 	g:Step(function(s)
 		s:Goto(SW, 54.0, 67.0, 25)
@@ -166,7 +177,8 @@ ObviGuide.Guide(function(g)
 		s:Note("Read Expert Fishing - The Bass and You from your bags. Needs level 20 and Fishing 125.")
 	end)
 	Buy(nil, "skill " .. COOK .. " >= 250", STV, 28.23, 74.34, g.Npc("Kelsey Yance", 2664), function(s)
-		s:Do(g.Buy("Buy Recipe: Mithril Head Trout and Recipe: Filet of Redgill"), ".")
+		Recipe(s, "Mithril Head Trout")
+		Recipe(s, "Filet of Redgill")
 	end)
 	Buy(nil, "skill " .. FISH .. " >= 205", ASH, 49.48, 67.09, g.Npc("Shandrina", 3955), function(s)
 		s:Do(g.Buy("Buy the "), g.Item("Expert Cookbook", 16072), "."):Only("skillmax " .. COOK .. " < 225")
@@ -269,12 +281,15 @@ ObviGuide.Guide(function(g)
 		s:Train(COOK, 300)
 	end)
 	Buy(nil, "skill " .. COOK .. " >= 290", TAN, 66.64, 22.08, g.Npc("Gikkix", 8137), function(s)
-		s:Do(g.Buy("Buy Recipe: Nightfin Soup, Recipe: Poached Sunscale Salmon and Recipe: Spotted Yellowtail"), " at Steamwheedle Port.")
+		Recipe(s, "Nightfin Soup")
+		Recipe(s, "Poached Sunscale Salmon")
+		Recipe(s, "Spotted Yellowtail")
 	end)
 
 	-- Fishing 255-300: Feralas, then Cooking to 300
 	Buy(nil, "skill " .. FISH .. " >= 300", FERALAS, 31.30, 43.46, g.Npc("Vivianna", 7947), function(s)
-		s:Do(g.Buy("Buy Recipe: Baked Salmon and 10 "), crawlers, " at Feathermoon Stronghold.")
+		Recipe(s, "Baked Salmon")
+		s:Do(g.Buy("Buy 10 "), crawlers, " at Feathermoon Stronghold.")
 	end)
 	g:Step(function(s)
 		s:Say("Fish in Feralas's inland water (any lake but Jademir Lake). A new Nightcrawler every 10 minutes.")
