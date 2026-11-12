@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- Going back to a step the guide skipped says so at the top, and why: you have it already, it isn't for this character,
-  or there's nothing left to do there.
+- Going back to a step the guide skipped (you had it already) shows its lines ticked off.
 - Clicking a line that uses or equips an item or casts a spell does just that, and says so when you hover it; it no
   longer sets the waypoint too.
 - Guide conditions can test a profession's cap: `skillmax Cooking >= 225` (Expert learned).

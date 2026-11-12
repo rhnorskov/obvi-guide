@@ -542,6 +542,8 @@ end
 ---@return boolean
 function Engine.IsComplete(goal, step)
 	if goal.done and Conditions.Eval(goal.done) then return true end
+	-- a step whose skip holds is done, every line in it with it (ticked when you go back to it)
+	if step and step.skip and COMPLETABLE[goal.kind] and Conditions.Eval(step.skip) then return true end
 	if goal.with then
 		for _, w in ipairs(goal.with) do if not Engine.IsComplete(w, step) then return false end end
 		return true
