@@ -87,7 +87,6 @@ ObviGuide.Guide(function(g)
 	---@param s ObviGuideStepBuilder
 	local function Gear(s)
 		s:Do(g.Buy("Buy a "), pole, " and a ", bauble, "."):Only(NO_POLE)
-		s:Note("Buy any ", attractor, " you see and keep it for the Artisan Fishing quest.")
 	end
 
 	-- Fishing 1-75: the starting zone
@@ -215,7 +214,7 @@ ObviGuide.Guide(function(g)
 	g:Step(function(s)
 		s.skip = "done " .. NAT
 		s:Collect(g.Item("Feralas Ahi", 16967), { count = 1 })
-		s:Note("Feralas: put on the ", attractor, " you kept, or Bright Baubles from Vivianna, or most get away.")
+		s:Note("Feralas: put on Bright Baubles (Vivianna, Feathermoon Stronghold) or an ", attractor, ", or most get away.")
 		s:Collect(g.Item("Misty Reed Mahi Mahi", 16970), { count = 1 })
 		s:Note("Swamp of Sorrows.")
 		s:Collect(g.Item("Sar'theris Striker", 16968), { count = 1 })
