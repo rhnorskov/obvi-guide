@@ -46,6 +46,7 @@ ObviGuide.Guide(function(g)
 		shop()
 		g:Step(function(s)
 			s.only = only
+			s.skip = "skill " .. FISH .. " >= 75"   -- (else the pole's Equip line would hold it)
 			s:Goto(map, water.x, water.y, 25)
 			s:Equip(pole)
 			s:Use(bauble)
