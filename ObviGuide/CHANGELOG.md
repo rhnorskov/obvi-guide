@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Going back to a step the guide skipped (you had it already) shows its lines ticked off.
+- Going back to a step the guide skipped (you had it already) shows its click-when-done lines ticked off; lines the
+  game can check (an item equipped, a skill) show what's true.
 - Clicking a line that uses or equips an item or casts a spell does just that, and says so when you hover it; it no
   longer sets the waypoint too.
 - Guide lines can be ticked off by a condition: `s:Do("Buy Recipe: ..."):Done("knows 7751")` stays in the list, ticked, once
