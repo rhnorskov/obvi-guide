@@ -79,13 +79,13 @@ local function Compile(s)
 			local op, n = compare("items")
 			return { "items" .. op, id, n }
 		end
-		if w == "skill" then
+		if w == "skill" or w == "skillmax" then
 			-- the profession's name, up to the comparison (it may be two words: "First Aid")
 			local words = {}
 			while toks[i] and toks[i]:match("^%a") do table.insert(words, take()) end
-			if #words == 0 then error("skill needs a profession's name", 0) end
-			local op, n = compare("skill")
-			return { "skill" .. op, table.concat(words, " "), n }
+			if #words == 0 then error(w .. " needs a profession's name", 0) end
+			local op, n = compare(w)
+			return { w .. op, table.concat(words, " "), n }
 		end
 		local class = Conditions.ClassToken(tok)
 		if class then return { "class", class } end

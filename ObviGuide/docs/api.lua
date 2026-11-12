@@ -61,6 +61,7 @@ function ObviGuide.Read(guide) end
 --- `level < 10`, `level >= 10`, `onquest 123`, `ready 123`, `done 123`, `knows 123` (spell), `items 123 >= 5`,
 --- `items 123 < 5`, `area 123` (subzone), `map 123`, `nomap` (somewhere without a map), `aura 123`,
 --- `skill Mining >= 75`, `skill Mining < 75` (a profession's skill by its English name; one you haven't got is 0).
+--- `skillmax Cooking >= 225` (its cap: what the trainer or book has taught up to; 0 without it).
 --- Checked when the guide loads; mistakes are reported in chat.
 --- Examples: `"Alliance and not Shaman"`, `"Horde/Shaman"`, `"done 92703 or area 16638"`.
 ---@alias ObviGuideCondition string

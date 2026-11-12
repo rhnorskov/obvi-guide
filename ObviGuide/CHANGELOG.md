@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Guide conditions can test a profession's cap: `skillmax Cooking >= 225` (Expert learned).
 - Guides can have exploration lines (`s:Explore(challenge, area)`), done once the game counts the area as found in that
   exploration challenge.
 - Guides can list the parts of a bigger challenge still to finish (`s:Challenge(challenge, guide)`): each line goes once

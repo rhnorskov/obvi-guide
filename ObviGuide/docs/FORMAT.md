@@ -118,6 +118,7 @@ Conditions (`only`, `skip`, `:Only(...)`) are short strings: words joined with `
 | `nomap` | You are somewhere without a map (a dungeon). |
 | `aura 123` | You have that buff or debuff. |
 | `skill Mining >= 75`, `skill Mining < 75` | A profession's skill (English name; one you haven't got counts as 0). |
+| `skillmax Cooking >= 225` | A profession's cap: what its trainer or book has taught up to (225 is Expert). |
 
 Examples: `"Alliance and not Shaman"`, `"Horde/Shaman"`, `"done 92703 or area 16638"`.
 
