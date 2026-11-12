@@ -1,7 +1,7 @@
 ## Interface: 16001, 120105
 ## Title: Obvi Guide: Professions
 ## Version: @project-version@
-## Notes: Profession leveling guides for Obvi Guide: Mining, Blacksmithing, Cooking and First Aid (Alliance), after wow-professions.com's WoW Forever guides.
+## Notes: Profession leveling guides for Obvi Guide: Mining, Blacksmithing, Cooking, Fishing and Cooking, and First Aid (Alliance), after wow-professions.com's WoW Forever guides.
 ## Author: Rasmus Norskov
 ## Dependencies: ObviGuide
 ## X-License: GPL-3.0-or-later
@@ -11,3 +11,4 @@ Mining.lua
 Blacksmithing.lua
 Cooking.lua
 FirstAid.lua
+FishingCooking.lua
