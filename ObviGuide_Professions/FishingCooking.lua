@@ -82,15 +82,27 @@ ObviGuide.Guide(function(g)
 	local EARLY = "skill " .. FISH .. " >= 75"
 	-- each purchase ticked off once you don't need it: a recipe once you know it, the pole once you have one
 	local HAS_POLE = "items 6256 >= 1"
-	-- the recipes' spells (a recipe you've learned is a spell you know), from WhatsTraining's Classic recipe list
-	local SPELLS = { ["Brilliant Smallfish"] = 7751, ["Longjaw Mud Snapper"] = 7753, ["Bristle Whisker Catfish"] = 7755,
-		["Mithril Head Trout"] = 20916, ["Filet of Redgill"] = 18241, ["Nightfin Soup"] = 18243,
-		["Poached Sunscale Salmon"] = 18244, ["Spotted Yellowtail"] = 18238, ["Baked Salmon"] = 18247 }
-	--- A recipe to buy and learn (use it from your bags), ticked off once you know it.
+	-- the recipes: the item, and the spell it teaches (a recipe you've learned is a spell you know), from WhatsTraining's
+	-- Classic recipe list; most are bought before your Cooking is high enough to learn them
+	local RECIPES = { ["Brilliant Smallfish"] = { 6325, 7751 }, ["Longjaw Mud Snapper"] = { 6328, 7753 },
+		["Bristle Whisker Catfish"] = { 6330, 7755 }, ["Mithril Head Trout"] = { 17062, 20916 },
+		["Filet of Redgill"] = { 13941, 18241 }, ["Nightfin Soup"] = { 13945, 18243 },
+		["Poached Sunscale Salmon"] = { 13946, 18244 }, ["Spotted Yellowtail"] = { 13939, 18238 },
+		["Baked Salmon"] = { 13949, 18247 } }
+	--- A recipe to buy: ticked off once it's in your bags (or you know it).
 	---@param s ObviGuideStepBuilder
 	---@param name string
 	local function Recipe(s, name)
-		s:Do(g.Buy("Buy and learn Recipe: " .. name), "."):Done("knows " .. SPELLS[name])
+		local r = RECIPES[name]
+		s:Do(g.Buy("Buy "), g.Item("Recipe: " .. name, r[1]), "."):Done(("knows %d or items %d >= 1"):format(r[2], r[1]))
+	end
+	--- Learning a recipe you bought, when your Cooking is high enough: the line uses it, ticked off once you know it.
+	---@param s ObviGuideStepBuilder
+	---@param name string
+	---@return ObviGuideLine
+	local function Learn(s, name)
+		local r = RECIPES[name]
+		return s:Use(g.Item("Recipe: " .. name, r[1])):Done("knows " .. r[2])
 	end
 	---@param s ObviGuideStepBuilder
 	local function Gear(s)
@@ -143,7 +155,7 @@ ObviGuide.Guide(function(g)
 	end)
 	Buy(nil, "skill " .. COOK .. " >= 175", SW, 55.09, 69.76, g.Npc("Catherine Leland", 5494), function(s)
 		Recipe(s, "Bristle Whisker Catfish")
-		s:Note("No Recipe: Longjaw Mud Snapper yet? Tharynn Bouden in Goldshire sells it."):Only("not knows " .. SPELLS["Longjaw Mud Snapper"])
+		s:Note("No Recipe: Longjaw Mud Snapper yet? Tharynn Bouden in Goldshire sells it."):Only("not knows 7753 and items 6328 < 1")
 	end)
 	g:Step(function(s)
 		s:Goto(SW, 54.0, 67.0, 25)
@@ -152,6 +164,7 @@ ObviGuide.Guide(function(g)
 		s:Note("About 20 ", smallfish, ", 60 ", longjaw, " and 30 ", catfish, ".")
 	end)
 	g:Step(function(s)
+		Learn(s, "Brilliant Smallfish")
 		s:Say("Cook your ", smallfish, ".")
 		s:Skill(COOK, 50)
 		s:Note("A few points short? Catch and cook a few more.")
@@ -163,6 +176,7 @@ ObviGuide.Guide(function(g)
 	end)
 	g:Step(function(s)
 		s.skip = "skill " .. COOK .. " >= 100"
+		Learn(s, "Longjaw Mud Snapper")
 		s:Do("Cook all your ", longjaw, ".")
 		s:Note("It should take you past 100. If not, you catch more of them later.")
 	end)
@@ -192,6 +206,8 @@ ObviGuide.Guide(function(g)
 		s:Note("About 95 ", longjaw, " and 145 ", catfish, ".")
 	end)
 	g:Step(function(s)
+		Learn(s, "Bristle Whisker Catfish")
+		s:Note("Bristle Whisker Catfish needs Cooking 100.")
 		s:Say("Cook ", longjaw, " (below 100), then ", catfish, ".")
 		s:Skill(COOK, 125)
 	end)
@@ -247,6 +263,8 @@ ObviGuide.Guide(function(g)
 		s:Skill(FISH, 255)
 	end)
 	g:Step(function(s)
+		Learn(s, "Mithril Head Trout")
+		s:Note("Mithril Head Trout needs Cooking 175.")
 		s:Say("Cook at Theramore Isle or a campfire: ", catfish, " (below 175), then ", trout, ".")
 		s:Skill(COOK, 225)
 		s:Note("Stop at 225 and keep the rest of the trout.")
@@ -296,12 +314,17 @@ ObviGuide.Guide(function(g)
 		s:Skill(FISH, 300)
 	end)
 	g:Step(function(s)
+		Learn(s, "Filet of Redgill")
 		s:Say("Cook the rest of your ", trout, ", then ", g.Item("Raw Redgill", 13758), " (Filet of Redgill).")
 		s:Skill(COOK, 250)
 	end)
 	g:Step(function(s)
+		Learn(s, "Nightfin Soup")
+		Learn(s, "Poached Sunscale Salmon")
+		s:Note("Both need Cooking 250.")
+		Learn(s, "Baked Salmon"):Optional()
+		s:Note("From 275, if you caught Raw Whitescale Salmon.")
 		s:Say("Cook Nightfin Soup and Poached Sunscale Salmon from your fish.")
-		s:Note("From 275, Baked Salmon too if you caught Raw Whitescale Salmon.")
 		s:Note("Not enough fish for 300? Fish a bit longer, or buy a few on the Auction House.")
 		s:Skill(COOK, 300)
 	end)

@@ -9,7 +9,8 @@
 - A line the game can check (a recipe you learn, an area you explore) no longer says "click when done".
 - Guide lines can be optional (`:Optional()`): the step is done once its other lines are, and the optional one shows
   its own state, e.g. Equip Fishing Pole beside Reach Fishing 75.
-- Guide lines can be ticked off by a condition: `s:Do("Buy Recipe: ..."):Done("knows 7751")` stays in the list, ticked, once
+- Guide lines can be ticked off by a condition (`:Done`), a Use line too: `s:Use(recipe):Done("knows 7751")` learns the
+  recipe when clicked and is ticked once you know it; `s:Do("Buy ..."):Done(...)` stays in the list, ticked, once
   it holds.
 - Guide conditions can test a profession's cap: `skillmax Cooking >= 225` (Expert learned).
 - Guides can have exploration lines (`s:Explore(challenge, area)`), done once the game counts the area as found in that

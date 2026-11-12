@@ -86,7 +86,8 @@ end)
 | `Note(text...)` | A note, shown right after the line above it. | - |
 
 Every line can be limited with `:Only(condition)`, and ticked off by a condition with `:Done(condition)` (a purchase
-you no longer need stays in the list, ticked, where `:Only` would hide it). `:Optional()` makes a line optional: the
+you no longer need stays in the list, ticked, where `:Only` would hide it); any line with it counts towards its step, a
+`Use` line too. `:Optional()` makes a line optional: the
 step is done once its other lines are, and the optional one shows its own state.
 
 ## Markers

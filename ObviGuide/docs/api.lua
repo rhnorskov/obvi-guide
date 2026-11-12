@@ -164,7 +164,8 @@ local Line = {}
 function Line:Only(condition) end
 
 --- The line counts as done (shown ticked) once this holds, e.g. a purchase you no longer need:
---- `s:Do("Buy Recipe: Brilliant Smallfish"):Done("knows 7751")`.
+--- `s:Do("Buy Recipe: Brilliant Smallfish"):Done("knows 7751")`. Any line with it counts towards its step, a `Use` line too
+--- (`s:Use(recipe):Done("knows 7751")`: click it to learn the recipe).
 ---@param condition ObviGuideCondition
 ---@return ObviGuideLine
 function Line:Done(condition) end

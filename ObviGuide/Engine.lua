@@ -20,6 +20,14 @@ local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = tru
 	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true, skill = true,
 	challenge = true }
 
+--- Whether a line counts towards its step being done: one the game can check (or that is ticked off), or any line
+--- with its own done condition (a Use line ticked once the recipe it uses is known); not an optional one.
+---@param g ObviGuideGoal
+---@return boolean
+local function Counts(g)
+	return not g.optional and (COMPLETABLE[g.kind] or g.done ~= nil)
+end
+
 -- manual ticks and reached waypoints: charDB.marks[guide title]["step:goal"] = true
 local function Marks()
 	if not (guide and ns.charDB) then return {} end
@@ -529,7 +537,7 @@ end
 function Engine.SideOpen(box, step)
 	local any = false
 	for _, g in ipairs(box) do
-		if COMPLETABLE[g.kind] and not g.optional then
+		if Counts(g) then
 			any = true
 			if Engine.IsVisible(g) and not Engine.IsComplete(g, step) then return true end
 		end
@@ -634,7 +642,7 @@ function Engine.StepState(step)
 		if not Engine.IsVisible(g) then locked, waiting = Engine.Locked(g) end
 		if locked and keep(g, waiting) then
 			any, done = true, false
-		elseif COMPLETABLE[g.kind] and not g.optional and Engine.IsVisible(g) then
+		elseif Counts(g) and Engine.IsVisible(g) then
 			any = true
 			local complete = Engine.IsComplete(g, step)
 			if complete and g.finishes then return true, true end
