@@ -80,39 +80,43 @@ ObviGuide.Guide(function(g)
 		end)
 	end
 	local EARLY = "skill " .. FISH .. " >= 75"
+	-- each purchase only while the skill it's for still needs it: the fish recipes until Cooking 100 (the fish you
+	-- catch until 75 are cooked up to there), the pole while you have none
+	local RECIPES, NO_POLE = "skill " .. COOK .. " < 100", "items 6256 < 1"
 	---@param s ObviGuideStepBuilder
-	local function Attract(s) s:Note("Buy any ", attractor, " you see and keep it for the Artisan Fishing quest.") end
+	local function Gear(s)
+		s:Do(g.Buy("Buy a "), pole, " and a ", bauble, "."):Only(NO_POLE)
+		s:Note("Buy any ", attractor, " you see and keep it for the Artisan Fishing quest.")
+	end
 
 	-- Fishing 1-75: the starting zone
 	Start(IN_ELW, ELWYNN, { npc = g.Npc("Lee Brown", 1651), x = 47.61, y = 62.32 }, function()
 		Buy(IN_ELW, EARLY, ELWYNN, 41.82, 67.16, g.Npc("Tharynn Bouden", 66), function(s)
-			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish, Recipe: Longjaw Mud Snapper"), ", a ", pole, " and a ", bauble, ".")
-			Attract(s)
+			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish and Recipe: Longjaw Mud Snapper"), "."):Only(RECIPES)
+			Gear(s)
 		end)
 	end, { x = 49.5, y = 63.5, text = "Fish in Crystal Lake, by Lee Brown." })
 
 	Start(IN_DM, DUNMOROGH, { npc = g.Npc("Paxton Ganter", 1700), x = 35.48, y = 40.22 }, function()
 		Buy(IN_DM, EARLY, DUNMOROGH, 31.53, 44.65, g.Npc("Gretta Ganter", 8508), function(s)
-			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish"), ", a ", pole, " and a ", bauble, ".")
-			Attract(s)
+			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish"), "."):Only(RECIPES)
 			s:Note("Recipe: Longjaw Mud Snapper comes later, from Tharynn Bouden in Goldshire.")
+			Gear(s)
 		end)
 	end, { x = 35.0, y = 42.5, text = "Fish in Iceflow Lake." })
 
 	Start(IN_TEL, TELDRASSIL, { npc = g.Npc("Astaia", 4156), map = DARNASSUS, x = 47.89, y = 56.65 }, function()
-		Buy(IN_TEL, EARLY, TELDRASSIL, 57.19, 61.26, g.Npc("Nyoma", 4265), function(s)
+		Buy(IN_TEL, "skill " .. COOK .. " >= 100", TELDRASSIL, 57.19, 61.26, g.Npc("Nyoma", 4265), function(s)
 			s:Do(g.Buy("Buy Recipe: Brilliant Smallfish and Recipe: Longjaw Mud Snapper"), ".")
 		end)
 		Buy(IN_TEL, EARLY, TELDRASSIL, 55.27, 57.15, g.Npc("Narret Shadowgrove", 3614), function(s)
-			s:Do(g.Buy("Buy a "), pole, " and a ", bauble, ".")
-			Attract(s)
+			Gear(s)
 		end)
 	end, { x = 58.0, y = 67.5, text = "Fish in Lake Al'Ameth, south of Dolanaar." })
 
 	Start(IN_ZEP, ZEPHRAS, { npc = g.Npc("Fenn Fairweather", 251992), x = 45.02, y = 48.44 }, function()
 		Buy(IN_ZEP, EARLY, ZEPHRAS, 44.77, 45.05, g.Npc("Belandiel Farflight", 254360), function(s)
-			s:Do(g.Buy("Buy a "), pole, " and a ", bauble, ".")
-			Attract(s)
+			Gear(s)
 			s:Note("Baelann Swiftcurrent in Valanaar teaches Fishing and sells them too.")
 		end)
 	end, { x = 45.0, y = 48.4, text = "Fish in any lake or river on Zephras Isle, e.g. by Fenn Fairweather." })
@@ -131,7 +135,7 @@ ObviGuide.Guide(function(g)
 		s:Do(g.Buy("Buy Recipe: Bristle Whisker Catfish"), ".")
 		s:Note("No Recipe: Longjaw Mud Snapper yet? Tharynn Bouden in Goldshire sells it.")
 	end)
-	Buy(nil, "items 8932 >= 20 or done " .. CLAMLETTE, SW, 66.36, 73.51, g.Npc("Ben Trias", 4981), function(s)
+	Buy(nil, "items 8932 >= 20 or done " .. CLAMLETTE .. " or skill " .. COOK .. " > 225", SW, 66.36, 73.51, g.Npc("Ben Trias", 4981), function(s)
 		s:Do(g.Buy("Buy 20 "), swiss, ": for the Artisan Cooking quest, much later.")
 	end)
 	g:Step(function(s)
