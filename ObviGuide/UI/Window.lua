@@ -187,12 +187,24 @@ local function ClickAction(b, line)
 	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.opens ~= nil or (g.point or line.step.dest) ~= nil
 end
 
---- Where clicking a line sets the waypoint: its own spot, or else the step's.
+-- what clicking a line that uses an item or casts a spell does, for its tooltip
+local ACTS = { use = "use", equip = "equip", hearth = "use", cast = "cast" }
+
+--- What clicking the line does with an item or spell ("use", "equip", "cast"), or nil when it doesn't.
+---@param g ObviGuideGoal
+---@return string?
+local function Acts(g)
+	return g.id and ACTS[g.kind] or nil
+end
+
+--- Where clicking a line sets the waypoint: its own spot, or else the step's. Not a line that uses an item or casts
+--- a spell (unless it has a spot of its own): that click is the action.
 ---@param b ObviGuideClick
 ---@return ObviGuidePoint?
 local function ClickPoint(b)
 	local g = b.line and b.line.goal
 	if not g or b.line.dim then return nil end
+	if Acts(g) then return g.point end
 	return g.point or b.line.step.dest
 end
 
@@ -240,6 +252,15 @@ local function NewClick()
 			local guide = ns.FindGuide(g.opens)
 			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 			GameTooltip:SetText("|cffffd100Click|r to open the guide |cffffd100" .. (guide and guide.title or g.opens) .. "|r")
+			GameTooltip:Show()
+			return
+		end
+		local acts = g and not self.line.dim and Acts(g)
+		if acts then
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			-- the line's own words without its verb: "Use [Shiny Bauble]" -> "[Shiny Bauble]"
+			local what = g.text:gsub("^%a+ ", "")
+			GameTooltip:SetText("|cffffd100Click|r to " .. acts .. " " .. what)
 			GameTooltip:Show()
 			return
 		end
