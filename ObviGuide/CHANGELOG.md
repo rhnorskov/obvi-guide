@@ -5,6 +5,8 @@
 - Going back to a step the guide skipped (you had it already) shows its lines ticked off.
 - Clicking a line that uses or equips an item or casts a spell does just that, and says so when you hover it; it no
   longer sets the waypoint too.
+- Guide lines can be ticked off by a condition: `s:Do("Buy Recipe: ..."):Done("knows 7751")` stays in the list, ticked, once
+  it holds.
 - Guide conditions can test a profession's cap: `skillmax Cooking >= 225` (Expert learned).
 - Guides can have exploration lines (`s:Explore(challenge, area)`), done once the game counts the area as found in that
   exploration challenge.

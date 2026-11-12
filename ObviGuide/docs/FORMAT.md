@@ -85,7 +85,8 @@ end)
 | `Say(text...)` | Plain text: an instruction with nothing to tick off. | - |
 | `Note(text...)` | A note, shown right after the line above it. | - |
 
-Every line can be limited with `:Only(condition)`.
+Every line can be limited with `:Only(condition)`, and ticked off by a condition with `:Done(condition)` (a purchase
+you no longer need stays in the list, ticked, where `:Only` would hide it).
 
 ## Markers
 

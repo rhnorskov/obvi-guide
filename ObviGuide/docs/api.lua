@@ -163,6 +163,12 @@ local Line = {}
 ---@return ObviGuideLine
 function Line:Only(condition) end
 
+--- The line counts as done (shown ticked) once this holds, e.g. a purchase you no longer need:
+--- `s:Do("Buy Recipe: Brilliant Smallfish"):Done("knows 7751")`.
+---@param condition ObviGuideCondition
+---@return ObviGuideLine
+function Line:Done(condition) end
+
 --- The step's destination. Done when you come within `radius` yards (default 10).
 ---@param map integer      uiMapID
 ---@param x number         0-100, as the map shows it

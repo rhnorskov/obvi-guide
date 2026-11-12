@@ -81,21 +81,21 @@ ObviGuide.Guide(function(g)
 		end)
 	end
 	local EARLY = "skill " .. FISH .. " >= 75"
-	-- each purchase only while you still need it: a recipe while you don't know it, the pole while you have none
-	local NO_POLE = "items 6256 < 1"
+	-- each purchase ticked off once you don't need it: a recipe once you know it, the pole once you have one
+	local HAS_POLE = "items 6256 >= 1"
 	-- the recipes' spells (a recipe you've learned is a spell you know), from WhatsTraining's Classic recipe list
 	local SPELLS = { ["Brilliant Smallfish"] = 7751, ["Longjaw Mud Snapper"] = 7753, ["Bristle Whisker Catfish"] = 7755,
 		["Mithril Head Trout"] = 20916, ["Filet of Redgill"] = 18241, ["Nightfin Soup"] = 18243,
 		["Poached Sunscale Salmon"] = 18244, ["Spotted Yellowtail"] = 18238, ["Baked Salmon"] = 18247 }
-	--- A recipe to buy, shown only while you don't know it.
+	--- A recipe to buy, ticked off once you know it.
 	---@param s ObviGuideStepBuilder
 	---@param name string
 	local function Recipe(s, name)
-		s:Do(g.Buy("Buy Recipe: " .. name), "."):Only("not knows " .. SPELLS[name])
+		s:Do(g.Buy("Buy Recipe: " .. name), "."):Done("knows " .. SPELLS[name])
 	end
 	---@param s ObviGuideStepBuilder
 	local function Gear(s)
-		s:Do(g.Buy("Buy a "), pole, " and a ", bauble, "."):Only(NO_POLE)
+		s:Do(g.Buy("Buy a "), pole, " and a ", bauble, "."):Done(HAS_POLE)
 	end
 
 	-- Fishing 1-75: the starting zone
@@ -170,7 +170,7 @@ ObviGuide.Guide(function(g)
 
 	-- Fishing 130-205 and Cooking 100-175: Booty Bay, then Mystral Lake
 	Buy(nil, "skill " .. FISH .. " >= 205", STV, 27.42, 77.16, g.Npc("Old Man Heming", 2626), function(s)
-		s:Do(g.Buy("Buy "), g.Item("Expert Fishing - The Bass and You", 16083), " in Booty Bay."):Only("skillmax " .. FISH .. " < 225")
+		s:Do(g.Buy("Buy "), g.Item("Expert Fishing - The Bass and You", 16083), " in Booty Bay."):Done("skillmax " .. FISH .. " >= 225")
 	end)
 	g:Step(function(s)
 		s:Train(FISH, 225)
@@ -181,8 +181,8 @@ ObviGuide.Guide(function(g)
 		Recipe(s, "Filet of Redgill")
 	end)
 	Buy(nil, "skill " .. FISH .. " >= 205", ASH, 49.48, 67.09, g.Npc("Shandrina", 3955), function(s)
-		s:Do(g.Buy("Buy the "), g.Item("Expert Cookbook", 16072), "."):Only("skillmax " .. COOK .. " < 225")
-		s:Do(g.Buy("Buy 5 "), crawlers, "."):Only("skill " .. FISH .. " < 150")
+		s:Do(g.Buy("Buy the "), g.Item("Expert Cookbook", 16072), "."):Done("skillmax " .. COOK .. " >= 225")
+		s:Do(g.Buy("Buy 5 "), crawlers, "."):Done("skill " .. FISH .. " >= 150")
 		s:Note("2 last until 150. Keep the other 3 for Dustwallow Marsh, where nobody sells them.")
 	end)
 	g:Step(function(s)
