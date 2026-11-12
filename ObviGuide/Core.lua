@@ -13,6 +13,7 @@ local ADDON, ns = ...
 ---@field Action ObviGuideAction
 ---@field Window ObviGuideWindow
 ---@field MinimapPins ObviGuideMinimapPins
+---@field WorldMapPins ObviGuideWorldMapPins
 ---@field Arrow ObviGuideArrow
 ---@field guides ObviGuideGuide[]                  every guide added this session, in order
 ---@field warnings string[]                        what the readers could not translate, for /og debug
@@ -41,6 +42,7 @@ local ADDON, ns = ...
 ---@field pickerShowOtherFaction? boolean   the guide picker also lists the guides only for the other faction (its gear menu; nil: left out)
 ---@field previewSteps? integer   how many upcoming steps the window shows dimmed (default 0)
 ---@field minimap? boolean        the step's points on the minimap (nil: on)
+---@field worldMap? boolean       the step's points on the world map (nil: on)
 ---@field waypoints? ObviGuideWaypoints   how the way is shown (nil: Obvi Guide's own arrow)
 ---@field arrow? {point: string, relPoint: string, x: number, y: number}   where the arrow was dragged
 ---@field flip? boolean           the window's header at the bottom (it grows upwards)

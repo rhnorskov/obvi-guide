@@ -20,6 +20,7 @@ Quests.lua
 Catchup.lua
 UI\Window.lua
 UI\Minimap.lua
+UI\WorldMap.lua
 UI\Arrow.lua
 UI\Copy.lua
 UI\Cleanup.lua

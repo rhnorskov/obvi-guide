@@ -52,6 +52,10 @@ local function Build()
 	Checkbox("Show on the minimap", "minimap", true,
 		"The current step's destination and the spots it marks (yellow dots) on the minimap.",
 		function() ns.MinimapPins.Refresh() end)
+	Checkbox("Show on the world map", "worldMap", true,
+		"The current step's destination (a gold pin) and the spots it marks (dots) on the world map, on the zone's map "
+		.. "and the continent's.",
+		function() ns.WorldMapPins.Refresh() end)
 	-- the addons are only offered when installed; a saved choice that isn't shows (and works) as the arrow
 	local waypoints = Settings.RegisterProxySetting(category, "ObviGuide_waypoints", Settings.VarType.String,
 		"Waypoints", "arrow",

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The current step on the world map: its destination as a gold pin and the spots it marks ("multiple locations") as
+  dots, in the minimap's colours, on the zone's map and the continent's. Hover one for the step. Show on the world map
+  (setting) turns it off.
 - Going back to a step the guide skipped (you had it already) shows its click-when-done lines ticked off; lines the
   game can check (an item equipped, a skill) show what's true.
 - Clicking a line that uses or equips an item or casts a spell does just that, and says so when you hover it; it no

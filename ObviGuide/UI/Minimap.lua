@@ -150,7 +150,7 @@ end
 --- route dots; white for anything else (a place to go).
 ---@param s ObviGuideStep
 ---@return number r, number g, number b
-local function StepColor(s)
+function Pins.StepColor(s)
 	local function Hex(c) return tonumber(c:sub(3, 4), 16) / 255, tonumber(c:sub(5, 6), 16) / 255, tonumber(c:sub(7, 8), 16) / 255 end
 	local C = ns.Colors
 	for _, g in ipairs(s.goals) do
@@ -236,7 +236,7 @@ function Pins.Refresh()
 	used = 0
 	-- the dots: the step's route points and its markers (where its mobs or things are)
 	if on and step then
-		local r, g, b = StepColor(step)
+		local r, g, b = Pins.StepColor(step)
 		for _, p in ipairs(step.path) do Place(Dot(r, g, b), p) end
 		for _, p in ipairs(step.markers or {}) do Place(Dot(r, g, b), p) end
 	end
