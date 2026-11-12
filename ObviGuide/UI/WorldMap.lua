@@ -56,15 +56,7 @@ local function Circle(pin, layer, size, r, g, b, a)
 	return tex
 end
 
-local function ShowTooltip(self)
-	local text
-	for _, g in ipairs(step and step.goals or {}) do
-		if g.text and g.kind ~= "text" then text = g.text break end
-	end
-	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	GameTooltip:SetText(text or (step and step.label) or "Obvi Guide", 1, 1, 1, 1, true)
-	GameTooltip:Show()
-end
+local function ShowTooltip(self) ns.MinimapPins.Tooltip(self, step) end
 
 --- A pin from the pool, made into a dot (r, g, b) or, without a colour, the destination's gold pin.
 ---@param canvas Frame

@@ -103,13 +103,29 @@ local function NewPin(size, level)
 	return pin
 end
 
--- the destination shows the step's first line on hover; the dots take no mouse
-local function ShowTooltip(self)
-	local goal = step and step.goals[1]
-	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	GameTooltip:SetText(goal and goal.text or (step and step.label) or "Obvi Guide", 1, 1, 1, 1, true)
+--- A pin's tooltip: what is still to do in the step (its open lines, with their progress), else its first line.
+---@param owner Frame
+---@param s? ObviGuideStep
+function Pins.Tooltip(owner, s)
+	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+	local first = true
+	for _, g in ipairs(s and s.goals or {}) do
+		if g.text and g.kind ~= "text" and ns.Engine.IsVisible(g) and not ns.Engine.IsComplete(g, s --[[@as ObviGuideStep]]) then
+			local progress = ns.Engine.Progress(g)
+			local text = g.text .. (progress and (" |cffaaaaaa(" .. progress .. ")|r") or "")
+			if first then GameTooltip:SetText(text, 1, 1, 1, 1, true) else GameTooltip:AddLine(text, 1, 1, 1, true) end
+			first = false
+		end
+	end
+	if first then
+		local goal = s and s.goals[1]
+		GameTooltip:SetText(goal and goal.text or (s and s.label) or "Obvi Guide", 1, 1, 1, 1, true)
+	end
 	GameTooltip:Show()
 end
+
+-- the destination shows what is left in the step on hover; the dots take no mouse
+local function ShowTooltip(self) Pins.Tooltip(self, step) end
 
 ---@return ObviGuidePin
 local function Dest()
