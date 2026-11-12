@@ -571,6 +571,17 @@ function Window.Refresh()
 		return
 	end
 	local y = TopPad()
+	-- a step the guide passes over (you went back to it): say why, above its lines
+	local why
+	if not ns.Conditions.Eval(step.cond) then why = "Skipped: not for this character."
+	elseif step.skip and ns.Conditions.Eval(step.skip) then why = "Skipped: you have this already."
+	elseif not Engine.StepState(step) then why = "Skipped: nothing left to do here." end
+	if why then
+		local line = Line()
+		line.text:SetText("|cff888888" .. why .. "|r")
+		Icon(line, nil, false)
+		y = Place(line, y, 0)
+	end
 	y = Goals(step, step.goals, y, false, false, step.tips)
 	-- side tasks
 	local open = {}
