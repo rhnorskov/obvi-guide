@@ -169,6 +169,11 @@ function Line:Only(condition) end
 ---@return ObviGuideLine
 function Line:Done(condition) end
 
+--- The line is optional: the step is done once its other lines are, and this one shows its own state (ticked only
+--- when it is done), e.g. `s:Equip(pole):Optional()` beside `s:Skill("Fishing", 75)`.
+---@return ObviGuideLine
+function Line:Optional() end
+
 --- The step's destination. Done when you come within `radius` yards (default 10).
 ---@param map integer      uiMapID
 ---@param x number         0-100, as the map shows it

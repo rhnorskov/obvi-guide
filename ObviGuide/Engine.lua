@@ -529,7 +529,7 @@ end
 function Engine.SideOpen(box, step)
 	local any = false
 	for _, g in ipairs(box) do
-		if COMPLETABLE[g.kind] then
+		if COMPLETABLE[g.kind] and not g.optional then
 			any = true
 			if Engine.IsVisible(g) and not Engine.IsComplete(g, step) then return true end
 		end
@@ -634,7 +634,7 @@ function Engine.StepState(step)
 		if not Engine.IsVisible(g) then locked, waiting = Engine.Locked(g) end
 		if locked and keep(g, waiting) then
 			any, done = true, false
-		elseif COMPLETABLE[g.kind] and Engine.IsVisible(g) then
+		elseif COMPLETABLE[g.kind] and not g.optional and Engine.IsVisible(g) then
 			any = true
 			local complete = Engine.IsComplete(g, step)
 			if complete and g.finishes then return true, true end

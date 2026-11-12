@@ -134,6 +134,7 @@ local ADDON, ns = ...
 ---@field text string            what the window shows
 ---@field cond? ObviGuideCond     the line is shown (and counts) only while this holds
 ---@field done? ObviGuideCond     the line is done while this holds (besides what its kind checks)
+---@field optional? boolean  not needed for its step to be done; shows its own state
 ---@field orGroup? string        lines with the same group are alternatives: once orCount of them are done, the
 ---@field orCount? integer       step counts them all as done (default 1)
 ---@field finishes? boolean      once this line is done, so is the step (Zygor's confirm lines)

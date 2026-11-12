@@ -221,6 +221,7 @@ end
 ---@field op string          the method that made it ("Goto", "Talk", ...)
 ---@field only? any          its condition, as written
 ---@field doneWhen? any      when it counts as done (shown ticked), as written
+---@field optional? boolean  not needed for the step to be done
 ---@field text? string
 ---@field mob? ObviGuideMarkerImpl
 ---@field marker? ObviGuideMarkerImpl
@@ -233,6 +234,10 @@ function LineMT.__index:Only(cond)
 end
 function LineMT.__index:Done(cond)
 	self.doneWhen = cond
+	return self
+end
+function LineMT.__index:Optional()
+	self.optional = true
 	return self
 end
 
@@ -458,6 +463,7 @@ local function BuildStep(lines, untilStep, ctx)
 		if goal then
 			goal.cond = cond
 			if l.doneWhen ~= nil then goal.done = Cond(l.doneWhen, ctx) end
+			goal.optional = l.optional
 			-- a challenge's line goes once it is finished, so the step lists what is left
 			if goal.kind == "challenge" then goal.cond = cond and { "and", cond, { "not", goal.done } } or { "not", goal.done } end
 			if (goal.kind == "accept" or goal.kind == "turnin") and talk then goal.target = talk end
