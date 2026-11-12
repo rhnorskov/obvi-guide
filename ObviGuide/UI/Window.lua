@@ -571,7 +571,6 @@ function Window.Refresh()
 		return
 	end
 	local y = TopPad()
-
 	y = Goals(step, step.goals, y, false, false, step.tips)
 	-- side tasks
 	local open = {}
