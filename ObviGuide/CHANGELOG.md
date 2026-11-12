@@ -6,6 +6,7 @@
   game can check (an item equipped, a skill) show what's true.
 - Clicking a line that uses or equips an item or casts a spell does just that, and says so when you hover it; it no
   longer sets the waypoint too.
+- A line the game can check (a recipe you learn, an area you explore) no longer says "click when done".
 - Guide lines can be optional (`:Optional()`): the step is done once its other lines are, and the optional one shows
   its own state, e.g. Equip Fishing Pole beside Reach Fishing 75.
 - Guide lines can be ticked off by a condition: `s:Do("Buy Recipe: ..."):Done("knows 7751")` stays in the list, ticked, once

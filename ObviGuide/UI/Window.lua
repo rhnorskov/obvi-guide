@@ -380,7 +380,7 @@ local function RenderLine(line)
 			text = text .. " " .. tag
 		end
 	end
-	if g.kind == "confirm" and not dim and not done then text = text .. " |cff888888(click when done)|r" end
+	if g.kind == "confirm" and not g.done and not dim and not done then text = text .. " |cff888888(click when done)|r" end
 	-- a quest you can't take yet: what it waits for, small, under it, and the catch-up the line's click starts
 	if line.locked and not line.quiet then
 		-- with what it's worth: the XP of the catch-up, the quest, and its chain after it (missed if you go on)
