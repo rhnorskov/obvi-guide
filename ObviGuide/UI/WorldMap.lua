@@ -23,6 +23,29 @@ local GOLD = { 1, 0.82, 0 }
 -- (FrameXML; the annotations differ by client)
 local WorldMapFrame = _G["WorldMapFrame"] ---@type table?
 
+-- OpenMap (a seamless world map): while its stitched map is up, pins go where it says on its canvas (over all of the
+-- stitched map, not only the map underneath) and above its art (its docs/api.md)
+---@class OpenMapAPI
+---@field IsStitched fun(): boolean
+---@field CanvasFromWorldPos fun(continent: integer, x: number, y: number): number?, number?
+---@field ArtTopLevel fun(): integer?
+---@field RegisterCallback fun(owner: any, event: string, method: function)
+local function OpenMap()
+	local api = _G["OpenMapAPI"] ---@type OpenMapAPI?
+	if api and api.IsStitched and api.IsStitched() then return api end
+	return nil
+end
+
+--- The frame level pins sit on: above the map's art (OpenMap's stitched art reaches higher than Blizzard's).
+---@param canvas Frame
+---@param above integer
+---@return integer
+local function Level(canvas, above)
+	local api = OpenMap()
+	local top = api and api.ArtTopLevel and api.ArtTopLevel()
+	return math.max(canvas:GetFrameLevel(), top or 0) + above
+end
+
 local pins = {} ---@type ObviGuideMapPin[]
 local used = 0
 local step ---@type ObviGuideStep?
@@ -87,7 +110,7 @@ local function Pin(canvas, r, g, b)
 		pin.rim:Show()
 		pin.dot:Show()
 		pin.dot:SetVertexColor(r, g or 1, b or 1, 1)
-		pin.holder:SetFrameLevel(canvas:GetFrameLevel() + 100)
+		pin.holder:SetFrameLevel(Level(canvas, 100))
 	else
 		pin:SetSize(DEST, DEST)
 		if not pin.gold then
@@ -103,7 +126,7 @@ local function Pin(canvas, r, g, b)
 			end
 		end
 		pin.gold:Show()
-		pin.holder:SetFrameLevel(canvas:GetFrameLevel() + 110)
+		pin.holder:SetFrameLevel(Level(canvas, 110))
 	end
 	pin.holder:Show()
 	return pin
@@ -126,6 +149,13 @@ end
 ---@param map integer
 ---@return number?, number?
 local function OnMap(p, map)
+	local api = OpenMap()
+	if api then
+		-- on OpenMap's stitched map: anywhere on it (past the map underneath too)
+		local continent, world = C_Map.GetWorldPosFromMapPos(p.map, CreateVector2D(p.x, p.y))
+		if not (continent and world) then return nil end
+		return api.CanvasFromWorldPos(continent, world.x, world.y)
+	end
 	if p.map == map then return p.x, p.y end
 	local continent, world = C_Map.GetWorldPosFromMapPos(p.map, CreateVector2D(p.x, p.y))
 	if not (continent and world) or Continent(map) ~= continent then return nil end
@@ -188,6 +218,15 @@ if WorldMapFrame then
 		if map ~= shownMap or scale ~= shownScale then Layout() end
 	end)
 end
+
+-- OpenMap: its view moving (or turning stitched on or off) moves the pins
+local function HookOpenMap()
+	local api = _G["OpenMapAPI"] ---@type OpenMapAPI?
+	if not (api and api.RegisterCallback) then return end
+	api.RegisterCallback(Map, "OpenMap_ViewChanged", function() if WorldMapFrame and WorldMapFrame:IsShown() then Layout() end end)
+	api.RegisterCallback(Map, "OpenMap_StitchedChanged", function() Map.Refresh() end)
+end
+ns:On("PLAYER_LOGIN", HookOpenMap)
 
 ns:On("OBVIGUIDE_STEP", function() Map.Refresh() end)
 ns:On("OBVIGUIDE_UPDATE", function() Map.Refresh() end)
