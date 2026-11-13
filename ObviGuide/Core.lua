@@ -56,6 +56,7 @@ local ADDON, ns = ...
 ---@class ObviGuideTab
 ---@field guide? string          the guide in this tab (name, or title); none: an empty tab
 ---@field step? integer          the step it is on
+---@field reached? integer       the furthest step the guide has gone to by itself (going back leaves it there)
 
 ---@class ObviGuideCharDB
 ---@field tabs? ObviGuideTab[]   the guides open in tabs

@@ -702,18 +702,22 @@ local function Tabs()
 	return db.tabs
 end
 
+-- Going back pauses auto-advance, as Zygor does: it stays paused until the step you're on is not done (from then
+-- on finishing it moves on as usual), so a finished step you went back to stays put.
+local paused = false
+-- the furthest step the guide itself has gone to in this guide (while not paused): while you're on an earlier one
+-- (you went back), the window's next arrow pulses
+local reached = 0
+
 local function Changed()
+	if not paused then reached = math.max(reached, index) end
 	local tab = Tabs()[ns.charDB and ns.charDB.tab or 1]
 	-- (a tab whose guide isn't here, its pack not loaded, keeps it)
-	if tab and guide then tab.guide, tab.step = guide.name or guide.title, index end
+	if tab and guide then tab.guide, tab.step, tab.reached = guide.name or guide.title, index, reached end
 	local _, step = Engine.Current()
 	ns.Travel.Show(step)
 	ns:Fire("OBVIGUIDE_STEP")
 end
-
--- Going back pauses auto-advance, as Zygor does: it stays paused until the step you're on is not done (from then
--- on finishing it moves on as usual), so a finished step you went back to stays put.
-local paused = false
 
 -- a guide in any order (guide.nearest): the route is planned again when the guide is opened
 local replan = false
@@ -868,7 +872,7 @@ function Engine.Load(title, step)
 	local g = ns.FindGuide(title)
 	if not g then ns.Print("no guide called '%s'", title) return end
 	guide, index = g, math.max(1, math.min(step or 1, #g.steps))
-	paused, ended = false, false
+	paused, ended, reached = false, false, 0
 	replan = true
 	ns:Fire("OBVIGUIDE_LOADED", g)   -- (the guide picker's "Recent")
 	Changed()
@@ -891,7 +895,8 @@ local function ShowTab()
 	else
 		guide, index = nil, 1
 	end
-	paused, ended = false, false
+	-- (a step you went back to stays one: the furthest step is kept with the tab)
+	paused, ended, reached = index < (tab and tab.reached or 0), false, tab and tab.reached or 0
 	Changed()
 	Engine.Advance()
 	ns:Fire("OBVIGUIDE_UPDATE")
@@ -966,6 +971,14 @@ function Engine.Step(dir)
 	end
 	-- next past the last step: the guide's end
 	if dir > 0 then ended = true Changed() end
+end
+
+--- Whether you're back from the furthest step the guide has gone to (you went back with the arrows or the counter):
+--- that step's number, or nil when you're on it (or past it).
+---@return integer?
+function Engine.Behind()
+	if guide and not ended and index < reached then return reached end
+	return nil
 end
 
 --- Straight to a step by its number (typed into the step counter), held there like a step chosen with the arrows.

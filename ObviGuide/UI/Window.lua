@@ -31,6 +31,8 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@class ObviGuideFrame : Frame
 ---@field Title FontString
 ---@field StepText FontString
+---@field FwdPulse AnimationGroup   the next arrow's pulse, while you're back from the step the guide is on
+---@field FwdGlow Texture
 ---@field Background Texture
 ---@field Body Frame
 ---@field Header Frame
@@ -525,6 +527,12 @@ function Window.Refresh()
 	local guide, step = Engine.Current()
 	frame.Title:SetText(guide and guide.title or "Obvi Guide")
 	frame.StepText:SetText(guide and step and ("%d/%d"):format(step.index, #guide.steps) or "")
+	if Engine.Behind() then
+		if not frame.FwdPulse:IsPlaying() then frame.FwdPulse:Play() end
+	elseif frame.FwdPulse:IsPlaying() then
+		frame.FwdPulse:Stop()
+		frame.FwdGlow:SetAlpha(0)
+	end
 	used, sepUsed = 0, 0
 	frame.SideHeader:Hide()
 	if frame.collapsed then
@@ -797,6 +805,8 @@ local function Build()
 		b:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:SetText(tip)
+			local at = dir > 0 and Engine.Behind()
+			if at then GameTooltip:AddLine(("You went back: the guide is at step %d."):format(at), 1, 0.82, 0) end
 			GameTooltip:AddLine(dir > 0 and "Right-click: next unfinished step" or "Right-click: back to an unfinished step", 1, 1, 1)
 			GameTooltip:Show()
 		end)
@@ -805,6 +815,20 @@ local function Build()
 	end
 	local fwd = Arrow("common-icon-forwardarrow", gear, 1, "Next step")
 	local back = Arrow("common-icon-backarrow", fwd, -1, "Previous step")
+	-- the next arrow pulses gold while you're back from the step the guide is on
+	local glow = fwd:CreateTexture(nil, "OVERLAY")
+	glow:SetAtlas("common-icon-forwardarrow")
+	glow:SetAllPoints()
+	glow:SetBlendMode("ADD")
+	glow:SetVertexColor(1, 0.82, 0)
+	glow:SetAlpha(0)
+	local pulse = glow:CreateAnimationGroup()
+	pulse:SetLooping("BOUNCE")
+	local fade = pulse:CreateAnimation("Alpha")
+	fade:SetFromAlpha(0)
+	fade:SetToAlpha(1)
+	fade:SetDuration(0.6)
+	frame.FwdPulse, frame.FwdGlow = pulse, glow
 	frame.StepText = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	frame.StepText:SetPoint("RIGHT", back, "LEFT", -4, 0)
 	frame.Title:SetPoint("RIGHT", frame.StepText, "LEFT", -6, 0)

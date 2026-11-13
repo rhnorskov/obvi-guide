@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The next-step arrow pulses gold while you're on an earlier step than the guide has got to (you went back); its
+  tooltip says which step that is. Kept across a reload.
 - The current step on the world map: its destination as a gold pin and the spots it marks ("multiple locations") as
   dots, in the minimap's colours, on the zone's map and the continent's. Hover one for the step. Show on the world map
   (setting) turns it off. With OpenMap, they show across its seamless map.
