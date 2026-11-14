@@ -1,12 +1,13 @@
 -- Excavation Site: Wetlands (24-29): the quests Attune lists for each faction. Alliance: Caitlin Grassman's chain
 -- (Lost in the Thicket Things, Heartwoven; Seeking Caitlin handed in if you have it), Young Crocolisk Skins and Highland
 -- Hides, Rethiel the Greenwarden's chain up to Horrors in the Highland, Songblade Search and Fallen in the Fen, and
--- Lost Relic Carry from the Relic Guardian. Horde: Dragonmaw Rumors and Open the Maw, Changing Tastes, and Elder
--- Knowledge from the Relic Guardian. Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's
--- Forever data; the entrance from DungeonJournal (Exehn). See README.md.
+-- Lost Relic Carry from the Relic Guardian with Prehistoric Prism after it. Horde: Dragonmaw Rumors and Open the Maw,
+-- Changing Tastes, and Elder Knowledge from the Relic Guardian with Earthen Echo after it. Quest list from Attune
+-- (CixiDelmont) and DungeonJournal (Exehn); quest, NPC and item ids and positions from Attune and QuestieDB's Forever
+-- data; the entrance from DungeonJournal. See README.md.
 
-local WETLANDS, REDRIDGE = 1437, 1433
-local ARATHI, ORGRIMMAR, THUNDER_BLUFF = 1417, 1454, 1456
+local WETLANDS, REDRIDGE, IRONFORGE = 1437, 1433, 1455
+local ARATHI, ORGRIMMAR, THUNDER_BLUFF, MULGORE = 1417, 1454, 1456, 1412
 
 -- the dungeon portal: under a big tree in the hills south-east of Whelgar's Excavation
 local function enter(s, skip)
@@ -191,7 +192,8 @@ ObviGuide.Guide(function(g)
 		s:Goto(WETLANDS, 38.8, 52.4)
 		s:Talk(g.Npc("Prospector Whelgar", 1077))
 		s:Turnin(95810, "Lost Relic Carry")
-		s:Note("Inside the small cave at Whelgar's Excavation.")
+		s:Accept(98824, "Prehistoric Prism")
+		s:Note("Inside the small cave at Whelgar's Excavation. He sends the relic on to Ironforge.")
 	end)
 
 	g:Step(function(s)
@@ -204,6 +206,14 @@ ObviGuide.Guide(function(g)
 		s:Goto(WETLANDS, 11.9, 58.8)
 		s:Talk(caitlin)
 		s:Turnin(95809, "Heartwoven")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 98824 or done 98824"
+		s:Goto(IRONFORGE, 69.9, 18.6)
+		s:Talk(g.Npc("High Explorer Magellas", 5387))
+		s:Turnin(98824, "Prehistoric Prism")
+		s:Note("In the Hall of Explorers. Fly to Ironforge from Menethil Harbor.")
 	end)
 
 	g:Step(function(s)
@@ -303,6 +313,15 @@ ObviGuide.Guide(function(g)
 		s:Goto(THUNDER_BLUFF, 71.1, 34.2)
 		s:Talk(g.Npc("Bashana Runetotem", 9087))
 		s:Turnin(95664, "Elder Knowledge")
+		s:Accept(98823, "Earthen Echo")
 		s:Note("On the Elder Rise.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 98823 or done 98823"
+		s:Goto(MULGORE, 33.4, 22.6)
+		s:Talk(g.Npc("Muln Earthfury", 259118))
+		s:Turnin(98823, "Earthen Echo")
+		s:Note("On the Skywatcher Plateau in north-west Mulgore.")
 	end)
 end)

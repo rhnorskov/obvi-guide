@@ -1,11 +1,12 @@
--- Blackfathom Deeps (25-28): the quests Attune lists for each faction. Alliance: Knowledge in the Deeps, Researching
--- the Corruption, Twilight Falls, and Blackfathom Villainy with its lead-in from Darnassus. Horde: Trouble in the
--- Deeps and The Essence of Aku'Mai, Amongst the Ruins, Allegiance to the Old Gods from the Damp Note, Baron Aquanis,
--- and Blackfathom Villainy. Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's Forever
--- data; the entrance from DungeonJournal (Exehn). See README.md.
+-- Blackfathom Deeps (25-28): the quests Attune and DungeonJournal (Exehn) list for each faction. Alliance: Knowledge in
+-- the Deeps, Researching the Corruption with The Corruption Abroad from Stormwind before it, Twilight Falls, and
+-- Blackfathom Villainy with its lead-in from Darnassus. Horde: Trouble in the Deeps and The Essence of Aku'Mai, Amongst
+-- the Ruins, Allegiance to the Old Gods from the Damp Note, Baron Aquanis, and Blackfathom Villainy. Quest, NPC and item
+-- ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance from DungeonJournal. See
+-- README.md.
 
 local ASHENVALE, DARKSHORE, DARNASSUS, IRONFORGE = 1440, 1439, 1457, 1455
-local STONETALON, THUNDER_BLUFF = 1442, 1456
+local STONETALON, THUNDER_BLUFF, STORMWIND = 1442, 1456, 1453
 
 -- the entrance: dive into the water on the Zoram Strand and swim into the cave, through it to the portal
 local function enter(s, skip)
@@ -38,17 +39,27 @@ ObviGuide.Guide(function(g)
 	local gershala = g.Npc("Gershala Nightwhisper", 8997)
 	local manados  = g.Npc("Argent Guard Manados", 4784)
 
-	-- Ironforge, then the boat from Menethil to Auberdine, and Darnassus
+	-- Ironforge and Stormwind, then the boat from Menethil to Auberdine, and Darnassus
 	g:Step(function(s)
 		s:Goto(IRONFORGE, 50.8, 5.6)
 		s:Talk(gerrig)
 		s:Accept(971, "Knowledge in the Deeps")
-		s:Note("In the Forlorn Cavern, inside the building up the stairs. Then fly to Menethil Harbor and take the boat to Auberdine.")
+		s:Note("In the Forlorn Cavern, inside the building up the stairs. Then take the Deeprun Tram to Stormwind.")
+	end)
+
+	-- The Corruption Abroad only leads to Gershala, who gives her quest without it
+	g:Step(function(s)
+		s.skip = "onquest 1275 or done 1275"
+		s:Goto(STORMWIND, 36.2, 67.6)
+		s:Talk(g.Npc("Argos Nightwhisper", 4984))
+		s:Accept(3765, "The Corruption Abroad")
+		s:Note("In the Park. Then fly to Menethil Harbor and take the boat to Auberdine.")
 	end)
 
 	g:Step(function(s)
 		s:Goto(DARKSHORE, 38.3, 43.0)
 		s:Talk(gershala)
+		s:Turnin(3765, "The Corruption Abroad"):Only("onquest 3765")
 		s:Accept(1275, "Researching the Corruption")
 		s:Note("In Auberdine. Then the boat to Rut'theran Village and the portal up to Darnassus.")
 	end)

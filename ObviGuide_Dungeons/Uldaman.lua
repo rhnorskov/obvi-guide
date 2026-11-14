@@ -1,12 +1,14 @@
--- Uldaman (Alliance and Horde, 35-47): the quests Attune lists for the dungeon. Both factions: Power Stones, Solution
--- to Doom, the two Reagent Runs, Reclaimed Treasures and The Platinum Discs. Alliance: The Lost Dwarves and The Hidden
--- Chamber, The Lost Tablets of Will, A Sign of Hope and Amulet of Secrets (Hammertoe Grez), and The Shattered Necklace
--- that drops inside. Horde: the Necklace Recovery chain up to Find the Gems and Power Source, which takes three
--- visits: the necklace, the paladin's remains, then the gems. Quest, NPC, item and object ids and positions from
--- Attune (CixiDelmont) and QuestieDB's Forever data; the entrance and the outer caves from DungeonJournal (Exehn).
--- See README.md.
+-- Uldaman (Alliance and Horde, 35-47): the quests Attune and DungeonJournal (Exehn) list for the dungeon. Both
+-- factions: Power Stones, Solution to Doom, the two Reagent Runs, Reclaimed Treasures and The Platinum Discs, with the
+-- discs' follow-up to Ironforge or Thunder Bluff. Alliance: The Lost Dwarves and The Hidden Chamber, The Lost Tablets
+-- of Will, A Sign of Hope and Amulet of Secrets (Hammertoe Grez), Prospector Ironband's chain from Ironband Wants You!
+-- to Agmond's Fate, and Talvash del Kissel's necklace from The Shattered Necklace that drops inside to Restoring the
+-- Necklace, which takes a second visit for the paladin's remains and the gems. Horde: the Necklace Recovery chain up
+-- to Find the Gems and Power Source, which takes three visits: the necklace, the paladin's remains, then the gems.
+-- Quest, NPC, item and object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance,
+-- the outer caves and where the gems are from DungeonJournal (Exehn). See README.md.
 
-local BADLANDS, LOCH_MODAN, IRONFORGE, UNDERCITY, ORGRIMMAR = 1418, 1432, 1455, 1458, 1454
+local BADLANDS, LOCH_MODAN, IRONFORGE, UNDERCITY, ORGRIMMAR, THUNDERBLUFF = 1418, 1432, 1455, 1458, 1454, 1456
 
 -- the Badlands, both factions
 local function rigglefuzz(g, s, turnin)
@@ -53,12 +55,46 @@ local function ryuneh(g, s)
 	s:Note("In an ", g.Object("Ancient Chest"), " in the outer caves.")
 end
 
-local function discs(g, s)
+-- followUp: the faction's Platinum Discs quest that takes the small discs home
+local function discs(g, s, followUp)
 	s:Talk(g.Npc("Lore Keeper of Norgannon", 7172))
 	s:Accept(2278, "The Platinum Discs")
 	s:Quest(2278, 1, "Hear out the stone watcher, then click the Discs of Norgannon.")
 	s:Turnin(2278, "The Platinum Discs")
-	s:Note("In the chamber past Archaedas, the last boss. The discs then offer a follow-up to take to your capital.")
+	s:Accept(followUp, "The Platinum Discs")
+	s:Note("In the chamber past Archaedas, the last boss. Click the discs again for the follow-up: a small copy to take to your capital.")
+end
+
+-- the necklace's three gems, the same for both factions' quest (ruby 1, sapphire 2, topaz 3); label: the step that
+-- ends the visit, only: who sees them
+local function gems(g, quest, label, only)
+	g:Side(label, function(s)
+		s.only = only
+		s:Collect(g.Item("Shattered Necklace Ruby", 7669), { quest = quest, objective = 1 })
+		s:Note("In a ", g.Object("Shadowforge Cache"), ", in a barricaded Shadowforge area.")
+	end)
+
+	g:Side(label, function(s)
+		s.only = only
+		s:Collect(g.Item("Shattered Necklace Topaz", 7671), { quest = quest, objective = 3 })
+		s:Note("In a ", g.Object("Conspicuous Urn"), ", in the trogg area near the lost Alliance dwarves.")
+	end)
+
+	g:Step(function(s)
+		s.only = only
+		s:Kill(g.Mob("Grimlok", 4854))
+		s:Collect(g.Item("Shattered Necklace Sapphire", 7670), { quest = quest, objective = 2 })
+		s:Note("The trogg chieftain.")
+	end)
+end
+
+local function powerSource(g, quest, objective, only)
+	g:Step(function(s)
+		s.only = only
+		s:Kill(g.Mob("Archaedas", 2748))
+		s:Collect(g.Item("Shattered Necklace Power Source", 7672), { quest = quest, objective = objective })
+		s:Note("The last boss.")
+	end)
 end
 
 ObviGuide.Guide(function(g)
@@ -72,14 +108,20 @@ ObviGuide.Guide(function(g)
 	local krom      = g.Npc("Krom Stoutarm", 6294)
 	local belgrum   = g.Npc("Advisor Belgrum", 2918)
 	local ghak      = g.Npc("Ghak Healtouch", 1470)
+	local ironband  = g.Npc("Prospector Ironband", 1344)
 	local ryedol    = g.Npc("Prospector Ryedol", 2910)
 	local hammertoe = g.Npc("Hammertoe Grez", 2909)
+	local talvash   = g.Npc("Talvash del Kissel", 6826)
+	local magellas  = g.Npc("High Explorer Magellas", 5387)
+	local remains   = g.Npc("Remains of a Paladin", 6912)
+	local necklace  = "onquest 2200 or onquest 2201 or onquest 2204"   -- (on Talvash's chain, for the second visit)
 
 	-- Ironforge: the Hall of Explorers
 	g:Step(function(s)
 		s:Goto(IRONFORGE, 74.6, 11.7)
 		s:Talk(stormpike)
 		s:Accept(2398, "The Lost Dwarves")
+		s:Accept(707, "Ironband Wants You!")
 		s:Note("In the Hall of Explorers.")
 	end)
 
@@ -96,10 +138,18 @@ ObviGuide.Guide(function(g)
 		s:Goto(LOCH_MODAN, 37.1, 49.4)
 		s:Talk(ghak)
 		s:Accept(2500, "Badlands Reagent Run")
-		s:Note("In Thelsamar. Then south into the Badlands.")
+		s:Note("In Thelsamar. Then south-east to Ironband's Excavation Site.")
 	end)
 
-	-- the Badlands: north to south, then back to Thelsamar
+	g:Step(function(s)
+		s:Goto(LOCH_MODAN, 65.9, 65.6)
+		s:Talk(ironband)
+		s:Turnin(707, "Ironband Wants You!")
+		s:Accept(738, "Find Agmond")
+		s:Note("At Ironband's Excavation Site. Then south into the Badlands.")
+	end)
+
+	-- the Badlands: north to south, then back to Loch Modan
 	g:Step(function(s)
 		s:Goto(BADLANDS, 53.0, 33.9)
 		s:Accept(720, "A Sign of Hope")
@@ -115,6 +165,21 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s) coyotesAndBuzzards(g, s, 2500) end)
 	g:Step(function(s) rigglefuzz(g, s) end)
+
+	g:Step(function(s)
+		s:Goto(BADLANDS, 50.9, 62.4)
+		s:Turnin(738, "Find Agmond")
+		s:Accept(739, "Murdaloc")
+		s:Note("Click the ", g.Object("Battered Dwarven Skeleton"), ".")
+	end)
+
+	g:Step(function(s)
+		s:Goto(BADLANDS, 49.6, 66.3)
+		s:Kill(g.Mob("Murdaloc", 2945), { quest = 739, objective = 1 })
+		s:Kill(g.Mob("Stonevault Bonesnapper", 2893), { quest = 739, objective = 2 })
+		s:Note("The troggs all around here, south of the skeleton; Murdaloc is level 42.")
+	end)
+
 	g:Step(function(s) theldurin(g, s) end)
 
 	g:Step(function(s)
@@ -122,6 +187,14 @@ ObviGuide.Guide(function(g)
 		s:Kill(g.Mob("Rock Elemental", 92))
 		s:Collect(g.Item("Rock Elemental Shard", 7848), { count = 5, quest = 2500, objective = 3 })
 		s:Note("Below Theldurin, in the south of the Badlands.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(LOCH_MODAN, 65.9, 65.6)
+		s:Talk(ironband)
+		s:Turnin(739, "Murdaloc")
+		s:Accept(704, "Agmond's Fate")
+		s:Note("Back at Ironband's Excavation Site; the urns are at Uldaman.")
 	end)
 
 	g:Step(function(s)
@@ -142,6 +215,12 @@ ObviGuide.Guide(function(g)
 	end)
 
 	outerSides(g, 17)
+
+	g:Side("out", function(s)
+		s.only = "onquest 704"
+		s:Collect(g.Item("Carved Stone Urn", 4610), { count = 4, quest = 704, objective = 1 })
+		s:Note("Click the ", g.Object("Carved Stone Urn"), "s outside the instance: on both sides of the gate and under the tents before Dig One.")
+	end)
 
 	g:Step(function(s)
 		s:Goto(BADLANDS, 39.0, 19.7)
@@ -166,10 +245,10 @@ ObviGuide.Guide(function(g)
 
 	-- inside
 	g:Side("out", function(s)
-		local necklace = g.Item("Shattered Necklace", 7666)
-		s:Use(necklace):Only("not onquest 2198 and not done 2198")
+		local shattered = g.Item("Shattered Necklace", 7666)
+		s:Use(shattered):Only("not onquest 2198 and not done 2198")
 		s:Accept(2198, "The Shattered Necklace")
-		s:Note("The troggs and Shadowforge dwarves can drop the ", necklace, ": it starts the quest.")
+		s:Note("The troggs and Shadowforge dwarves can drop the ", shattered, ": it starts the quest.")
 	end)
 
 	g:Side("out", function(s)
@@ -195,15 +274,21 @@ ObviGuide.Guide(function(g)
 		s:Note("The hidden chamber is the vault where Ironaya waits.")
 	end)
 
-	g:Step(function(s) discs(g, s) end)
+	g:Step(function(s) discs(g, s, 2279) end)
 
-	-- the turn-ins: south through the Badlands, north to Thelsamar, and on to Ironforge
+	-- the turn-ins: south through the Badlands, north to Loch Modan, and on to Ironforge
 	g:Step(function(s)
 		s.label = "out"
 		rigglefuzz(g, s, true)
 	end)
 
 	g:Step(function(s) theldurin(g, s, true) end)
+
+	g:Step(function(s)
+		s:Goto(LOCH_MODAN, 65.9, 65.6)
+		s:Talk(ironband)
+		s:Turnin(704, "Agmond's Fate")
+	end)
 
 	g:Step(function(s)
 		s:Goto(LOCH_MODAN, 37.1, 49.4)
@@ -227,11 +312,70 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s:Goto(IRONFORGE, 69.9, 18.6)
+		s:Talk(magellas)
+		s:Turnin(2279, "The Platinum Discs")
+		s:Accept(2439, "The Platinum Discs")
+		s:Note("In the Hall of Explorers. He gives you a reward voucher for the Vault.")
+	end)
+
+	g:Step(function(s)
 		s.only = "onquest 2198 or done 2198"
 		s:Goto(IRONFORGE, 36.4, 3.6)
-		s:Talk(g.Npc("Talvash del Kissel", 6826))
+		s:Talk(talvash)
 		s:Turnin(2198, "The Shattered Necklace")
-		s:Note("In the Mystic Ward. His chain goes on, back into Uldaman for the necklace's gems.")
+		s:Accept(2199, "Lore for a Price")
+		s:Collect(g.Item("Silver Bar", 2842), { count = 5, quest = 2199, objective = 1 })
+		s:Turnin(2199, "Lore for a Price")
+		s:Accept(2200, "Back to Uldaman")
+		s:Note("In the Mystic Ward. He wants five Silver Bars: smelt them, or buy them at the auction house. Back to Uldaman sends you into the dungeon again.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(IRONFORGE, 33.9, 59.2)
+		s:Talk(g.Npc("Dinita Stonemantle", 7292))
+		s:Turnin(2439, "The Platinum Discs")
+		s:Note("In the Vault: pick your reward.")
+	end)
+
+	-- second visit, for Talvash's chain: the paladin's remains, the gems and the power source
+	g:Step(function(s)
+		s.only = necklace
+		s.skip = "ready 2204 or done 2204"
+		s:Goto(BADLANDS, 44.3, 12.0)
+		s:Do("Enter Uldaman with your group.")
+		s:Note("For Talvash's necklace this time.")
+	end)
+
+	g:Step(function(s)
+		s.only = necklace
+		s:Talk(remains)
+		s:Turnin(2200, "Back to Uldaman")
+		s:Accept(2201, "Find the Gems")
+		s:Note("Inside the dungeon.")
+	end)
+
+	gems(g, 2201, "out2", necklace)
+
+	g:Step(function(s)
+		s.only = necklace
+		s:Use(g.Item("Talvash's Phial of Scrying", 7667))
+		s:Turnin(2201, "Find the Gems")
+		s:Accept(2204, "Restoring the Necklace")
+		s:Note("With all three gems, use the phial he gave you: hand them in at ", g.Object("Talvash's Scrying Bowl"), " when it appears.")
+	end)
+
+	powerSource(g, 2204, 1, necklace)
+
+	g:Step(function(s)
+		s.label = "out2"
+		s.only = necklace .. " or done 2204"
+		s:Goto(IRONFORGE, 36.4, 3.6)
+		s:Talk(talvash)
+		s:Turnin(2204, "Restoring the Necklace")
+		s:Accept(2361, "Restoring the Necklace")
+		s:Turnin(2361, "Restoring the Necklace")
+		s:Note("Back in the Mystic Ward. Wait while he restores the necklace, then take it from him.")
 	end)
 end)
 
@@ -311,7 +455,7 @@ ObviGuide.Guide(function(g)
 		s:Note("In the ", g.Object("Garrett Family Chest"), ", in the South Common Hall.")
 	end)
 
-	g:Step(function(s) discs(g, s) end)
+	g:Step(function(s) discs(g, s, 2280) end)
 
 	-- the turn-ins, and the necklace back to Orgrimmar by way of the Undercity
 	g:Step(function(s)
@@ -375,27 +519,8 @@ ObviGuide.Guide(function(g)
 		s:Do("Enter Uldaman with your group.")
 	end)
 
-	g:Side("out2", function(s)
-		s:Collect(g.Item("Shattered Necklace Ruby", 7669), { quest = 2339, objective = 1 })
-		s:Note("In a ", g.Object("Shadowforge Cache"), ", in a barricaded Shadowforge area.")
-	end)
-
-	g:Side("out2", function(s)
-		s:Collect(g.Item("Shattered Necklace Topaz", 7671), { quest = 2339, objective = 3 })
-		s:Note("In a ", g.Object("Conspicuous Urn"), ", in the trogg area near the lost Alliance dwarves.")
-	end)
-
-	g:Step(function(s)
-		s:Kill(g.Mob("Grimlok", 4854))
-		s:Collect(g.Item("Shattered Necklace Sapphire", 7670), { quest = 2339, objective = 2 })
-		s:Note("The trogg chieftain.")
-	end)
-
-	g:Step(function(s)
-		s:Kill(g.Mob("Archaedas", 2748))
-		s:Collect(g.Item("Shattered Necklace Power Source", 7672), { quest = 2339, objective = 4 })
-		s:Note("The last boss.")
-	end)
+	gems(g, 2339, "out2")
+	powerSource(g, 2339, 4)
 
 	g:Step(function(s)
 		s.label = "out2"
@@ -403,5 +528,23 @@ ObviGuide.Guide(function(g)
 		s:Talk(jarkal)
 		s:Turnin(2339, "Find the Gems and Power Source")
 		s:Note("His next quest, Deliver the Gems, takes the necklace back to Dran Droffers in Orgrimmar.")
+	end)
+
+	-- the small discs go to Thunder Bluff; it can wait for your next time there
+	g:Step(function(s)
+		s.only = "onquest 2280 or done 2280"
+		s:Goto(THUNDERBLUFF, 34.4, 46.9)
+		s:Talk(g.Npc("Sage Truthseeker", 3978))
+		s:Turnin(2280, "The Platinum Discs")
+		s:Accept(2440, "The Platinum Discs")
+		s:Note("Inside a building. He gives you a reward voucher for Bena Winterhoof. It can wait for your next time in Thunder Bluff.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 2440 or done 2440"
+		s:Goto(THUNDERBLUFF, 46.6, 33.2)
+		s:Talk(g.Npc("Bena Winterhoof", 3009))
+		s:Turnin(2440, "The Platinum Discs")
+		s:Note("Pick your reward.")
 	end)
 end)

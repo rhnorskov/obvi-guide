@@ -1,9 +1,10 @@
 -- The Stockade (Alliance, 26-29): the quests Attune lists: What Comes Around... from Lakeshire, Crime and Punishment
 -- from Darkshire, The Color of Blood and Quell The Uprising in Stormwind, and The Unsent Letter (dropped by Edwin
--- VanCleef in the Deadmines) with Bazil Thredd and The Stockade Riots after it. Quest, NPC and item ids and positions
--- from Attune (CixiDelmont) and QuestieDB's Forever data. See README.md.
+-- VanCleef in the Deadmines) with Bazil Thredd and The Stockade Riots after it; and The Fury Runs Deep from Dun Modr
+-- in the Wetlands, offered after The Dark Iron War. Quest list from Attune (CixiDelmont) and DungeonJournal (Exehn);
+-- quest, NPC and item ids and positions from Attune and QuestieDB's Forever data. See README.md.
 
-local STORMWIND, REDRIDGE, DUSKWOOD = 1453, 1433, 1431
+local STORMWIND, REDRIDGE, DUSKWOOD, WETLANDS = 1453, 1433, 1431, 1437
 
 ObviGuide.Guide(function(g)
 	g.title = "The Stockade: Quests"
@@ -18,8 +19,37 @@ ObviGuide.Guide(function(g)
 	local baros     = g.Npc("Baros Alexston", 1646)
 	local thelwater = g.Npc("Warden Thelwater", 1719)
 	local letter    = g.Item("An Unsent Letter", 2874)
+	local motley    = g.Npc("Motley Garmason", 1074)
 
-	-- Lakeshire and Darkshire first, then fly to Stormwind
+	-- The Fury Runs Deep needs The Dark Iron War first, at Dun Modr in the Wetlands: optional, so only offered
+	g:Step(function(s)
+		s.skip = "onquest 303 or done 303"
+		s:Goto(WETLANDS, 49.7, 18.2)
+		s:Talk(motley)
+		s:Do("Optional: take The Dark Iron War from ", motley, ", or tick this off to skip it.")
+		s:Note("At Dun Modr in the north of the Wetlands. It opens The Fury Runs Deep, a Stockade quest; without it you just skip that one.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 303"
+		s:Goto(WETLANDS, 48.0, 17.0)
+		s:Kill(g.Mob("Dark Iron Dwarf", 1051), { quest = 303, objective = 1 })
+		s:Kill(g.Mob("Dark Iron Tunneler", 1053), { quest = 303, objective = 2 })
+		s:Kill(g.Mob("Dark Iron Saboteur", 1052), { quest = 303, objective = 3 })
+		s:Kill(g.Mob("Dark Iron Demolitionist", 1054), { quest = 303, objective = 4 })
+		s:Note("All around Dun Modr; more to the east, around 61, 26.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 303 or done 303"
+		s:Goto(WETLANDS, 49.7, 18.2)
+		s:Talk(motley)
+		s:Turnin(303, "The Dark Iron War")
+		s:Accept(378, "The Fury Runs Deep")
+		s:Note("Then on to Lakeshire.")
+	end)
+
+	-- Lakeshire and Darkshire, then fly to Stormwind
 	g:Step(function(s)
 		s:Goto(REDRIDGE, 21.2, 46.6)
 		s:Talk(berton)
@@ -87,6 +117,13 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s)
+		s.only = "onquest 378 or done 378"
+		s:Kill(g.Mob("Kam Deepfury", 1666))
+		s:Collect(g.Item("Head of Deepfury", 3640), { quest = 378, objective = 1 })
+		s:Note("One of the named prisoners.")
+	end)
+
+	g:Step(function(s)
 		s.only = "onquest 391 or done 391"
 		s:Kill(g.Mob("Bazil Thredd", 1716))
 		s:Collect(g.Item("Head of Bazil Thredd", 2926), { quest = 391, objective = 1 })
@@ -124,5 +161,13 @@ ObviGuide.Guide(function(g)
 		s:Goto(REDRIDGE, 21.2, 46.6)
 		s:Talk(berton)
 		s:Turnin(386, "What Comes Around...")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 378 or done 378"
+		s:Goto(WETLANDS, 49.7, 18.2)
+		s:Talk(motley)
+		s:Turnin(378, "The Fury Runs Deep")
+		s:Note("Back at Dun Modr; it can wait for your next time in the Wetlands.")
 	end)
 end)

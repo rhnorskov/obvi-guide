@@ -1,12 +1,15 @@
--- Zul'Farrak (40-48): the quests Attune lists for each faction. Both: Divino-matic Rod, Gahz'rilla (with the Mallet
--- of Zul'Farrak from the Hinterlands), Screecher Spirits and The Prophecy of Mosh'aru, Tiara of the Deep, Troll Temper
--- and Scarab Shells. Alliance: Nekrum's Medallion. Horde: Venom Bottles, Undamaged Venom Sac, Consult Master Gadrin
--- and The Spider God. Quest, NPC, item and object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever
--- data; the dungeon portal from QuestieDB, the bosses' places from DungeonJournal (Exehn). Pick-ups go Hinterlands,
--- Dustwallow, Thousand Needles, Tanaris and Feralas; the turn-ins run back the same way. See README.md.
+-- Zul'Farrak (40-48): the quests Attune and DungeonJournal (Exehn) list for each faction. Both: Divino-matic Rod,
+-- Gahz'rilla (with the Mallet of Zul'Farrak from the Hinterlands), Screecher Spirits and The Prophecy of Mosh'aru,
+-- Tiara of the Deep, Troll Temper, and Scarab Shells with Tran'rek from Booty Bay (pointed at). Alliance: Nekrum's
+-- Medallion, The Brassbolts Brothers from Ironforge and The Witch Doctor's Head (Archmage Lan'dalock, Dalaran). Horde:
+-- Venom Bottles, Undamaged Venom Sac, Consult Master Gadrin, The Spider God and Zum'rah's Head (Mazu'kon, Mulgore).
+-- A Lesson in Literacy (mages only) is left out. Quest, NPC, item and object ids and positions from Attune
+-- (CixiDelmont) and QuestieDB's Forever data; the dungeon portal from QuestieDB, the bosses' places and the Forever
+-- quests from DungeonJournal (Exehn). Pick-ups go Hinterlands, Dustwallow, Thousand Needles, Tanaris and Feralas; the
+-- turn-ins run back the same way. See README.md.
 
-local TANARIS, NEEDLES, DUSTWALLOW, FERALAS = 1446, 1441, 1445, 1444
-local HINTERLANDS, BLASTED, HILLSBRAD, DUROTAR = 1425, 1419, 1424, 1411
+local TANARIS, NEEDLES, DUSTWALLOW, FERALAS, MULGORE = 1446, 1441, 1445, 1444, 1412
+local HINTERLANDS, BLASTED, HILLSBRAD, DUROTAR, IRONFORGE, ALTERAC = 1425, 1419, 1424, 1411, 1455, 1416
 
 -- the Mallet of Zul'Farrak, which calls up Gahz'rilla: one in the group is enough
 local function mallet(g)
@@ -31,6 +34,13 @@ end
 local function pickups(g)
 	local yeh = g.Npc("Yeh'kinya", 8579)
 
+	-- Tran'rek only sends you on to Scarab Shells, from Booty Bay; it's only pointed at
+	g:Step(function(s)
+		s.skip = "onquest 2864 or done 2864 or onquest 2865 or done 2865"
+		s:Do("Optional: if you pass through Booty Bay, pick up Tran'rek from ", g.Npc("Krazek", 773), ".")
+		s:Note("Upstairs in the Booty Bay inn (Stranglethorn Vale 26.9, 77.2). It only sends you to Tran'rek in Gadgetzan, who gives Scarab Shells anyway.")
+	end)
+
 	g:Step(function(s)
 		s:Goto(DUSTWALLOW, 46.1, 57.1)
 		s:Talk(g.Npc("Tabetha", 6546))
@@ -41,6 +51,7 @@ local function pickups(g)
 	g:Step(function(s)
 		s:Goto(NEEDLES, 78.1, 77.1)
 		s:Talk(g.Npc("Wizzle Brassbolts", 4453))
+		s:Turnin(2769, "The Brassbolts Brothers"):Only("onquest 2769")
 		s:Accept(2770, "Gahz'rilla")
 		s:Note("At the Mirage Raceway in the Shimmering Flats.")
 	end)
@@ -61,6 +72,7 @@ local function pickups(g)
 	g:Step(function(s)
 		s:Goto(TANARIS, 51.6, 26.8)
 		s:Talk(g.Npc("Tran'rek", 7876))
+		s:Turnin(2864, "Tran'rek"):Only("onquest 2864")
 		s:Accept(2865, "Scarab Shells")
 	end)
 
@@ -111,6 +123,15 @@ end
 
 -- the bosses, in the order a group meets them
 local function bosses(g, horde)
+	-- Zum'rah's head: The Witch Doctor's Head (Alliance) or Zum'rah's Head (Horde)
+	local head = horde and 96775 or 96770
+	g:Side("out", function(s)
+		s.only = "onquest " .. head
+		s:Kill(g.Mob("Witch Doctor Zum'rah", 7271))
+		s:Collect(g.Item("Zum'rah's Head", 277112), { quest = head, objective = 1 })
+		s:Note("In the graveyard. Zombies rise from the graves when he is pulled.")
+	end)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Theka the Martyr", 7272))
 		s:Collect(g.Item("First Mosh'aru Tablet", 10660), { quest = 3527, objective = 1 })
@@ -194,7 +215,15 @@ ObviGuide.Guide(function(g)
 	g.next  = "obvi-maraudon"
 	g.only  = "Alliance"
 
-	local thadius = g.Npc("Thadius Grimshade", 8022)
+	local thadius   = g.Npc("Thadius Grimshade", 8022)
+	local landalock = g.Npc("Archmage Lan'dalock", 20735)
+
+	g:Step(function(s)
+		s:Goto(ALTERAC, 15.3, 73.9)
+		s:Talk(landalock)
+		s:Accept(96770, "The Witch Doctor's Head")
+		s:Note("At the Violet Hold entrance in Dalaran. Then fly from Southshore to Aerie Peak, in the Hinterlands.")
+	end)
 
 	-- Nekrum's Medallion needs a Hinterlands chain first; Attune doesn't count that chain, so it's only pointed at
 	g:Step(function(s)
@@ -205,6 +234,14 @@ ObviGuide.Guide(function(g)
 	end)
 
 	mallet(g)
+
+	-- Ironforge, on the way south: The Brassbolts Brothers only sends you on to Gahz'rilla
+	g:Step(function(s)
+		s:Goto(IRONFORGE, 67.9, 46.1)
+		s:Talk(g.Npc("Klockmort Spannerspan", 6169))
+		s:Accept(2769, "The Brassbolts Brothers")
+		s:Note("In Tinker Town. It sends you to Wizzle Brassbolts in Thousand Needles.")
+	end)
 
 	-- Nekrum's Medallion comes at the end of a chain from Aerie Peak; only for those on it
 	g:Step(function(s)
@@ -228,6 +265,14 @@ ObviGuide.Guide(function(g)
 		s:Turnin(2991, "Nekrum's Medallion")
 		s:Note("His next quest, The Divination, follows straight on.")
 	end)
+
+	g:Step(function(s)
+		s.only = "onquest 96770 or done 96770"
+		s:Goto(ALTERAC, 15.3, 73.9)
+		s:Talk(landalock)
+		s:Turnin(96770, "The Witch Doctor's Head")
+		s:Note("Back at Dalaran; Southshore is the nearest flight path.")
+	end)
 end)
 
 ObviGuide.Guide(function(g)
@@ -238,7 +283,8 @@ ObviGuide.Guide(function(g)
 	g.only  = "Horde"
 
 	local lydon  = g.Npc("Apothecary Lydon", 2216)
-	local gadrin = g.Npc("Master Gadrin", 3188)
+	local gadrin  = g.Npc("Master Gadrin", 3188)
+	local mazukon = g.Npc("Mazu'kon", 264074)
 
 	-- the Venom Bottles chain starts from a bottle in the Hinterlands
 	g:Step(function(s)
@@ -276,7 +322,14 @@ ObviGuide.Guide(function(g)
 		s:Talk(gadrin)
 		s:Turnin(2935, "Consult Master Gadrin")
 		s:Accept(2936, "The Spider God")
-		s:Note("In Sen'jin Village. Then fly from Orgrimmar to Brackenwall Village for Dustwallow Marsh.")
+		s:Note("In Sen'jin Village. Then fly from Orgrimmar to Thunder Bluff.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(MULGORE, 32.5, 20.7)
+		s:Talk(mazukon)
+		s:Accept(96775, "Zum'rah's Head")
+		s:Note("On the Skywatcher Plateau, in north-west Mulgore. Then fly from Thunder Bluff to Brackenwall Village for Dustwallow Marsh.")
 	end)
 
 	pickups(g)
@@ -289,5 +342,13 @@ ObviGuide.Guide(function(g)
 		s:Talk(gadrin)
 		s:Turnin(2936, "The Spider God")
 		s:Note("His next quest, Summoning Shadra, goes back to the Hinterlands.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 96775 or done 96775"
+		s:Goto(MULGORE, 32.5, 20.7)
+		s:Talk(mazukon)
+		s:Turnin(96775, "Zum'rah's Head")
+		s:Note("On the Skywatcher Plateau; fly to Thunder Bluff.")
 	end)
 end)

@@ -6,7 +6,8 @@ show in the guide list under **Dungeons** and **Dungeon keys**. Each dungeon gui
 ## Dungeon quests
 
 One guide for each faction (A: Alliance, H: Horde), with the quests [Attune](https://www.curseforge.com/wow/addons/attune)
-lists for the dungeon: picked up before going in, done inside, handed in afterwards.
+and DungeonJournal list for the dungeon: picked up before going in, done inside, handed in afterwards. Class quests
+aren't in them yet.
 
 | Level | Dungeon | |
 |---|---|---|
@@ -48,6 +49,6 @@ The guide text is our own. Facts (quest, NPC and item ids, quest order, quest gi
 
 - **Attune** by CixiDelmont: dungeon quest lists, keys, prerequisites and quest giver positions.
 - **QuestieDB** (Forever data): quest starters and finishers, objectives, NPC and object positions.
-- **DungeonJournal** by Exehn: dungeon entrances, the ways in and where things are inside.
+- **DungeonJournal** by Exehn: the quests Attune misses, dungeon entrances, the ways in and where things are inside.
 
 Thanks to their authors.

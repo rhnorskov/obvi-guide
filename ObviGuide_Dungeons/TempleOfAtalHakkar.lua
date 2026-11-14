@@ -1,12 +1,14 @@
--- The Temple of Atal'Hakkar (46-55): the quests Attune lists for each faction. Both: The Sunken Temple, The Stone
--- Circle, Into the Depths and Secret of the Circle (Marvon Rivetseeker), Yeh'kinya's chain from Screecher Spirits to
--- The God Hakkar (with the Mosh'aru tablets from Zul'Farrak), Jammal'an the Prophet and The Essence of Eranikus.
--- Alliance: Into The Temple of Atal'Hakkar (Brohann Caskbelly). Horde: Fel'Zerul's chain from Pool of Tears to The
--- Temple of Atal'Hakkar. Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's Forever data, entrances
--- from DungeonJournal (Exehn). Yeh'kinya's Ancient Egg has to reach Tanaris before the temple, so the route crosses
--- between Kalimdor and the Eastern Kingdoms twice. See README.md.
+-- The Temple of Atal'Hakkar (46-55): the quests Attune and DungeonJournal (Exehn) list for each faction. Both: The
+-- Sunken Temple, The Stone Circle, Into the Depths and Secret of the Circle (Marvon Rivetseeker), Yeh'kinya's chain
+-- from Screecher Spirits to The God Hakkar (with the Mosh'aru tablets from Zul'Farrak), Jammal'an the Prophet and The
+-- Essence of Eranikus. Alliance: Into The Temple of Atal'Hakkar (Brohann Caskbelly), and Haze of Evil (Gregan
+-- Brewspewer, Feralas). Horde: Fel'Zerul's chain from Pool of Tears to The Temple of Atal'Hakkar, and Zapper Fuel (Liv
+-- Rizzlefix, Ratchet). Haze of Evil and Zapper Fuel need Muigin's or Larion's quests in Un'Goro Crater first, which are
+-- only pointed at. The class quests are left out. Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's
+-- Forever data, entrances from DungeonJournal (Exehn). Yeh'kinya's Ancient Egg has to reach Tanaris before the temple,
+-- so the route crosses between Kalimdor and the Eastern Kingdoms twice. See README.md.
 
-local BARRENS, FERALAS, TANARIS = 1413, 1444, 1446
+local BARRENS, FERALAS, TANARIS, UNGORO = 1413, 1444, 1446, 1449
 local STORMWIND, HINTERLANDS, SWAMP = 1453, 1425, 1435
 
 -- the parts both factions share ---------------------------------------------------------------------------------
@@ -20,7 +22,7 @@ local function npcs(g)
 end
 
 -- Tanaris, Feralas, Ratchet and Zul'Farrak: everything up to The Ancient Egg. `sunken` is the faction's Sunken
--- Temple quest, `giver` the step that picks it up in Feralas.
+-- Temple quest, `giver` adds the step(s) that pick it up in Feralas.
 local function kalimdor(g, n, sunken, giver)
 	g:Step(function(s)
 		s:Goto(TANARIS, 67.0, 22.4)
@@ -29,7 +31,7 @@ local function kalimdor(g, n, sunken, giver)
 		s:Note("In Steamwheedle Port, north-east of Gadgetzan.")
 	end)
 
-	g:Step(giver)
+	giver(g)
 
 	g:Step(function(s)
 		s:Goto(FERALAS, 58.2, 57.8)
@@ -60,6 +62,10 @@ local function kalimdor(g, n, sunken, giver)
 		s:Goto(BARRENS, 62.5, 38.5)
 		s:Collect(g.Item("Stone Circle", 10556), { quest = 3444, objective = 1 })
 		s:Note("In ", g.Object("Marvon's Chest"), ", in his workshop in Ratchet. Then fly back to Gadgetzan.")
+		s:Talk(g.Npc("Liv Rizzlefix", 8496)):Only("onquest 4147")
+		s:Turnin(4147, "Marvon's Workshop"):Only("onquest 4147")
+		s:Accept(4146, "Zapper Fuel"):Only("onquest 4147 or done 4147")
+		s:Note("Liv Rizzlefix stands in the same workshop. Keep the ", g.Item("Unloaded Zapper", 11319), " that comes with Zapper Fuel.")
 	end)
 
 	g:Step(function(s)
@@ -124,6 +130,28 @@ local function exileStep(s, n)
 	s:Talk(n.exile)
 end
 
+-- Atal'ai Haze inside the temple, for Haze of Evil or Zapper Fuel (quest)
+local function haze(g, quest)
+	g:Side("out", function(s)
+		s.only = "onquest " .. quest
+		s:Kill(g.Mob("Murk Worm", 5226))
+		s:Kill(g.Mob("Saturated Ooze", 5228))
+		s:Kill(g.Mob("Deep Lurker", 8384))
+		s:Collect(g.Item("Atal'ai Haze", 11318), { count = 5, quest = quest, objective = 1 })
+		s:Note("The temple's worms, oozes and lurkers drop it.")
+	end)
+end
+
+-- Haze of Evil and Zapper Fuel need Muigin's or Larion's first quests in Un'Goro; only pointed at. after: the
+-- quest that opens the dungeon quest, npc: who gives the first one
+local function ungoroPointer(g, after, npc, title)
+	g:Step(function(s)
+		s.skip = "onquest " .. after .. " or done " .. after
+		s:Do("Optional: ", title, " needs the first quests from ", npc, " in Un'Goro Crater.")
+		s:Note("At Marshal's Refuge, in the north of Un'Goro, next to Tanaris. Without them you just skip ", title, ".")
+	end)
+end
+
 -- the temple itself; `extra` adds the faction's own side tasks inside
 local function temple(g, extra)
 	g:Step(function(s)
@@ -178,11 +206,24 @@ ObviGuide.Guide(function(g)
 	local n = npcs(g)
 	local brohann = g.Npc("Brohann Caskbelly", 5384)
 
-	kalimdor(g, n, 3445, function(s)
-		s:Goto(FERALAS, 31.8, 45.6)
-		s:Talk(g.Npc("Angelas Moonbreeze", 7900))
-		s:Accept(3445, "The Sunken Temple")
-		s:Note("In Feathermoon Stronghold, inside the building. The screechers are on the mainland.")
+	ungoroPointer(g, 4142, g.Npc("Muigin", 9119), "Haze of Evil")
+
+	kalimdor(g, n, 3445, function()
+		g:Step(function(s)
+			s:Goto(FERALAS, 31.8, 45.6)
+			s:Talk(g.Npc("Angelas Moonbreeze", 7900))
+			s:Accept(3445, "The Sunken Temple")
+			s:Note("In Feathermoon Stronghold, inside the building. The screechers are on the mainland.")
+		end)
+
+		g:Step(function(s)
+			s.only = "onquest 4142 or done 4142"
+			s:Goto(FERALAS, 45.1, 25.6)
+			s:Talk(g.Npc("Gregan Brewspewer", 7775))
+			s:Turnin(4142, "A Visit to Gregan")
+			s:Accept(4143, "Haze of Evil")
+			s:Note("At the Twin Colossals, in the north of Feralas.")
+		end)
 	end)
 
 	-- the Eastern Kingdoms: Stormwind on the way to the Hinterlands
@@ -216,9 +257,9 @@ ObviGuide.Guide(function(g)
 		s:Note("The silver ", g.Object("Atal'ai Tablet"), " slabs against the walls of the sunken ruins, on the way down to the instance.")
 	end)
 
-	temple(g)
+	temple(g, function() haze(g, 4143) end)
 
-	-- the turn-ins: Stormwind, the Hinterlands, Tanaris
+	-- the turn-ins: Stormwind, the Hinterlands, Tanaris, Un'Goro
 	g:Step(function(s)
 		s.label = "out"
 		s.only = "onquest 1475 or done 1475"
@@ -237,6 +278,14 @@ ObviGuide.Guide(function(g)
 		s:Talk(n.yeh)
 		s:Turnin(3528, "The God Hakkar")
 	end)
+
+	g:Step(function(s)
+		s.only = "onquest 4143 or done 4143"
+		s:Goto(UNGORO, 43.0, 9.6)
+		s:Talk(g.Npc("Muigin", 9119))
+		s:Turnin(4143, "Haze of Evil")
+		s:Note("At Marshal's Refuge.")
+	end)
 end)
 
 -- Horde ----------------------------------------------------------------------------------------------------------
@@ -251,11 +300,15 @@ ObviGuide.Guide(function(g)
 	local n = npcs(g)
 	local felzerul = g.Npc("Fel'zerul", 1443)
 
-	kalimdor(g, n, 3380, function(s)
-		s:Goto(FERALAS, 74.4, 43.4)
-		s:Talk(g.Npc("Witch Doctor Uzer'i", 8115))
-		s:Accept(3380, "The Sunken Temple")
-		s:Note("In Camp Mojache.")
+	ungoroPointer(g, 4147, g.Npc("Larion", 9118), "Zapper Fuel")
+
+	kalimdor(g, n, 3380, function()
+		g:Step(function(s)
+			s:Goto(FERALAS, 74.4, 43.4)
+			s:Talk(g.Npc("Witch Doctor Uzer'i", 8115))
+			s:Accept(3380, "The Sunken Temple")
+			s:Note("In Camp Mojache.")
+		end)
 	end)
 
 	-- the Eastern Kingdoms: Stonard and the Pool of Tears, then the Hinterlands
@@ -305,9 +358,10 @@ ObviGuide.Guide(function(g)
 			s:Collect(g.Item("Fetish of Hakkar", 6181), { count = 20, quest = 1445, objective = 1 })
 			s:Note("From the Atal'ai trolls throughout the temple.")
 		end)
+		haze(g, 4146)
 	end)
 
-	-- the turn-ins: Stonard, the Hinterlands, Tanaris
+	-- the turn-ins: Stonard, the Hinterlands, Tanaris, Un'Goro
 	g:Step(function(s)
 		s.label = "out"
 		s:Goto(SWAMP, 47.9, 54.8)
@@ -324,5 +378,13 @@ ObviGuide.Guide(function(g)
 		s:Goto(TANARIS, 67.0, 22.4)
 		s:Talk(n.yeh)
 		s:Turnin(3528, "The God Hakkar")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 4146 or done 4146"
+		s:Goto(UNGORO, 45.5, 8.7)
+		s:Talk(g.Npc("Larion", 9118))
+		s:Turnin(4146, "Zapper Fuel")
+		s:Note("At Marshal's Refuge.")
 	end)
 end)

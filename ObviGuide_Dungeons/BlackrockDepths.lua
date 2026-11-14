@@ -1,17 +1,22 @@
--- Blackrock Depths (48-60): the quests Attune lists for each faction, in two runs. Both: The Heart of the Mountain,
--- Ribbly Screwspigot, A Taste of Flame, the Thunderbrew recipe, and The Love Potion inside. Alliance: Ragnar Thunderbrew
--- and Hurley Blackbreath, The Good Stuff, Overmaster Pyron and Incendius!, The Smoldering Ruins of Thaurissan up to
--- The Princess's Surprise, Dragonkin Menace and The True Masters up to Marshal Windsor, Abandoned Hope and A Crumpled
--- Up Note. Horde: Lost Thunderbrew Recipe, The Last Element, The Rise of the Machines, the two KILL ON SIGHT bounties,
--- and Disharmony of Flame up to The Princess Saved?. Attune also counts the Shadowforge Key and the Molten Core
--- attunement here; they have guides of their own. Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's
--- Forever data, the entrance and boss order from DungeonJournal (Exehn). Organised by hub: the Burning Steppes camps
+-- Blackrock Depths (48-60): the quests for each faction, in two runs. Both: The Heart of the Mountain, Ribbly
+-- Screwspigot (with Yuka Screwspigot from Tanaris before it), A Taste of Flame, the Thunderbrew recipe, and The Love
+-- Potion inside; The Spectral Chalice for miners (Mining 230), A Binding Contract only with the Thorium Brotherhood
+-- Contract, and The Challenge (Dungeon Set 2) only while you have it. Alliance: Ragnar Thunderbrew and Hurley
+-- Blackbreath, The Good Stuff, Overmaster Pyron and Incendius!, The Smoldering Ruins of Thaurissan up to The Princess's
+-- Surprise, Dragonkin Menace and The True Masters up to Marshal Windsor, Abandoned Hope, A Crumpled Up Note, A Shred
+-- of Hope and Jail Break!. Horde: Vivian Lagrave and the Lost Thunderbrew Recipe, The Last Element, The Rise of the
+-- Machines, the two KILL ON SIGHT bounties, Operation: Death to Angerforge (once Grark Lorkrub's escort is done),
+-- Disharmony of Flame up to The Princess Saved?, and Fragment of the Firelands from Mulgore. Attune also counts the
+-- Shadowforge Key and the Molten Core attunement here; they have guides of their own. Quest list from Attune
+-- (CixiDelmont) and DungeonJournal (Exehn); quest, NPC and item ids from Attune and QuestieDB's Forever data, the
+-- entrance, boss order and where things are inside from DungeonJournal. Organised by hub: the Burning Steppes camps
 -- (Morgan's Vigil, Flame Crest) or Kargath, then the first run; the hand-ins that open the rest; the second run.
 -- See README.md.
 
 local IRONFORGE, DUN_MOROGH, STORMWIND, ORGRIMMAR = 1455, 1426, 1453, 1454
 local BLASTED, BURNING, REDRIDGE, SEARING, BADLANDS = 1419, 1428, 1433, 1427, 1418
 local AZSHARA, UNGORO = 1447, 1449
+local TANARIS, UNDERCITY, MULGORE, EPL = 1446, 1458, 1412, 1423
 
 -- the parts both factions share ---------------------------------------------------------------------------------
 
@@ -24,6 +29,17 @@ local function npcs(g)
 	}
 end
 
+-- Yuka's sister in Tanaris: only a breadcrumb to Yuka
+local function yorba(g)
+	g:Step(function(s)
+		s.skip = "onquest 4324 or done 4324 or onquest 4136 or done 4136"
+		s:Goto(TANARIS, 67.0, 24.0)
+		s:Talk(g.Npc("Yorba Screwspigot", 9706))
+		s:Accept(4324, "Yuka Screwspigot")
+		s:Note("In Steamwheedle Port. It only leads to Yuka at Flame Crest: skip it if you're not passing by.")
+	end)
+end
+
 -- Flame Crest, in the north of the Burning Steppes; `extra` adds the faction's own lines there
 local function flameCrestPickups(g, n, extra)
 	g:Step(function(s)
@@ -32,6 +48,7 @@ local function flameCrestPickups(g, n, extra)
 		s:Talk(n.maxwort)
 		s:Accept(4123, "The Heart of the Mountain")
 		s:Talk(n.yuka)
+		s:Turnin(4324, "Yuka Screwspigot"):Only("onquest 4324")
 		s:Accept(4136, "Ribbly Screwspigot")
 		s:Note("At Flame Crest. Yuka is in the small cave just behind, at 66.1, 22.0.")
 	end)
@@ -96,6 +113,27 @@ local function firstRunSides(g, n, until_)
 	end)
 end
 
+-- The Challenge, from the Dungeon Set 2 chain; only for those on it
+local function challenge(g)
+	g:Step(function(s)
+		s.only = "onquest 9015"
+		s:Use(g.Item("Banner of Provocation", 21986))
+		s:Kill(g.Mob("Theldren", 16059), { quest = 9015, objective = 1 })
+		s:Collect(g.Item("Top Piece of Lord Valthalak's Amulet", 22047), { quest = 9015, objective = 2 })
+		s:Note("In the Ring of Law: plant the banner in the middle as High Justice Grimstone sentences you, before the usual challenger comes out. Theldren and his gladiators fight you instead.")
+	end)
+end
+
+local function anthion(g)
+	g:Step(function(s)
+		s.only = "ready 9015"
+		s:Goto(EPL, 26.1, 11.3)
+		s:Talk(g.Npc("Anthion Harmon", 16016))
+		s:Turnin(9015, "The Challenge")
+		s:Note("Outside the main gate of Stratholme; you need the Extra-Dimensional Ghost Revealer to see him.")
+	end)
+end
+
 local function vault(g)
 	g:Step(function(s)
 		s:Kill(g.Mob("Watchman Doomgrip", 9476))
@@ -116,6 +154,17 @@ end
 
 -- the Grim Guzzler: Ribbly, then Hurley for the recipe (`recipe` is the faction's quest)
 local function guzzler(g, recipe, label)
+	-- only with the contract (Lokhtos gives it for a Sulfuron Ingot from Molten Core)
+	g:Step(function(s)
+		local contract = g.Item("Thorium Brotherhood Contract", 18628)
+		s.only = "items 18628 >= 1 or onquest 7604"
+		s:Use(contract):Only("not onquest 7604")
+		s:Accept(7604, "A Binding Contract")
+		s:Talk(g.Npc("Lokhtos Darkbargainer", 12944))
+		s:Turnin(7604, "A Binding Contract")
+		s:Note("In the Grim Guzzler. Hand the contract back to him with a Sulfuron Ingot for the plans for Sulfuron.")
+	end)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Ribbly Screwspigot", 9543))
 		s:Collect(g.Item("Ribbly's Head", 11313), { quest = 4136, objective = 1 })
@@ -164,6 +213,26 @@ local function secondRun(g, n, rescue)
 		s:Note("In the Grim Guzzler.")
 	end)
 
+	-- only for miners
+	g:Step(function(s)
+		s.only = "skill Mining >= 230 and not done 4083"
+		s:Talk(g.Npc("Gloom'rel", 9037))
+		s:Accept(4083, "The Spectral Chalice")
+		s:Collect(g.Item("Star Ruby", 7910), { count = 2, quest = 4083, objective = 1 }):Only("onquest 4083"):Optional()
+		s:Collect(g.Item("Gold Bar", 3577), { count = 20, quest = 4083, objective = 2 }):Only("onquest 4083"):Optional()
+		s:Collect(g.Item("Truesilver Bar", 6037), { count = 10, quest = 4083, objective = 3 }):Only("onquest 4083"):Optional()
+		s:Turnin(4083, "The Spectral Chalice"):Only("ready 4083")
+		s:Note("Optional, with Mining 230: in the Summoners' Tomb, talk to Gloom'rel before the Seven fight, then put the rubies and bars in the ", g.Object("Spectral Chalice"), " to learn Smelt Dark Iron.")
+	end)
+
+	-- Horde: the fragment for Alaana Stormwalker
+	g:Step(function(s)
+		s.only = "onquest 97197"
+		s:Kill(g.Mob("Magmus", 9938))
+		s:Collect(g.Item("Fragment of the Firelands", 277129), { quest = 97197, objective = 1 })
+		s:Note("Magmus guards the door to the Imperial Seat, past the Lyceum's braziers.")
+	end)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Emperor Dagran Thaurissan", 9019), { quest = rescue, objective = 1 })
 		s:Note("Past the Grim Guzzler (Dark Iron Ale for Private Rocknot, or fight Phalanx): light the braziers in the Lyceum with the torches the Flame Keepers drop, kill Magmus, and the Imperial Seat is behind. ", g.Warn("Don't kill Princess Moira"), "; interrupt her heals.")
@@ -191,7 +260,9 @@ ObviGuide.Guide(function(g)
 	local bolvar     = g.Npc("Highlord Bolvar Fordragon", 1748)
 	local windsor    = g.Npc("Marshal Windsor", 9023)
 
-	-- Blasted Lands, Ironforge and Kharanos
+	-- Tanaris, Blasted Lands, Ironforge and Kharanos
+	yorba(g)
+
 	g:Step(function(s)
 		s.skip = "onquest 4126 or done 4126"
 		s:Goto(BLASTED, 63.6, 20.6)
@@ -354,11 +425,25 @@ ObviGuide.Guide(function(g)
 		s:Turnin(4241, "Marshal Windsor")
 		s:Turnin(4264, "A Crumpled Up Note"):Only("onquest 4264")
 		s:Accept(4242, "Abandoned Hope")
+		s:Accept(4282, "A Shred of Hope"):Only("onquest 4264 or done 4264")
 		s:Note("In another cell along the same corridor.")
 	end)
 
+	challenge(g)
 	vault(g)
 	baelgar(g)
+
+	-- A Shred of Hope: Windsor's papers, for Jail Break! on the second run
+	g:Step(function(s)
+		s.only = "onquest 4282"
+		s:Kill(g.Mob("General Angerforge", 9033))
+		s:Collect(g.Item("Marshal Windsor's Lost Information", 11464), { quest = 4282, objective = 1 })
+		s:Note("In the West Garrison; he calls for help when he's low.")
+		s:Kill(g.Mob("Golem Lord Argelmach", 8983))
+		s:Collect(g.Item("Marshal Windsor's Lost Information", 11465), { quest = 4282, objective = 2 })
+		s:Note("In the Manufactory, north of the West Garrison.")
+	end)
+
 	guzzler(g, 4126, "run1")
 
 	-- between the runs: Flame Crest and Cyrus, Morgan's Vigil, Ironforge and Kharanos
@@ -395,6 +480,16 @@ ObviGuide.Guide(function(g)
 	-- the second run
 	enter(g, "ready 4263 or done 4263 or onquest 4363 or done 4363")
 
+	-- Jail Break!: the end of Windsor's chain, right after the entrance
+	g:Step(function(s)
+		s.only = "ready 4282 or onquest 4322"
+		s:Talk(windsor)
+		s:Turnin(4282, "A Shred of Hope")
+		s:Accept(4322, "Jail Break!")
+		s:Quest(4322, 1, "Escort Marshal Windsor while he gets his gear back and frees his friends.")
+		s:Note("In his cell in the Detention Block. Clear the patrols first and have everyone ready before you start.")
+	end)
+
 	g:Side("run2", function(s)
 		s.only = "not done 4286"
 		s:Collect(g.Item("Dark Iron Fanny Pack", 11468), { count = 20, quest = 4286, objective = 1 })
@@ -418,6 +513,9 @@ ObviGuide.Guide(function(g)
 	-- the last turn-ins
 	g:Step(function(s)
 		s:Goto(BURNING, 85.0, 69.0)
+		s:Talk(maxwell):Only("ready 4322")
+		s:Turnin(4322, "Jail Break!"):Only("ready 4322")
+		s:Note("His next quest, Stormwind Rendezvous, starts the road to Onyxia's Lair.")
 		s:Talk(jalinda)
 		s:Turnin(4263, "Incendius!")
 		s:Talk(oralius)
@@ -430,6 +528,8 @@ ObviGuide.Guide(function(g)
 		s:Talk(magni)
 		s:Turnin(4363, "The Princess's Surprise")
 	end)
+
+	anthion(g)
 end)
 
 -- Horde ----------------------------------------------------------------------------------------------------------
@@ -448,11 +548,24 @@ ObviGuide.Guide(function(g)
 	local lotwil      = g.Npc("Lotwil Veriatus", 2921)
 	local thrall      = g.Npc("Thrall", 4949)
 	local gorshak     = g.Npc("Commander Gor'shak", 9020)
+	local alaana      = g.Npc("Alaana Stormwalker", 259119)
+
+	-- Tanaris and the Undercity: breadcrumbs only
+	yorba(g)
+
+	g:Step(function(s)
+		s.skip = "onquest 4133 or done 4133 or onquest 4134 or done 4134"
+		s:Goto(UNDERCITY, 50.1, 68.0)
+		s:Talk(g.Npc("Apothecary Zinge", 5204))
+		s:Accept(4133, "Vivian Lagrave")
+		s:Note("In the Apothecarium. It only leads to Vivian Lagrave in Kargath: skip it if you're not passing by.")
+	end)
 
 	-- Kargath, and Lotwil out east
 	g:Step(function(s)
 		s:Goto(BADLANDS, 3.3, 47.8)
 		s:Talk(vivian)
+		s:Turnin(4133, "Vivian Lagrave"):Only("onquest 4133")
 		s:Accept(4134, "Lost Thunderbrew Recipe")
 		s:Talk(thunderheart)
 		s:Accept(3906, "Disharmony of Flame")
@@ -494,6 +607,9 @@ ObviGuide.Guide(function(g)
 		s:Talk(g.Npc("Galamav the Marksman", 9081))
 		s:Accept(3981, "Commander Gor'shak")
 		s:Note("Back in Kargath; Galamav is at the top of the tower at 6.0, 47.7.")
+		s:Talk(goretooth):Only("done 4121")
+		s:Accept(4132, "Operation: Death to Angerforge"):Only("done 4121")
+		s:Note("Beside Galamav. Only once you've escorted Grark Lorkrub, the chain after the two KILL ON SIGHT bounties.")
 	end)
 
 	-- the first run
@@ -545,6 +661,7 @@ ObviGuide.Guide(function(g)
 		s:Note("In the cell across the corridor.")
 	end)
 
+	challenge(g)
 	vault(g)
 
 	g:Step(function(s)
@@ -554,6 +671,12 @@ ObviGuide.Guide(function(g)
 	end)
 
 	baelgar(g)
+
+	g:Step(function(s)
+		s.only = "onquest 4132"
+		s:Kill(g.Mob("General Angerforge", 9033), { quest = 4132, objective = 1 })
+		s:Note("In the West Garrison; he calls for help when he's low.")
+	end)
 
 	g:Step(function(s)
 		s.only = "onquest 4063 or done 4063"
@@ -579,6 +702,7 @@ ObviGuide.Guide(function(g)
 		s:Talk(goretooth)
 		s:Turnin(4081, "KILL ON SIGHT: Dark Iron Dwarves")
 		s:Accept(4082, "KILL ON SIGHT: High Ranking Dark Iron Officials")
+		s:Turnin(4132, "Operation: Death to Angerforge"):Only("ready 4132")
 		s:Note("Fly from Flame Crest to Kargath. Goretooth is at the top of the tower (5.8, 47.5); the next bounty is on the ", g.Object("KILL ON SIGHT"), " poster at 3.9, 46.7.")
 	end)
 
@@ -596,7 +720,14 @@ ObviGuide.Guide(function(g)
 		s:Accept(4002, "The Eastern Kingdom")
 		s:Turnin(4002, "The Eastern Kingdom")
 		s:Accept(4003, "The Royal Rescue")
-		s:Note("In Grommash Hold. Then back to Blackrock Mountain.")
+		s:Note("In Grommash Hold. Then fly to Thunder Bluff.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(MULGORE, 33.4, 22.5)
+		s:Talk(alaana)
+		s:Accept(97197, "Fragment of the Firelands")
+		s:Note("On Skywatcher Plateau, where the skycutter lands, north-west of Thunder Bluff. Then back to Blackrock Mountain.")
 	end)
 
 	-- the second run
@@ -623,7 +754,7 @@ ObviGuide.Guide(function(g)
 		s:Goto(BADLANDS, 5.8, 47.5)
 		s:Talk(goretooth)
 		s:Turnin(4082, "KILL ON SIGHT: High Ranking Dark Iron Officials")
-		s:Note("At the top of the tower in Kargath.")
+		s:Note("At the top of the tower in Kargath. Lexlort beside him then has Grark Lorkrub: that chain, an escort, opens Operation: Death to Angerforge.")
 	end)
 
 	g:Step(function(s)
@@ -631,4 +762,14 @@ ObviGuide.Guide(function(g)
 		s:Talk(thrall)
 		s:Turnin(4004, "The Princess Saved?")
 	end)
+
+	g:Step(function(s)
+		s.only = "ready 97197"
+		s:Goto(MULGORE, 33.4, 22.5)
+		s:Talk(alaana)
+		s:Turnin(97197, "Fragment of the Firelands")
+		s:Note("On Skywatcher Plateau, north-west of Thunder Bluff.")
+	end)
+
+	anthion(g)
 end)

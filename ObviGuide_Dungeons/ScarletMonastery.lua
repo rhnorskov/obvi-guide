@@ -1,9 +1,10 @@
--- Scarlet Monastery (28-40): the quests Attune lists for each faction. Alliance: Brother Anton and both Down the
--- Scarlet Path quests up to In the Name of the Light, and Mythology of the Titans. Horde: Into The Scarlet Monastery,
--- Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal (after Going, Going, Guano! from Razorfen Kraul), and the
--- Test of Faith, Endurance, Strength and Lore chain that ends in the Library. Quest, NPC, item and object ids and
--- positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance from DungeonJournal (Exehn).
--- See README.md.
+-- Scarlet Monastery (28-40): the quests Attune and DungeonJournal (Exehn) list for each faction. Alliance: Brother
+-- Anton and both Down the Scarlet Path quests up to In the Name of the Light, Mythology of the Titans, and Past Due
+-- (Magus Olvek, Dalaran). Horde: Into The Scarlet Monastery, Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal
+-- (after Going, Going, Guano! from Razorfen Kraul), and the Test of Faith, Endurance, Strength and Lore chain that ends
+-- in the Library, then Final Passage back to Dorn Plainstalker. The Eye of Bhossca (rogues only) is left out. Quest,
+-- NPC, item and object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance and the
+-- Forever quests from DungeonJournal (Exehn). See README.md.
 
 local TIRISFAL, STORMWIND, IRONFORGE, DESOLACE, HILLSBRAD = 1420, 1453, 1455, 1443, 1424
 local UNDERCITY, THUNDERBLUFF, BARRENS, NEEDLES, STONETALON, ASHENVALE, ALTERAC = 1458, 1456, 1413, 1441, 1442, 1440, 1416
@@ -28,6 +29,7 @@ ObviGuide.Guide(function(g)
 	local mae     = g.Npc("Librarian Mae Paledust", 3979)
 	local anton   = g.Npc("Brother Anton", 1182)
 	local raleigh = g.Npc("Raleigh the Devout", 3980)
+	local olvek   = g.Npc("Magus Olvek", 264265)
 
 	-- Stormwind and Ironforge
 	g:Step(function(s)
@@ -72,7 +74,15 @@ ObviGuide.Guide(function(g)
 		s:Talk(raleigh)
 		s:Turnin(1052, "Down the Scarlet Path")
 		s:Accept(1053, "In the Name of the Light")
-		s:Note("In Southshore. Then the long ride north to the monastery, in the far north-east of Tirisfal Glades.")
+		s:Note("In Southshore. Then north to Dalaran.")
+	end)
+
+	-- Dalaran, on the way north
+	g:Step(function(s)
+		s:Goto(ALTERAC, 9.5, 62.3)
+		s:Talk(olvek)
+		s:Accept(96800, "Past Due")
+		s:Note("At Dalaran. Then the long ride north to the monastery, in the far north-east of Tirisfal Glades.")
 	end)
 
 	-- the Library first: Loksey, the book, and the Scarlet Key for the last two wings
@@ -95,6 +105,12 @@ ObviGuide.Guide(function(g)
 		s:Note("The last boss of the Library. The key opens the Armory and the Cathedral: one in the group is enough.")
 	end)
 
+	g:Step(function(s)
+		s.only = "onquest 96800"
+		s:Collect(g.Item("The Lost Magic of the Runemasters", 273169), { quest = 96800, objective = 1 })
+		s:Note("Arcanist Doan holds the book.")
+	end)
+
 	wing(g, "Armory", "ready 1053 or done 1053", "Its door needs the Scarlet Key.")
 
 	g:Step(function(s)
@@ -110,7 +126,14 @@ ObviGuide.Guide(function(g)
 		s:Note("At the far end of the Cathedral. Whitemane comes in when Mograine falls, and raises him once.")
 	end)
 
-	-- out
+	-- out: Dalaran on the way back to Southshore
+	g:Step(function(s)
+		s.only = "onquest 96800 or done 96800"
+		s:Goto(ALTERAC, 9.5, 62.3)
+		s:Talk(olvek)
+		s:Turnin(96800, "Past Due")
+	end)
+
 	g:Step(function(s)
 		s.label = "out"
 		s:Goto(HILLSBRAD, 51.5, 58.4)
@@ -335,7 +358,7 @@ ObviGuide.Guide(function(g)
 	end)
 
 	---------------------------------------------------------------------------------------------------------------
-	-- out: Undercity, then Vorrel's ring in Alterac and Tarren Mill, then Thunder Bluff
+	-- out: Undercity, then Vorrel's ring in Alterac and Tarren Mill, then Thunder Bluff and Thousand Needles
 	---------------------------------------------------------------------------------------------------------------
 	g:Step(function(s)
 		s.label = "out"
@@ -354,7 +377,11 @@ ObviGuide.Guide(function(g)
 		s:Goto(UNDERCITY, 57.8, 65.4)
 		s:Talk(parqual)
 		s:Turnin(1160, "Test of Lore")
-		s:Note("His own question comes next: answer it and he gives you your reward. Then fly to Tarren Mill.")
+		s:Accept(6628, "Test of Lore")
+		s:Quest(6628, 1, "Answer Parqual's question.")
+		s:Turnin(6628, "Test of Lore")
+		s:Accept(1394, "Final Passage")
+		s:Note("If you get the answer wrong, take the quest from him again. Final Passage takes you back to Dorn in Thousand Needles for your reward. Then fly to Tarren Mill.")
 	end)
 
 	g:Step(function(s)
@@ -379,5 +406,13 @@ ObviGuide.Guide(function(g)
 		s:Talk(sage)
 		s:Turnin(1049, "Compendium of the Fallen")
 		s:Note("It can wait for your next time in Thunder Bluff.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 1394 or done 1394"
+		s:Goto(NEEDLES, 53.9, 41.5)
+		s:Talk(dorn)
+		s:Turnin(1394, "Final Passage")
+		s:Note("In his cave up the path on the mesa. It can wait too.")
 	end)
 end)

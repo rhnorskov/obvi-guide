@@ -1,11 +1,12 @@
--- Stratholme (55-60), one guide for each faction: the quests Attune lists for the dungeon. From Light's Hope Chapel:
--- Houses of the Holy, The Archivist and its follow-ups up to Baron Rivendare, The Flesh Does Not Lie and The Active
--- Agent, The Restless Souls and The Great Ezra Grimm. Tirion Fordring's chain from Redemption to Of Love and Family,
--- Ras Frostwhisper's chain up to Menethil's Gift, and Aurius' Reckoning from inside. The Horde guide adds Nathanos
--- Blightcaller's chain up to Ramstein. Two runs: the living side first (main gate), then the undead side (service
--- entrance), with Light's Hope in between.
--- Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrances from
--- DungeonJournal (Exehn). See README.md.
+-- Stratholme (55-60), one guide for each faction: the quests for the dungeon. From Light's Hope Chapel: Houses of the
+-- Holy, The Archivist and its follow-ups up to Baron Rivendare, The Flesh Does Not Lie and The Active Agent, The
+-- Restless Souls and The Great Ezra Grimm. Tirion Fordring's chain from Redemption to Of Love and Family, Ras
+-- Frostwhisper's chain up to Menethil's Gift, and Aurius' Reckoning from inside. Dead Man's Plea (from Anthion Harmon,
+-- at the end of the long Dungeon Set 2 chain) only while you have it. The Horde guide adds Nathanos Blightcaller's
+-- chain up to Ramstein. Two runs: the living side first (main gate), then the undead side (service entrance), with
+-- Light's Hope in between.
+-- Quest list from Attune (CixiDelmont) and DungeonJournal (Exehn); quest, NPC and item ids and positions from Attune
+-- and QuestieDB's Forever data; the entrances from DungeonJournal. See README.md.
 
 local EPL, WPL, ARATHI, UNDERCITY = 1423, 1422, 1417, 1458
 
@@ -344,6 +345,7 @@ local function stratholme(g, horde)
 		s.skip = "ready 5263 or done 5263"   -- (been inside already)
 		s:Goto(EPL, 44.0, 19.0)
 		s:Do("Enter Stratholme by the service entrance with your group.")
+		s:Say(g.Warn("Dead Man's Plea is timed: Baron Rivendare has to die within 45 minutes to save Ysida Harmon.")):Only("onquest 8945")
 	end)
 
 	g:Step(function(s)
@@ -373,6 +375,15 @@ local function stratholme(g, horde)
 		s:Kill(g.Mob("Baron Rivendare", 10440))
 		s:Collect(g.Item("Head of Baron Rivendare", 13251), { quest = 5263, objective = 1 })
 		s:Note("The last boss, in the building on Slaughter Square.")
+	end)
+
+	-- Dead Man's Plea comes at the end of Anthion Harmon's Dungeon Set 2 chain; only for those on it
+	g:Step(function(s)
+		s.only = "onquest 8945"
+		s:Quest(8945, 1, "Free Ysida Harmon.")
+		s:Talk(g.Npc("Ysida Harmon", 16031))
+		s:Turnin(8945, "Dead Man's Plea")
+		s:Note("Baron Rivendare holds her; she's freed once he dies in time. Her next quest, Proof of Life, goes back to Anthion Harmon outside the main gate.")
 	end)
 
 	g:Step(function(s)

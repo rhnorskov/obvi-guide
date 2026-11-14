@@ -1,12 +1,13 @@
--- Maraudon (Alliance and Horde, 41-51): the quests Attune lists for the dungeon. Both factions: Twisted Evils
--- (Willow), The Pariah's Instructions (the five Khans and the Amulet of Union), Legends of Maraudon and The Scepter of
--- Celebras, and Seed of Life from Zaetar's Spirit after Princess Theradras. Alliance: Corruption of Earth and Seed and
--- Vyletongue Corruption from Nijel's Point, Shadowshard Fragments from Theramore. Horde: the same two from Shadowprey
--- Village, Shadowshard Fragments from Orgrimmar. Quest, NPC, item and object ids and positions from Attune
--- (CixiDelmont) and QuestieDB's Forever data; the entrance and where things are inside from DungeonJournal (Exehn).
--- See README.md.
+-- Maraudon (Alliance and Horde, 41-51): the quests Attune and DungeonJournal (Exehn) list for the dungeon. Both
+-- factions: Twisted Evils (Willow), The Pariah's Instructions (the five Khans and the Amulet of Union), Legends of
+-- Maraudon and The Scepter of Celebras, Seed of Life from Zaetar's Spirit after Princess Theradras, and Rot and Regret
+-- (Woodwyrd, Shen'dralas), the end of a long Shen'dralas chain that is only pointed at. Alliance: Corruption of Earth
+-- and Seed and Vyletongue Corruption from Nijel's Point, Shadowshard Fragments from Theramore. Horde: the same two from
+-- Shadowprey Village, Shadowshard Fragments from Orgrimmar, and An'she's Radiance from Mulgore. Quest, NPC, item and
+-- object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance, where things are
+-- inside and the Forever quests from DungeonJournal (Exehn). See README.md.
 
-local DESOLACE, DUSTWALLOW, ORGRIMMAR, MOONGLADE = 1443, 1445, 1454, 1450
+local DESOLACE, DUSTWALLOW, ORGRIMMAR, MOONGLADE, MULGORE, SHENDRALAS = 1443, 1445, 1454, 1450, 1412, 2652
 
 -- the people in Desolace both factions visit
 local function willow(g, s, turnin)
@@ -24,6 +25,33 @@ local function pariah(g, s, turnin)
 		s:Accept(7067, "The Pariah's Instructions")
 		s:Use(g.Item("The Pariah's Instructions", 17781))
 		s:Note("He wanders this part of southern Desolace. Read the instructions he gives you.")
+	end
+end
+
+-- Rot and Regret: the end of a long chain in Shen'dralas, south of Desolace; only pointed at, then for those on it
+local function woodwyrdPointer(g)
+	g:Step(function(s)
+		s.skip = "onquest 93594 or done 93594"
+		s:Do("Optional: Rot and Regret comes at the end of a long chain in Shen'dralas, south of Desolace. It starts at the ", g.Object("Shen'dralar Pylon"), " there (43.6, 34.2).")
+		s:Note("Strange Pylons, then Mordent Evenshade's and Mithera's quests up to Word of the Woods. Without it you just skip Rot and Regret.")
+	end)
+end
+
+local function woodwyrd(g, s, turnin)
+	local vial = g.Item("Vial of Earth Song Water", 258296)
+	s:Goto(SHENDRALAS, 53.5, 76.0)
+	s:Talk(g.Npc("Woodwyrd", 254674))
+	if turnin then
+		s.only = "onquest 93404 or done 93404"
+		s:Use(vial)
+		s:Turnin(93404, "Rot and Regret")
+		s:Accept(93601, "Passing the Blame")
+		s:Note("Use the ", vial, " on the burning tree next to Woodwyrd, not on Woodwyrd himself. Passing the Blame goes on to Kog'thug the Brave and Agamaggan's Blood, a Razorfen Downs quest.")
+	else
+		s.only = "onquest 93594 or onquest 93404 or done 93404"
+		s:Turnin(93594, "Word of the Woods"):Only("onquest 93594")
+		s:Accept(93404, "Rot and Regret")
+		s:Note("In the Forlorn Gardens, just east of Mithera.")
 	end
 end
 
@@ -88,8 +116,8 @@ local function outerCaves(g, vyletongue, shadowshards)
 end
 
 -- inside: the orange wing (Noxxion), the purple wing (Lord Vyletongue), then Celebras and the inner caves down to
--- Princess Theradras. vyletongue, theradras: the faction's quest ids.
-local function inside(g, vyletongue, theradras)
+-- Princess Theradras. vyletongue, theradras: the faction's quest ids; horde adds An'she's Radiance.
+local function inside(g, vyletongue, theradras, horde)
 	g:Step(function(s)
 		s.skip = "ready " .. theradras .. " or done " .. theradras .. " or done 7046"   -- (been inside already)
 		s:Goto(DESOLACE, 29.1, 62.5)
@@ -155,6 +183,13 @@ local function inside(g, vyletongue, theradras)
 	end)
 
 	g:Step(function(s)
+		s.only = "onquest 93404"
+		s.skip = "ready 93404"   -- (the vial is used up at Woodwyrd)
+		s:Collect(g.Item("Vial of Earth Song Water", 258296))
+		s:Note("From the small geyser in the pools Rotgrip swims around in, in the waterfall cave below Princess Theradras.")
+	end)
+
+	g:Step(function(s)
 		s:Kill(g.Mob("Princess Theradras", 12201), { quest = theradras, objective = 1 })
 		s:Note("The last boss, at the bottom of the inner caves past the waterfall.")
 	end)
@@ -164,6 +199,14 @@ local function inside(g, vyletongue, theradras)
 		s:Accept(7066, "Seed of Life")
 		s:Note("He appears where Theradras died.")
 	end)
+
+	if horde then
+		g:Step(function(s)
+			s.only = "onquest 96776"
+			s:Collect(g.Item("An'she's Radiance", 277140), { quest = 96776, objective = 1 })
+			s:Note("Beyond Earth Song Falls, in the chamber of white crystals the giants guard: take it from the crystal near the highest part of the chamber.")
+		end)
+	end
 end
 
 local function seedOfLife(g, s)
@@ -183,6 +226,8 @@ ObviGuide.Guide(function(g)
 	local tervosh   = g.Npc("Archmage Tervosh", 4967)
 	local talendria = g.Npc("Talendria", 11715)
 	local marandis  = g.Npc("Keeper Marandis", 13698)
+
+	woodwyrdPointer(g)
 
 	g:Step(function(s)
 		s:Goto(DUSTWALLOW, 66.4, 49.3)
@@ -207,6 +252,7 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s) willow(g, s) end)
 	g:Step(function(s) pariah(g, s) end)
+	g:Step(function(s) woodwyrd(g, s) end)
 
 	outerCaves(g, 7041, 7070)
 	inside(g, 7041, 7065)
@@ -217,6 +263,7 @@ ObviGuide.Guide(function(g)
 		pariah(g, s, true)
 	end)
 
+	g:Step(function(s) woodwyrd(g, s, true) end)
 	g:Step(function(s) willow(g, s, true) end)
 
 	g:Step(function(s)
@@ -251,12 +298,22 @@ ObviGuide.Guide(function(g)
 	local uthelnay = g.Npc("Uthel'nay", 7311)
 	local vark     = g.Npc("Vark Battlescar", 11823)
 	local selendra = g.Npc("Selendra", 13699)
+	local olana    = g.Npc("Olana Brighthoof", 268557)
+
+	woodwyrdPointer(g)
 
 	g:Step(function(s)
 		s:Goto(ORGRIMMAR, 39.2, 86.3)
 		s:Talk(uthelnay)
 		s:Accept(7068, "Shadowshard Fragments")
-		s:Note("With the mage trainers in the Valley of Spirits. Then fly to Shadowprey Village.")
+		s:Note("With the mage trainers in the Valley of Spirits. Then fly to Thunder Bluff.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(MULGORE, 33.8, 23.7)
+		s:Talk(olana)
+		s:Accept(96776, "An'she's Radiance")
+		s:Note("At Camp Gev'rek on the Skywatcher Plateau, in north-west Mulgore. Then fly from Thunder Bluff to Shadowprey Village.")
 	end)
 
 	-- Shadowprey Village
@@ -274,10 +331,11 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s) pariah(g, s) end)
+	g:Step(function(s) woodwyrd(g, s) end)
 	g:Step(function(s) willow(g, s) end)
 
 	outerCaves(g, 7029, 7068)
-	inside(g, 7029, 7064)
+	inside(g, 7029, 7064, true)
 
 	-- the turn-ins: east to Willow, then down to the Pariah and back to Shadowprey
 	g:Step(function(s)
@@ -286,6 +344,7 @@ ObviGuide.Guide(function(g)
 	end)
 
 	g:Step(function(s) pariah(g, s, true) end)
+	g:Step(function(s) woodwyrd(g, s, true) end)
 
 	g:Step(function(s)
 		s:Goto(DESOLACE, 26.9, 77.7)
@@ -297,7 +356,14 @@ ObviGuide.Guide(function(g)
 		s:Goto(DESOLACE, 23.2, 70.3)
 		s:Talk(vark)
 		s:Turnin(7029, "Vyletongue Corruption")
-		s:Note("Then fly to Orgrimmar.")
+		s:Note("Then fly to Thunder Bluff.")
+	end)
+
+	g:Step(function(s)
+		s:Goto(MULGORE, 33.8, 23.7)
+		s:Talk(olana)
+		s:Turnin(96776, "An'she's Radiance")
+		s:Note("Then fly from Thunder Bluff to Orgrimmar.")
 	end)
 
 	g:Step(function(s)

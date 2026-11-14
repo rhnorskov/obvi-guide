@@ -1,11 +1,15 @@
--- Upper Blackrock Spire (55-60), one guide for each faction: the quests Attune lists for the dungeon. Egg Freezing and
--- Egg Collection for Tinkee Steamboil, Blackhand's Command (the Mark of Drakkisath), The Matron Protectorate from
--- Awbee, Eye of the Emberseer for Duke Hydraxis, Pip Quickwit's quest from The Beast, and General Drakkisath's Demise
--- with Doomrigger's Clasp (Alliance) or For The Horde! (Horde). Egg Collection needs a second run.
--- Quest, NPC and item ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance from
--- DungeonJournal (Exehn). See README.md.
+-- Upper Blackrock Spire (55-60), one guide for each faction: the quests for the dungeon. Egg Freezing and Egg
+-- Collection for Tinkee Steamboil, Blackhand's Command (the Mark of Drakkisath), The Matron Protectorate from Awbee,
+-- Eye of the Emberseer for Duke Hydraxis, Pip Quickwit's quest from The Beast, and General Drakkisath's Demise with
+-- Doomrigger's Clasp (Alliance) or For The Horde! (Horde). Egg Collection needs a second run. For those on their
+-- chains only: the parts of the Onyxia's Lair chains done here, Drakefire Amulet (Alliance; the chain starts with
+-- Jail Break! in Blackrock Depths) or Oculus Illusions and Blood of the Black Dragon Champion (Horde; it starts with
+-- Thrall after For The Horde!), and The Demon Forge for blacksmiths (after Lorax's Tale, in Winterspring).
+-- Quest list from Attune (CixiDelmont) and DungeonJournal (Exehn); quest, NPC and item ids and positions from Attune
+-- and QuestieDB's Forever data; the entrance and where things are inside from DungeonJournal. See README.md.
 
 local STORMWIND, ORGRIMMAR, STEPPES, SEARING, AZSHARA, WINTERSPRING = 1453, 1454, 1428, 1427, 1447, 1452
+local WPL, DESOLACE = 1422, 1443
 
 ---@param g ObviGuideGuideBuilder
 ---@param horde boolean
@@ -111,6 +115,15 @@ local function spire(g, horde)
 		s:Do("Enter Blackrock Spire with your group and go through to the sealed door of the upper part.")
 	end)
 
+	-- Horde, Oculus Illusions: only for those on the Onyxia chain
+	if horde then
+		g:Side("out", function(s)
+			s.only = "onquest 6569"
+			s:Collect(g.Item("Black Dragonspawn Eye", 16786), { count = 20, quest = 6569, objective = 1 })
+			s:Note("The black dragonspawn throughout the spire drop them.")
+		end)
+	end
+
 	-- only if someone skins The Beast
 	g:Side("out", function(s)
 		s:Talk(g.Npc("Pip Quickwit", 10776))
@@ -132,6 +145,16 @@ local function spire(g, horde)
 		s:Note("In the Rookery, right after Emberseer. Don't walk up to the eggs: they hatch. Doomrigger's Coffer stands in the middle of the room, before the ramp.")
 	end)
 
+	-- The Demon Forge: only for blacksmiths on it
+	g:Step(function(s)
+		s.only = "onquest 5127"
+		s:Kill(g.Mob("Goraluk Anvilcrack", 10899))
+		s:Use(g.Item("Blood Stained Pike", 12848))
+		s:Collect(g.Item("Soul Stained Pike", 12847), { quest = 5127, objective = 1 })
+		s:Collect(g.Item("Unforged Rune Covered Breastplate", 12806), { quest = 5127, objective = 2 })
+		s:Note("The Dark Horde blacksmith, after the Rookery on the way to the stadium. Use the pike on his corpse; the breastplate lies nearby.")
+	end)
+
 	if horde then
 		g:Step(function(s)
 			s.only = "onquest 4974"
@@ -148,10 +171,17 @@ local function spire(g, horde)
 	end)
 
 	g:Step(function(s)
-		s.only = "onquest 5102 or onquest 7761"
+		local blood = g.Item("Blood of the Black Dragon Champion", 16663)
+		s.only = "onquest 5102 or onquest 7761 or onquest 6502 or onquest 6602"
 		s:Kill(g.Mob("General Drakkisath", 10363), { quest = 5102, objective = 1 }):Only("onquest 5102")
 		s:Turnin(7761, "Blackhand's Command"):Only("onquest 7761")
 		s:Note("The last boss, past The Beast. After the fight, click Drakkisath's Brand behind him for the Mark of Drakkisath.")
+		if horde then
+			s:Collect(blood, { quest = 6602, objective = 1 }):Only("onquest 6602")
+		else
+			s:Collect(blood, { quest = 6502, objective = 1 }):Only("onquest 6502")
+		end
+		s:Note("He drops his blood for the Onyxia's Lair chain.")
 	end)
 
 	-- out: the Burning Steppes, and back in for the eggs
@@ -196,6 +226,17 @@ local function spire(g, horde)
 		s:Turnin(4735, "Egg Collection")
 	end)
 
+	-- Horde: Oculus Illusions, on the Onyxia chain
+	if horde then
+		g:Step(function(s)
+			s.only = "ready 6569"
+			s:Goto(WPL, 50.8, 77.8)
+			s:Talk(g.Npc("Myranda the Hag", 11872))
+			s:Turnin(6569, "Oculus Illusions")
+			s:Note("On Sorrow Hill, in the south of Western Plaguelands. Her next quest, Emberstrife, goes on towards Onyxia's Lair.")
+		end)
+	end
+
 	-- Kalimdor: Everlook and Azshara (and Orgrimmar)
 	g:Step(function(s)
 		s.only = "onquest 5047"
@@ -206,11 +247,23 @@ local function spire(g, horde)
 	end)
 
 	g:Step(function(s)
-		s.only = "onquest 5160"
+		s.only = horde and "onquest 5160" or "onquest 5160 or ready 6502"
 		s:Goto(WINTERSPRING, 54.5, 51.2)
 		s:Talk(g.Npc("Haleh", 10929))
-		s:Turnin(5160, "The Matron Protectorate")
 		s:Note("At the top of Mazthoril, south-west of Everlook: through the cave and up to the open ledge.")
+		s:Turnin(5160, "The Matron Protectorate"):Only("onquest 5160")
+		if not horde then
+			s:Turnin(6502, "Drakefire Amulet"):Only("ready 6502")
+			s:Note("The end of the Alliance chain to Onyxia's Lair, which starts with Jail Break! in Blackrock Depths.")
+		end
+	end)
+
+	g:Step(function(s)
+		s.only = "ready 5127"
+		s:Goto(WINTERSPRING, 63.8, 73.8)
+		s:Talk(g.Npc("Lorax", 10918))
+		s:Turnin(5127, "The Demon Forge")
+		s:Note("In the south of Winterspring. The Demon Forge comes from him after Lorax's Tale (Blacksmithing 270).")
 	end)
 
 	if horde then
@@ -219,7 +272,7 @@ local function spire(g, horde)
 			s:Goto(ORGRIMMAR, 31.7, 37.8)
 			s:Talk(thrall)
 			s:Turnin(4974, "For The Horde!")
-			s:Note("In Grommash Hold.")
+			s:Note("In Grommash Hold. His next quest, What the Wind Carries, starts the road to Onyxia's Lair; this guide picks it up again at Oculus Illusions.")
 		end)
 	end
 
@@ -229,6 +282,17 @@ local function spire(g, horde)
 		s:Talk(hydraxis)
 		s:Turnin(6821, "Eye of the Emberseer")
 	end)
+
+	-- Horde: the end of the Onyxia chain
+	if horde then
+		g:Step(function(s)
+			s.only = "ready 6602"
+			s:Goto(DESOLACE, 54.0, 3.2)
+			s:Talk(g.Npc("Rexxar", 10182))
+			s:Turnin(6602, "Blood of the Black Dragon Champion")
+			s:Note("He walks the roads of Desolace between the Stonetalon Mountains and Feralas. The end of the Horde chain to Onyxia's Lair, which starts with Thrall once For The Horde! is handed in.")
+		end)
+	end
 end
 
 ObviGuide.Guide(function(g)

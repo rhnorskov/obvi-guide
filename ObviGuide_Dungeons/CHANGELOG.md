@@ -7,6 +7,17 @@
   Razorfen Downs, Uldaman, Zul'Farrak, Maraudon, The Temple of Atal'Hakkar, Blackrock Depths, Dire Maul, Lower and
   Upper Blackrock Spire, Scholomance and Stratholme, and Wailing Caverns. The Hall of Thanes and Ruins of Lordaeron now
   have Horde guides too. Each guide leads to the next one by level.
+- The quests DungeonJournal lists that Attune misses are in the guides now: The Corruption Abroad (Blackfathom Deeps),
+  The Fury Runs Deep (The Stockade), Prehistoric Prism and Earthen Echo (Excavation Site), Data Rescue, The Only Cure
+  is More Green Glow, The Sparklematic 5200!, Gnome Improvement and Nogg's Ring Redo (Gnomeregan), Past Due and Final
+  Passage (Scarlet Monastery), Extinguishing the Idol, The Coldbringer's Eye and Agamaggan's Blood (Razorfen Downs),
+  Agmond's Fate, the rest of the necklace chain and The Platinum Discs (Uldaman), The Brassbolts Brothers, Tran'rek and
+  Zum'rah's Head (Zul'Farrak), Rot and Regret and An'she's Radiance (Maraudon), Haze of Evil and Zapper Fuel (The
+  Temple of Atal'Hakkar), Jail Break!, Operation: Death to Angerforge, Fragment of the Firelands, Yuka Screwspigot,
+  Vivian Lagrave, The Spectral Chalice, A Binding Contract and The Challenge (Blackrock Depths), the Gordok quests,
+  the Librams, Starfall and Fragments of the Past (Dire Maul), Dead Man's Plea (Stratholme), and the Upper Blackrock
+  Spire ends of the Onyxia chains and The Demon Forge. Quests at the end of a long chain show only once you're on it.
+  Dire Maul now goes East, North, then West.
 - New: **Dungeon keys**: Tome of Dalaran, Dalaran Sewer Key, The Scarlet Key, Shadowforge Key and Skeleton Key.
 - The guides are now called "The Deadmines: Quests" and so on.
 - The Deadmines: the Rough Dynamite for A Dynamite Plan is a step of its own; the Miners' Union Cards are a side task
