@@ -427,10 +427,10 @@ local function RenderLine(line)
 end
 
 ---@param tip ObviGuideTip
-local function Tip(tip, y)
+local function Tip(tip, y, dim)
 	local line = Line()
-	line.text:SetText(Inline("|cffd0b070" .. tip.text .. "|r"))
-	line.text:SetTextColor(1, 1, 1)
+	line.text:SetText(Inline(dim and tip.text or ("|cffd0b070" .. tip.text .. "|r")))
+	line.text:SetTextColor((dim and DIM or TODO):GetRGB())
 	Icon(line, nil, false)
 	return Place(line, y, 0)   -- no extra indent: its text lines up with the text of the lines around it
 end
@@ -438,13 +438,16 @@ end
 --- The goal lines, with the step's notes (if given) each right after the line it follows in the guide.
 ---@param step ObviGuideStep
 ---@param goals ObviGuideGoal[]
+--- With `all`, the lines left out for you are shown too (greyed, as `dim` has them): a step that doesn't apply, gone
+--- to by hand, shows what it is about rather than only its talk line and notes.
 ---@param tips? ObviGuideTip[]
-local function Goals(step, goals, y, dim, side, tips)
+---@param all? boolean
+local function Goals(step, goals, y, dim, side, tips, all)
 	tips = tips or {}
 	local shown = {} ---@type table<ObviGuideTip, boolean>
 	local function TipsAfter(goal)
 		for _, tip in ipairs(tips) do
-			if tip.after == goal then y = Tip(tip, y) shown[tip] = true end
+			if tip.after == goal then y = Tip(tip, y, dim) shown[tip] = true end
 		end
 	end
 	TipsAfter(nil)
@@ -463,7 +466,7 @@ local function Goals(step, goals, y, dim, side, tips)
 	for _, g in ipairs(goals) do
 		-- a quest you can't take yet (its chain began in a guide you skipped) shows greyed out, with what it waits for
 		local locked = not Engine.IsVisible(g) and Engine.Locked(g) or nil
-		if locked or Engine.IsVisible(g) then
+		if locked or all or Engine.IsVisible(g) then
 			if side and g.box and box and g.box ~= box then y = y + SIDE_BOX_GAP end
 			box = g.box or box
 			local line = Line()
@@ -476,7 +479,7 @@ local function Goals(step, goals, y, dim, side, tips)
 		TipsAfter(g)
 	end
 	-- notes whose line was folded away go last
-	for _, tip in ipairs(tips) do if not shown[tip] then y = Tip(tip, y) end end
+	for _, tip in ipairs(tips) do if not shown[tip] then y = Tip(tip, y, dim) end end
 	return y
 end
 
@@ -579,7 +582,11 @@ function Window.Refresh()
 		return
 	end
 	local y = TopPad()
-	y = Goals(step, step.goals, y, false, false, step.tips)
+	-- a step with nothing in it for you (its lines wait on a quest you haven't got: Stranglethorn Vale 37-38's first
+	-- step, the Small Brass Key from Viznik's bank), gone to by hand: the guide passes it by, so all of it shows
+	-- greyed, rather than a talk line and a note about something that isn't there
+	local applies = Engine.StepState(step)
+	y = Goals(step, step.goals, y, not applies, false, step.tips, not applies)
 	-- side tasks
 	local open = {}
 	local boxes = {} ---@type table<table, boolean>   each side box: still open (a done one goes with its notes)
