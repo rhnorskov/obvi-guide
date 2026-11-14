@@ -32,7 +32,7 @@ local DIM = CreateColor(0.55, 0.55, 0.55)
 ---@field Title FontString
 ---@field StepText FontString
 ---@field FwdPulse AnimationGroup   the next arrow's pulse, while you're back from the step the guide is on
----@field FwdGlow Texture
+---@field FwdGlow Frame
 ---@field Background Texture
 ---@field Body Frame
 ---@field Header Frame
@@ -815,19 +815,36 @@ local function Build()
 	end
 	local fwd = Arrow("common-icon-forwardarrow", gear, 1, "Next step")
 	local back = Arrow("common-icon-backarrow", fwd, -1, "Previous step")
-	-- the next arrow pulses gold while you're back from the step the guide is on
-	local glow = fwd:CreateTexture(nil, "OVERLAY")
-	glow:SetAtlas("common-icon-forwardarrow")
+	-- the next arrow pulses gold while you're back from the step the guide is on: a gold halo (the action buttons'
+	-- glow) swelling behind it and the arrow lit up, so it shows from the corner of your eye
+	local glow = CreateFrame("Frame", nil, fwd)
 	glow:SetAllPoints()
-	glow:SetBlendMode("ADD")
-	glow:SetVertexColor(1, 0.82, 0)
+	glow:SetFrameLevel(fwd:GetFrameLevel() + 1)
+	local halo = glow:CreateTexture(nil, "BACKGROUND")
+	halo:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+	halo:SetBlendMode("ADD")
+	halo:SetVertexColor(1, 0.82, 0)
+	halo:SetSize(40, 40)
+	halo:SetPoint("CENTER")
+	for _ = 1, 2 do   -- (two layers: one alone barely lights the arrow up)
+		local lit = glow:CreateTexture(nil, "OVERLAY")
+		lit:SetAtlas("common-icon-forwardarrow")
+		lit:SetAllPoints()
+		lit:SetBlendMode("ADD")
+		lit:SetVertexColor(1, 0.82, 0)
+	end
 	glow:SetAlpha(0)
 	local pulse = glow:CreateAnimationGroup()
 	pulse:SetLooping("BOUNCE")
 	local fade = pulse:CreateAnimation("Alpha")
-	fade:SetFromAlpha(0)
+	fade:SetFromAlpha(0.1)
 	fade:SetToAlpha(1)
-	fade:SetDuration(0.6)
+	fade:SetDuration(0.45)
+	local swell = pulse:CreateAnimation("Scale")
+	swell:SetScaleFrom(0.85, 0.85)
+	swell:SetScaleTo(1.25, 1.25)
+	swell:SetOrigin("CENTER", 0, 0)
+	swell:SetDuration(0.45)
 	frame.FwdPulse, frame.FwdGlow = pulse, glow
 	frame.StepText = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	frame.StepText:SetPoint("RIGHT", back, "LEFT", -4, 0)
