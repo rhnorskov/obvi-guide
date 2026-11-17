@@ -210,11 +210,11 @@ end
 ---@return {name?: string, hint: string}[]
 function Action.Hints(goal)
 	local out = {}
-	-- whether the line names this mob in its text: a key made for another line that names it shows here too, after
-	-- the name (two lines killing Kurzen Jungle Fighters share its key); a line that only targets it (collecting what
-	-- it drops) doesn't repeat it
+	-- whether another kill line kills this mob too: the key made for that line shows here as well, after the name
+	-- (two lines killing Kurzen Jungle Fighters share its key); a line that only targets it (collecting what it
+	-- drops, "Large River Crocolisk Skin") doesn't repeat it
 	local function names(name)
-		if not (goal.text and goal.text:find(name, 1, true)) then return false end
+		if goal.kind ~= "kill" or not (goal.text and goal.text:find(name, 1, true)) then return false end
 		for _, t in ipairs(goal.targets or { goal.target }) do if t.name == name then return true end end
 		return false
 	end
