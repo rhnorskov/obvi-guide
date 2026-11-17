@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Auto accept and turn in work as Zygor's: only what the step you're on still has to do (no longer the next step's
+  quests, nor lines hidden for you), and declining a quest leaves auto accept off for a few seconds.
 - A mob two lines name shows its action key on both (Kill Kurzen Jungle Fighter [a-3] under the line it came from).
 - Pressing the action key again in an NPC's quest window no longer accepts the quest shown (the game took the key as
   Accept): the key only interacts once the window is closed.
