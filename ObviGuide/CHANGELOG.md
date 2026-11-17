@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Pressing the action key again in an NPC's quest window no longer accepts the quest shown (the game took the key as
+  Accept): the key only interacts once the window is closed.
+
 - The next-step arrow pulses gold while you're on an earlier step than the guide has got to (you went back); its
   tooltip says which step that is. Kept across a reload.
 - The current step on the world map: its destination as a gold pin and the spots it marks ("multiple locations") as

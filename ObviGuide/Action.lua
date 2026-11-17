@@ -166,12 +166,17 @@ local function TargetIsOurs(slot)
 	return ok and same or false
 end
 
+-- an NPC's dialogue or quest window is open: the key isn't "Interact with Target" meanwhile, since the game takes
+-- that key in an open quest window as accepting the quest shown (pressing it again after talking to Mebok Mizzyrix
+-- took a quest the guide doesn't do); it comes back when the window closes
+local talking = false
+
 function Action.Rebind()
 	if InCombatLockdown() then pending = true return end
 	local changed = false
 	for _, slot in ipairs(slots) do
 		-- (a slot picking a dialogue option keeps that until the dialogue closes, see Gossip below)
-		local want = TargetIsOurs(slot) or (slot.current ~= nil and slot.current.kind == "interact")
+		local want = not talking and (TargetIsOurs(slot) or (slot.current ~= nil and slot.current.kind == "interact"))
 		if not slot.gossip and want ~= slot.interacting then
 			ClearOverrideBindings(slot.button)
 			if want then
@@ -279,6 +284,12 @@ ns:On("GOSSIP_CLOSED", GossipDone)
 ns:On("OBVIGUIDE_STEP", function() Apply() Action.Rebind() end)
 ns:On("OBVIGUIDE_UPDATE", function() Apply() Action.Rebind() end)
 ns:On("PLAYER_TARGET_CHANGED", function() Action.Rebind() end)
+for _, event in ipairs({ "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE" }) do
+	ns:On(event, function() talking = true Action.Rebind() end)
+end
+for _, event in ipairs({ "GOSSIP_CLOSED", "QUEST_FINISHED" }) do
+	ns:On(event, function() talking = false Action.Rebind() end)
+end
 ns:On("PLAYER_REGEN_ENABLED", function() if pending then Apply() Action.Rebind() ns:Fire("OBVIGUIDE_UPDATE") end end)
 ns:On("UPDATE_BINDINGS", function()
 	-- the player changed their keys: the interact overrides must follow the new keys
