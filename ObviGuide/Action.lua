@@ -210,9 +210,16 @@ end
 ---@return {name?: string, hint: string}[]
 function Action.Hints(goal)
 	local out = {}
+	-- whether the line names this mob: a key made for another line that names it shows here too (two lines killing
+	-- Kurzen Jungle Fighters share its key)
+	local function names(name)
+		for _, t in ipairs(goal.targets or { goal.target }) do if t.name == name then return true end end
+		return false
+	end
 	for i, slot in ipairs(slots) do
 		local a = slot.current
-		local key = a and a.goal == goal and Action.Key(i)
+		local mine = a and (a.goal == goal or (a.kind == "target" and type(a.value) == "string" and names(a.value)))
+		local key = mine and Action.Key(i)
 		if a and key then
 			local verb = a.kind == "interact" and "interact" or (a.enemy and "attack" or "talk")
 			local hint = slot.interacting and (key .. ": " .. verb) or key
