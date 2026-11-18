@@ -1,7 +1,4 @@
--- Slash commands: /obvi or /og (or /obviguide) toggles the window; "/og guides" opens the guide picker; "/og list"
--- lists the loaded guides in chat; "/og debug"; "/og names" tests looking up creature and item names by id;
--- "/og cleanup" cleans up the quest log; "/og catchup [quest]" finds skipped quests the guide (or that quest) needs (Catchup.lua);
--- "/og junk" offers to destroy the cheapest item in the bags (UI\Junk.lua).
+-- Slash commands: /og (or /obvi guide) toggles the window; "/og help" lists the rest (built by ObviHub.lua).
 local _, ns = ...
 ---@cast ns ObviGuideNS
 
@@ -135,41 +132,35 @@ local function Trainers(profession)
 	batch()
 end
 
-SLASH_OBVIGUIDE1, SLASH_OBVIGUIDE2, SLASH_OBVIGUIDE3 = "/obvi", "/og", "/obviguide"
--- SlashCmdList is a FrameXML global the WoW annotations do not declare, hence the _G lookup.
-local slashCmdList = _G["SlashCmdList"] ---@type table<string, fun(msg: string)>
-slashCmdList.OBVIGUIDE = function(msg)
-	local cmd = (msg or ""):lower():match("^%s*(%S*)")
-	if cmd == "list" then
-		if #ns.guides == 0 then ns.Print("no guides loaded; add a guide pack") return end
-		for _, g in ipairs(ns.guides) do
-			-- (a guide not opened yet isn't read, so its steps aren't counted)
-			local steps = g.pending and "not read yet" or (#g.steps .. " steps")
-			ns.Print("%s |cff888888(%s, %s, from %s)|r", g.title, g.group, steps, g.source)
-		end
-	elseif cmd == "debug" then
-		ns.debug = not ns.debug
-		ns.Print("debug %s", ns.debug and "on" or "off")
-		-- what the readers could not translate when the guides were added (before debug was on)
-		if ns.debug and #ns.warnings > 0 then ns.Copy("Obvi Guide: guide warnings", table.concat(ns.warnings, "\n")) end
-	elseif cmd == "pins" then
-		ns.MinimapPins.Debug()
-	elseif cmd == "guides" then
-		ns.GuidePicker.Open()
-	elseif cmd == "cleanup" then
-		ns.Cleanup()
-	elseif cmd == "junk" then
-		ns.DestroyCheapest()
-	elseif cmd == "catchup" then
-		-- (the rest as typed: a quest's id, name or link)
-		ns.Catchup.Start((msg or ""):match("^%s*%S+%s*(.-)%s*$"))
-	elseif cmd == "step" then
-		ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep() .. "\n" .. ns.Travel.DebugObjective())
-	elseif cmd == "names" then
-		TestNames()
-	elseif cmd == "trainers" then
-		Trainers((msg or ""):match("^%s*%S+%s*(.-)%s*$"))
-	else
-		ns.Window.Toggle()
+local function List()
+	if #ns.guides == 0 then ns.Print("no guides loaded; add a guide pack") return end
+	for _, g in ipairs(ns.guides) do
+		-- (a guide not opened yet isn't read, so its steps aren't counted)
+		local steps = g.pending and "not read yet" or (#g.steps .. " steps")
+		ns.Print("%s |cff888888(%s, %s, from %s)|r", g.title, g.group, steps, g.source)
 	end
 end
+
+local function Debug()
+	ns.debug = not ns.debug
+	ns.Print("debug %s", ns.debug and "on" or "off")
+	-- what the readers could not translate when the guides were added (before debug was on)
+	if ns.debug and #ns.warnings > 0 then ns.Copy("Obvi Guide: guide warnings", table.concat(ns.warnings, "\n")) end
+end
+
+ObviHub.Register({ key = "guide", title = "Obvi Guide", command = "/og", commands = {
+	{ "", function() ns.Window.Toggle() end, "shows or hides the guide window" },
+	{ "guides", function() ns.GuidePicker.Open() end, "picks a guide" },
+	{ "list", List, "lists the loaded guides in chat" },
+	-- (the rest as typed: a quest's id, name or link)
+	{ "catchup", function(quest) ns.Catchup.Start(quest) end, "finds skipped quests the guide needs (or: catchup <quest>)" },
+	{ "cleanup", function() ns.Cleanup() end, "cleans up the quest log" },
+	{ "junk", function() ns.DestroyCheapest() end, "offers to destroy the cheapest item in your bags" },
+	{ "options", function() ns.Options.Open() end, "opens the options" },
+	{ "debug", Debug, "debug output on or off" },
+	{ "step", function() ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep() .. "\n" .. ns.Travel.DebugObjective()) end,
+		"what the guide makes of the current step", dev = true },
+	{ "pins", function() ns.MinimapPins.Debug() end, "how the map pins are built", dev = true },
+	{ "names", TestNames, "tests looking up creature and item names by id", dev = true },
+	{ "trainers", Trainers, "the NPCs QuestieDB knows for a profession (trainers <profession>)", dev = true },
+} })

@@ -591,7 +591,7 @@ local function Build()
 	close:SetPoint("RIGHT", -2, 2)
 	-- the template hides its parent, which is the header here: close the whole window instead
 	close:SetScript("OnClick", function() frame:Hide() end)
-	-- "Open guide": any guide Obvi Guide has loaded, as a new draft (also /scribe open)
+	-- "Open guide": any guide Obvi Guide has loaded, as a new draft (also /ogs open)
 	openButton = Button(header, "Open guide...", 96, "Open a guide Obvi Guide has loaded as a new draft, to change it",
 		function(self) MenuUtil.CreateContextMenu(self, function(_, root) GuideMenu(root) end) end)
 	openButton:SetPoint("RIGHT", close, "LEFT", -2, 0)
@@ -683,7 +683,7 @@ function Editor.Toggle()
 	frame:SetShown(not frame:IsShown())
 end
 
---- The window, with the "Open guide" menu open (/scribe open).
+--- The window, with the "Open guide" menu open (/ogs open).
 function Editor.OpenGuide()
 	if not frame then Build() end
 	frame:Show()

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Slash commands: `/og help` lists every command, and `/og options` opens the options. `/obvi` now lists your Obvi
+  addons (`/obvi guide` is the same as `/og`); `/obviguide` is gone. Scribe's command is now `/ogs` (was `/scribe`).
 - The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
   you have its buff) or done no longer shows there.
 

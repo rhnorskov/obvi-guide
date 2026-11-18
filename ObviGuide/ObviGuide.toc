@@ -9,6 +9,7 @@
 ## SavedVariables: ObviGuideDB
 ## SavedVariablesPerCharacter: ObviGuideCharDB
 
+ObviHub.lua
 Core.lua
 Conditions.lua
 Builder.lua

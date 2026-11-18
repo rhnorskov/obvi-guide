@@ -225,9 +225,8 @@ ns:On("PLAYER_LOGIN", function()
 	for _, d in ipairs(ns.db.drafts) do ns.Register(d, true) end
 end)
 
--- /scribe toggles the window; "/scribe open" opens it with the "Open guide" menu
-SLASH_OBVISCRIBE1 = "/scribe"
-local slashCmdList = _G["SlashCmdList"] ---@type table<string, fun(msg: string)>
-slashCmdList.OBVISCRIBE = function(msg)
-	if (msg or ""):lower():match("^%s*open") then ns.Editor.OpenGuide() else ns.Editor.Toggle() end
-end
+-- /ogs (or /obvi scribe), through Obvi Guide's ObviHub.lua
+ObviHub.Register({ key = "scribe", title = "Obvi Guide: Scribe", command = "/ogs", commands = {
+	{ "", function() ns.Editor.Toggle() end, "shows or hides the Scribe window" },
+	{ "open", function() ns.Editor.OpenGuide() end, "opens a loaded guide as a new draft" },
+} })
