@@ -90,8 +90,9 @@ local function HandOver()
 		ZGV.guidesloaded and "" or "; Zygor hadn't finished loading"))
 end
 
--- Zygor off: once its guides are loaded, Zygor itself is stopped, so it can't clash with Obvi Guide (its window,
--- arrow, map pins, auto accept, bag upgrade marks, timers). On by default; "/og zygor" keeps Zygor running instead
+-- Zygor off: once its guides are loaded, Zygor itself is stopped, so it can't clash with Obvi Guide: nothing of it
+-- shows (window, arrow, action bar, map drawings, buttons it adds to the game's windows, tooltip lines) or runs (auto
+-- accept, its events, timers and update loops). On by default; "/og zygor" keeps Zygor running instead
 -- (from the next /reload), or stops it again. Kept in ObviGuideZygorDB.
 
 --- The saved settings. (The game sets ObviGuideZygorDB after this file has run, so it's looked up each time.)
@@ -106,25 +107,76 @@ end
 local function Try(f) pcall(f) end
 
 local stopped = false
---- Stops Zygor: its startup (the modules that come after the guides, loading the last guide), then the addon itself
---- (Ace's Disable hides its window and map button and drops all its events, timers and hooks), its arrow and
---- waypoints, and the event frames it keeps outside Ace. Its guides stay registered for Obvi Guide to read.
+--- Stops Zygor, so nothing of it shows or runs. Its guides stay registered for Obvi Guide to read. Each part is looked
+--- up as Zygor (Forever 1.6) has it, and skipped when it isn't there.
 local function StopZygor()
 	if stopped then return end
 	stopped = true
-	local master = _G["ZygorGuidesViewerFrameMaster"] ---@type Frame?
-	if master then master:SetScript("OnUpdate", nil) end
-	local Pointer = ZGV.Pointer
+	local Pointer = ZGV.Pointer ---@type table?
+	local ItemScore = ZGV.ItemScore ---@type table?
+	local Gold = ZGV.Gold ---@type table?
+
+	--- A frame of Zygor's: no events, no OnUpdate, no OnEvent.
+	---@param frame table?
+	local function Quiet(frame)
+		if not frame then return end
+		Try(function() frame:UnregisterAllEvents() end)
+		Try(function() frame:SetScript("OnUpdate", nil) end)
+		Try(function() frame:SetScript("OnEvent", nil) end)
+	end
+	--- A frame of Zygor's: hidden.
+	---@param frame table?
+	local function Hide(frame) if frame then Try(function() frame:Hide() end) end end
+	--- A function of Zygor's, called by name from a hook into the game's UI (hooks can't be undone): does nothing.
+	---@param t table?
+	---@param name string
+	local function NoOp(t, name) if t and type(t[name]) == "function" then t[name] = function() end end end
+
+	-- its startup: never resumed (it's frozen just after loading the guides, see below)
+	Quiet(_G["ZygorGuidesViewerFrameMaster"])
+
+	-- the arrow and waypoints, before the rest goes
 	if Pointer then
 		Try(function() Pointer:ClearWaypoints() end)
 		Try(function() Pointer:HideArrow() end)
-		Try(function() Pointer.ArrowFrame:Hide() end)
-		Try(function() Pointer.EventFrame:UnregisterAllEvents() end)
 	end
+
+	-- the addon: Ace's Disable hides its window and minimap button, and drops every event, message, timer and Ace hook
+	-- it registered through Ace (auto accept, step completion, the rest of its event handlers)
 	Try(function() ZGV:Disable() end)
-	Try(function() ZGV.Frame:Hide() end)
-	Try(function() ZGV.EventDelayFrame:UnregisterAllEvents() end)
-	Try(function() ZGV.Listener:UnregisterAllEvents() end)
+
+	-- its frames that run outside Ace: its every-frame update loop (points of interest, waypoint pins, tabs, widgets),
+	-- delayed events, startup checklist, arrow driver, map preview, travel planner (LibRover, with its own Ace timers),
+	-- flight path tracker (LibTaxi), auction house trackers
+	Quiet(ZGV.UpdateCentral)
+	Quiet(ZGV.EventDelayFrame)
+	Quiet(ZGV.Checklist and ZGV.Checklist.Listener)
+	Quiet(Pointer and Pointer.EventFrame)
+	Quiet(Pointer and Pointer.ArrowFrameCtrl)
+	Quiet(ZGV.PointerMap and ZGV.PointerMap.TrackerFrame)
+	local Rover = ZGV.LibRover ---@type table?
+	if Rover then
+		Quiet(Rover.frame)
+		Quiet(Rover.F)
+		Try(function() Rover:CancelAllTimers() end)
+	end
+	Quiet(ZGV.LibTaxi and ZGV.LibTaxi.frame)
+	Quiet(Gold and Gold.Appraiser and Gold.Appraiser.Events)
+	Quiet(Gold and Gold.Scan and Gold.Scan.FWORK)
+	Quiet(Gold and Gold.Scan and Gold.Scan.FUI)
+
+	-- what it shows: its window, arrow, action bar (below), the menu button on the world map, the bag-space count on the
+	-- backpack button, the gear finder button on the character window, the creature viewer, the minimap button
+	Hide(ZGV.Frame)
+	Hide(Pointer and Pointer.ArrowFrame)
+	Hide(ZGV.MapCoords and ZGV.MapCoords.MapButtonFrame)
+	Hide(ZGV.Inventory and ZGV.Inventory.BagSpaceText)
+	Hide(ZGV.Inventory and ZGV.Inventory.BagSpaceTextBG)
+	Hide(ItemScore and ItemScore.GearFinder and ItemScore.GearFinder.PaperDollButton)
+	Hide(ItemScore and ItemScore.GearFinder and ItemScore.GearFinder.MainFrame)
+	Hide(ZGV.CreatureViewer and ZGV.CreatureViewer.Frame)
+	Hide(_G["ZygorGuidesViewerMapIcon"])
+
 	-- what it draws on the maps: its world map layers (unexplored-area overlay, points of interest, waypoint pins and
 	-- lines) and its waypoint icons on the world map and minimap
 	local map = _G["WorldMapFrame"] ---@type table   (FrameXML; the annotations don't declare it)
@@ -137,6 +189,61 @@ local function StopZygor()
 		Try(function() ZGV.HBDPins:RemoveAllWorldMapIcons(Pointer) end)
 		Try(function() ZGV.HBDPins:RemoveAllMinimapIcons(Pointer) end)
 	end
+
+	-- its hooks into the game's own windows and tooltips. Those that ask Zygor's settings first: the settings are off
+	-- while it's stopped, and put back as they were at logout, before they're saved, so Zygor's own settings don't change
+	local profile = ZGV.db and ZGV.db.profile ---@type table?
+	local hidThings = false
+	if profile then
+		local keys = {
+			"talenton", "ta_toggle_icons",                     -- talent advisor: icons on the talents, its menu button
+			"autogear", "markupgrades", "itemscore_tooltips",  -- gear upgrades: bag marks, popups, tooltip lines
+			"badupgradehotkey",                                -- gear upgrades: the click on a bag item
+			"gold_tooltips_show",                              -- auction prices on item tooltips
+			"hidetracker", "hideexptracker",                   -- hiding the game's quest tracker and XP bar
+			"autoskipcutscenes",                               -- skipping cutscenes
+		}
+		hidThings = profile.hidetracker or profile.hideexptracker
+		-- what was saved (nil: left at Zygor's default, and put back as nil so it stays one)
+		local was = {} ---@type table<string, any>
+		for _, key in ipairs(keys) do
+			was[key] = rawget(profile, key)
+			profile[key] = false
+		end
+		local logout = CreateFrame("Frame")
+		logout:RegisterEvent("PLAYER_LOGOUT")
+		logout:SetScript("OnEvent", function() for _, key in ipairs(keys) do rawset(profile, key, was[key]) end end)
+	end
+	-- the rest call these by name: clicking a map icon (suggests a guide), quest and player choices (recorded), the
+	-- talents window (the advisor), its map preview, the bag-space count, the gear finder tab, a declined equip (marks a
+	-- bad upgrade), the flight map's tooltips, the gossip options picked (recorded)
+	NoOp(ZGV, "SuggestGuideFromBlizzardIcon")
+	NoOp(ZGV, "QuestRewardSelect")
+	NoOp(ZGV, "PlayerChoiceResponce")
+	local TA = ZGV.TalentAdvisor ---@type table?
+	if TA then
+		-- it sets itself up when the talents window first loads: marked set up so it never does, or put away if it has
+		if TA.Initialised then Try(function() TA:Toggle(false) end) else TA.Initialised = true end
+		NoOp(TA, "SetTalents")
+	end
+	local PointerMap = ZGV.PointerMap ---@type table?
+	if PointerMap then
+		if PointerMap.PreviewVisible then Try(function() PointerMap:HidePreview(true) end) end
+		NoOp(PointerMap, "HidePreview")
+		NoOp(PointerMap, "RestoreMapSettings")
+	end
+	NoOp(ZGV.Inventory, "UpdateBagspaceText")
+	NoOp(ItemScore and ItemScore.GearFinder, "UpdateSystemTab")
+	NoOp(ItemScore and ItemScore.Upgrades, "SetBadUpgrade")
+	NoOp(ZGV.LibTaxi and ZGV.LibTaxi.HooksForTaxiFrame, "ClassicTaxiButtonOnEnter")
+	NoOp(ZGV.Telemetry and ZGV.Telemetry.Miner, "GetSelectedOption")
+	-- the quest tracker and XP bar Zygor hides while its window is up (when set to): shown again, and no longer hidden
+	local Replacements = ZGV.Replacements ---@type table?
+	if Replacements then
+		if hidThings then Try(function() Replacements:UpdateVisibility(true) end) end
+		NoOp(Replacements, "UpdateVisibility")
+	end
+
 	-- its action bar (trash, talk-to and use buttons): a secure frame, so hidden out of combat, with its combat
 	-- show/hide driver dropped so combat can't bring it back
 	local bar = ZGV.ActionBar and ZGV.ActionBar.Frame ---@type table?
@@ -144,8 +251,8 @@ local function StopZygor()
 		local function HideBar()
 			-- (a FrameXML global the annotations don't declare)
 			Try(function() _G["UnregisterAttributeDriver"](bar, "state-combathide") end)
-			Try(function() bar.Overlay:Hide() end)
-			Try(function() bar:Hide() end)
+			Hide(bar.Overlay)
+			Hide(bar)
 		end
 		if InCombatLockdown() then
 			local wait = CreateFrame("Frame")
