@@ -1,4 +1,4 @@
--- The arrow, Obvi Guide's own way of showing the waypoint (the default, see Travel.lua), as Zygor and TomTom have one:
+-- The arrow, Obvi Guide's own way of showing the waypoint (the default without Shortest Path Forever, see Travel.lua), as Zygor and TomTom have one:
 -- the game's navigation arrow turning towards the destination, with the step's first line and how far it is under it.
 -- Drag it to move it; right-click hides it until the next step.
 local _, ns = ...

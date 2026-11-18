@@ -56,24 +56,30 @@ local function Build()
 		"The current step's destination (a gold pin) and the spots it marks (dots) on the world map, on the zone's map "
 		.. "and the continent's.",
 		function() ns.WorldMapPins.Refresh() end)
-	-- the addons are only offered when installed; a saved choice that isn't shows (and works) as the arrow
+	-- Auto (the default, kept as nil) says what it uses; the addons are only offered when installed, and a saved
+	-- choice that isn't shows (and works) as the arrow
 	local waypoints = Settings.RegisterProxySetting(category, "ObviGuide_waypoints", Settings.VarType.String,
-		"Waypoints", "arrow",
-		function() return ns.Travel.Provider() end,
+		"Waypoints", "auto",
+		function()
+			local kind = ns.Travel.Setting()
+			return kind == "auto" and kind or ns.Travel.Provider()
+		end,
 		function(value)
-			if ns.db then ns.db.waypoints = value ~= "arrow" and value or nil end
+			if ns.db then ns.db.waypoints = value ~= "auto" and value or nil end
 			ns.Travel.Refresh()
 		end)
 	Settings.CreateDropdown(category, waypoints, function()
 		local options = Settings.CreateControlTextContainer()
+		options:Add("auto", ns.Travel.Available("spf") and "Auto (Shortest Path Forever)" or "Auto (Obvi Guide arrow)")
 		options:Add("arrow", "Obvi Guide arrow")
 		if ns.Travel.Available("spf") then options:Add("spf", "Shortest Path Forever") end
 		if ns.Travel.Available("tomtom") then options:Add("tomtom", "TomTom") end
 		options:Add("pin", "Map pin")
 		options:Add("none", "None")
 		return options:GetData()
-	end, "How the way to the step's destination is shown: Obvi Guide's own arrow, Shortest Path Forever's journey, "
-		.. "a TomTom waypoint, or the game's own map pin (with its arrow on the screen).")
+	end, "How the way to the step's destination is shown. Auto: Shortest Path Forever's journey when it's installed, "
+		.. "else Obvi Guide's own arrow. Or always the arrow, Shortest Path Forever, a TomTom waypoint, or the game's own "
+		.. "map pin (with its arrow on the screen).")
 	Checkbox("Flip window", "flip", false,
 		"The window's header at the bottom with the step above it, growing upwards. For a window low on the screen.",
 		function() ns.Window.Arrange() end)

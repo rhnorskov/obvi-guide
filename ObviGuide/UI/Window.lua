@@ -177,6 +177,13 @@ local function ClickAction(b, line)
 	elseif k == "cast" and g.id then
 		b:SetAttribute("type", "spell")
 		b:SetAttribute("spell", g.id)
+	elseif g.craft and C_SpellBook.IsSpellKnown(g.craft) and not ns.Action.CraftReady(g) then
+		-- a "Make …" line with its profession's window closed: opens it (casts the profession); open, PostClick makes it
+		local profession = ns.Action.ProfessionSpell(g)
+		if profession then
+			b:SetAttribute("type", "spell")
+			b:SetAttribute("spell", profession)
+		end
 	elseif target then
 		b:SetAttribute("type", "macro")
 		b:SetAttribute("macrotext", ns.TargetMacro(target, enemy))
@@ -187,6 +194,10 @@ local function ClickAction(b, line)
 	end
 	-- ticking off and showing the way happen after the click (PostClick), with or without a secure action
 	return b:GetAttribute("type") ~= nil or g.kind == "confirm" or g.opens ~= nil or (g.point or line.step.dest) ~= nil
+		or g.kind == "learn" or g.kind == "skill"   -- (trained by clicking while a trainer's window is open)
+		or g.craft ~= nil   -- (makes its recipe)
+		or g.places ~= nil   -- (shows the way to where to get it)
+		or g.kind == "sell"   -- (sells the spare at an open merchant)
 end
 
 -- what clicking a line that uses an item or casts a spell does, for its tooltip
@@ -207,7 +218,9 @@ local function ClickPoint(b)
 	local g = b.line and b.line.goal
 	if not g or b.line.dim then return nil end
 	if Acts(g) then return g.point end
-	return g.point or b.line.step.dest
+	-- (a collect line with where to get it: the nearest of those places)
+	local place = Engine.NearestPlace(g)
+	return g.point or (place and place.point) or b.line.step.dest
 end
 
 --- "Darkshore 39.0, 86.0" for a point.
@@ -232,13 +245,21 @@ local function NewClick()
 		if self.line.locked then ns.Catchup.Start(g.quest) return end
 		if self.line.dim then return end
 		if g.kind == "confirm" then Engine.Tick(g) end
+		-- a "Sell …" line: sells the spare at an open merchant (else nothing: there's no way to show)
+		if g.kind == "sell" then ns.Action.Sell(g) return end
+		-- a recipe or rank the open trainer offers: trained
+		if ns.Action.Train(g) then return end
+		-- a "Make …" line whose recipe you know: made (or its window opened, by the secure click), no waypoint
+		if g.craft and C_SpellBook.IsSpellKnown(g.craft) then ns.Action.Craft(g) return end
 		-- a challenge's line opens the guide for it, beside this one
 		if g.opens then Engine.Open(g.opens, true) return end
 		-- (not when the way is shown there already, or you're there: clicking a "Talk to" line again and again to
 		-- target the NPC shouldn't set the waypoint anew each time)
 		local p = ClickPoint(self)
 		if not p or ns.Travel.Already(p) then return end
+		local place = Engine.NearestPlace(g)
 		if p == g.point then ns.Travel.To(p, g.text)
+		elseif place and p == place.point then ns.Travel.To(p, place.name or g.text)
 		else ns.Travel.Show(self.line.step) end
 	end)
 	-- hovering a line says where clicking it sends you
@@ -257,6 +278,30 @@ local function NewClick()
 			GameTooltip:Show()
 			return
 		end
+		if g and not self.line.dim and g.kind == "sell" then
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:SetText(ns.Action.MerchantOpen() and "|cffffd100Click|r to sell the spare"
+				or "At a merchant, |cffffd100click|r to sell the spare")
+			GameTooltip:Show()
+			return
+		end
+		if g and not self.line.dim and ns.Action.Service(g) then
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:SetText("|cffffd100Click|r to train it")
+			GameTooltip:Show()
+			return
+		end
+		if g and not self.line.dim and g.craft and C_SpellBook.IsSpellKnown(g.craft) then
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			local open = not ns.Action.CraftReady(g) and ns.Action.ProfessionSpell(g)
+			-- how many: what the skill points left need
+			local n = ns.Action.CraftCount(g)
+			local make = n and ("make " .. n) or "make all you can"
+			GameTooltip:SetText(open and ("|cffffd100Click|r to open " .. open .. ", then again to " .. make)
+				or ("|cffffd100Click|r to " .. make))
+			GameTooltip:Show()
+			return
+		end
 		local acts = g and not self.line.dim and Acts(g)
 		if acts then
 			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
@@ -269,7 +314,9 @@ local function NewClick()
 		local p = ClickPoint(self)
 		if not p then return end
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:SetText("|cffffd100Click|r to set waypoint: |cffffd100" .. PlaceName(p) .. "|r")
+		local place = Engine.NearestPlace(g)
+		local who = place and p == place.point and place.name and (" (" .. place.name .. ")") or ""
+		GameTooltip:SetText("|cffffd100Click|r to set waypoint: |cffffd100" .. PlaceName(p) .. "|r" .. who)
 		GameTooltip:Show()
 	end)
 	b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -339,6 +386,9 @@ local function Icon(line, goal, done)
 	-- collect lines: the loot cursor's pouch (the same pouch Questie draws on its maps)
 	elseif k == "collect" then
 		tex:SetTexture("Interface\\Cursor\\Crosshair\\LootAll")
+	-- sell lines: a gold coin
+	elseif k == "sell" then
+		tex:SetTexture("Interface\\MoneyFrame\\UI-GoldIcon")
 	elseif k == "text" or k == nil then tex:SetTexture(nil)
 	else line.dash:SetTextColor(line.text:GetTextColor()) line.dash:Show() end
 end

@@ -1,6 +1,7 @@
--- Travel: shows the way to the current step's destination, as the "Waypoints" setting says: Obvi Guide's own arrow (the
--- default), Shortest Path Forever (it plans the way there: walking paths, flights, boats, portals), TomTom, the game's
--- own map pin with its compass arrow, or nothing. A choice that isn't installed falls back to the arrow. Our waypoint
+-- Travel: shows the way to the current step's destination, as the "Waypoints" setting says: Auto (the default: Shortest
+-- Path Forever when it is installed, else the arrow), Obvi Guide's own arrow, Shortest Path Forever (it plans the way
+-- there: walking paths, flights, boats, portals), TomTom, the game's own map pin with its compass arrow, or nothing. A
+-- choice that isn't installed falls back to the arrow. Our waypoint
 -- lives with one of them at a time: showing it with one takes it away from the others.
 local _, ns = ...
 ---@cast ns ObviGuideNS
@@ -10,6 +11,7 @@ local Travel = {}
 ns.Travel = Travel
 
 ---@alias ObviGuideWaypoints "arrow"|"spf"|"tomtom"|"pin"|"none"
+---@alias ObviGuideWaypointsSetting ObviGuideWaypoints|"auto"
 
 local OWNER = "ObviGuide"   -- Shortest Path keeps one journey per owner
 local ourPin               -- the user waypoint we set, so we never clear someone else's
@@ -125,10 +127,18 @@ function Travel.Available(kind)
 	return kind == "arrow" or kind == "pin" or kind == "none"
 end
 
---- The way waypoints are shown: the setting, or the arrow when what it names isn't installed.
+--- The Waypoints setting as chosen ("auto" while it is left at the default).
+---@return ObviGuideWaypointsSetting
+function Travel.Setting()
+	return ns.db and ns.db.waypoints or "auto"
+end
+
+--- The way waypoints are shown: the setting (Auto: Shortest Path Forever when installed), or the arrow when what it
+--- names isn't installed. Looked up each time, so it doesn't matter which addon loaded first.
 ---@return ObviGuideWaypoints
 function Travel.Provider()
-	local kind = ns.db and ns.db.waypoints or "arrow"
+	local setting = Travel.Setting()
+	local kind = (setting == "auto" and "spf" or setting) --[[@as ObviGuideWaypoints]]
 	return Travel.Available(kind) and kind or "arrow"
 end
 
@@ -259,6 +269,13 @@ ns:On("PLAYER_REGEN_ENABLED", function()
 			Travel.Refresh()
 		end
 	end)
+end)
+
+-- Shortest Path Forever loading after us (or on demand): Auto moves the step's waypoint over to it
+ns:On("ADDON_LOADED", function(_, name)
+	if name == "ShortestPathForever" and Travel.Setting() == "auto" and ns.Engine and ns.Engine.Current() then
+		Travel.Refresh()
+	end
 end)
 
 --- The objective line under the waypoint marker, for /og step: what it would show and why it shows or not.

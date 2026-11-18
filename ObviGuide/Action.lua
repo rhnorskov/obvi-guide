@@ -16,7 +16,7 @@ ns.Action = Action
 local COUNT = 4
 
 ---@class ObviGuideActionInfo
----@field kind "item"|"spell"|"target"|"interact"   interact: the key is the game's Interact (an object to click)
+---@field kind "item"|"spell"|"target"|"interact"|"craft"   interact: the key is the game's Interact (an object to click)
 ---@field goal? ObviGuideGoal   the line the action belongs to (for the key hint)
 ---@field value string|integer|string[]   a target: one name, or several (any of them)
 ---@field enemy? boolean       a target to attack (else to talk to)
@@ -27,6 +27,7 @@ local COUNT = 4
 ---@field current? ObviGuideActionInfo
 ---@field interacting boolean  the key is "Interact with Target" now
 ---@field gossip? ObviGuideGoal   the "Select …" line whose dialogue option the key picks while the dialogue shows
+---@field training? ObviGuideGoal   the "Learn …"/"Train …" line the key trains while a trainer's window is open
 
 local slots = {} ---@type ObviGuideActionSlot[]
 for i = 1, COUNT do
@@ -41,6 +42,18 @@ for i = 1, COUNT do
 	-- the names Key Bindings shows (FrameXML globals)
 	_G["BINDING_NAME_" .. binding] = "Action Button " .. i
 	slots[i] = { button = button, binding = binding, interacting = false }
+end
+
+-- each action's plain button for crafting, which its secure button clicks (Action.Craft, below)
+local crafters = {} ---@type Button[]
+for i = 1, COUNT do
+	local b = CreateFrame("Button", "ObviGuideCraftButton" .. i, UIParent)
+	b:Hide()
+	b:SetScript("OnClick", function(self)
+		local g = self["goal"]
+		if g then Action.Craft(g) end
+	end)
+	crafters[i] = b
 end
 
 local pending = false
@@ -77,6 +90,11 @@ local function Pick()
 	end
 	for _, g in ipairs(step.goals) do
 		if g.kind == "cast" and g.id and open(g) then add("spell", g.id, g) end
+	end
+	-- a recipe to make, once it's known (before that, the key talks to the trainer); while the step isn't done
+	local _, done = Engine.StepState(step)
+	for _, g in ipairs(step.goals) do
+		if g.craft and not done and Engine.IsVisible(g) and C_SpellBook.IsSpellKnown(g.craft) then add("craft", g.craft, g) end
 	end
 	-- the step's own target first (its NPC, or what it kills), then the other things its lines target
 	if step.target then
@@ -130,12 +148,25 @@ local function Apply()
 		b:SetAttribute("item", nil)
 		b:SetAttribute("spell", nil)
 		b:SetAttribute("macrotext", nil)
+		b:SetAttribute("clickbutton", nil)
+		crafters[i]["goal"] = nil
 		if a and a.kind == "item" then
 			b:SetAttribute("type", "item")
 			b:SetAttribute("item", "item:" .. a.value)
 		elseif a and a.kind == "spell" then
 			b:SetAttribute("type", "spell")
 			b:SetAttribute("spell", a.value)
+		elseif a and a.kind == "craft" then
+			-- the window open: make it; else open the window (cast the profession)
+			local profession = a.goal and Action.ProfessionSpell(a.goal)
+			if a.goal and Action.CraftReady(a.goal) then
+				crafters[i]["goal"] = a.goal
+				b:SetAttribute("type", "click")
+				b:SetAttribute("clickbutton", crafters[i])
+			elseif profession then
+				b:SetAttribute("type", "spell")
+				b:SetAttribute("spell", profession)
+			end
 		elseif a and a.kind == "interact" then
 			-- (nothing to click: the key itself becomes Interact, see Rebind)
 		elseif a then
@@ -175,9 +206,10 @@ function Action.Rebind()
 	if InCombatLockdown() then pending = true return end
 	local changed = false
 	for _, slot in ipairs(slots) do
-		-- (a slot picking a dialogue option keeps that until the dialogue closes, see Gossip below)
+		-- (a slot picking a dialogue option, or training, keeps that until the window closes, see Gossip and Training
+		-- below)
 		local want = not talking and (TargetIsOurs(slot) or (slot.current ~= nil and slot.current.kind == "interact"))
-		if not slot.gossip and want ~= slot.interacting then
+		if not slot.gossip and not slot.training and want ~= slot.interacting then
 			ClearOverrideBindings(slot.button)
 			if want then
 				for _, key in ipairs({ GetBindingKey(slot.binding) }) do SetOverrideBinding(slot.button, true, key, "INTERACTTARGET") end
@@ -218,11 +250,31 @@ function Action.Hints(goal)
 		for _, t in ipairs(goal.targets or { goal.target }) do if t.name == name then return true end end
 		return false
 	end
+	-- a "Sell …" line at an open merchant: clicking it sells
+	if goal.kind == "sell" then
+		if Action.MerchantOpen() then table.insert(out, { hint = "click: sell" }) end
+		return out
+	end
+	-- a "Make …" line says what its next press does: open the profession's window, or make so many (with its key)
+	if goal.craft and C_SpellBook.IsSpellKnown(goal.craft) then
+		local what = "open"
+		if Action.CraftReady(goal) then
+			local n = Action.CraftCount(goal)
+			what = n == 0 and "made" or ("make " .. (n or "all"))
+		end
+		local key
+		for i, slot in ipairs(slots) do
+			if slot.current and slot.current.goal == goal then key = Action.Key(i) break end
+		end
+		table.insert(out, { hint = key and (key .. ": " .. what) or what })
+		return out
+	end
 	for i, slot in ipairs(slots) do
 		local a = slot.current
 		local mine = a and (a.goal == goal or (a.kind == "target" and type(a.value) == "string" and names(a.value)))
 		local key = mine and Action.Key(i)
-		if a and key then
+		-- (while the key trains, it shows on the line it trains only)
+		if a and key and not slot.training then
 			local verb = a.kind == "interact" and "interact" or (a.enemy and "attack" or "talk")
 			local hint = slot.interacting and (key .. ": " .. verb) or key
 			if slot.gossip then hint = key end   -- (the key picks the dialogue option now; that line says so)
@@ -233,6 +285,9 @@ function Action.Hints(goal)
 		-- the "Select …" line whose dialogue option the key picks right now
 		local pickKey = slot.gossip == goal and Action.Key(i)
 		if pickKey then table.insert(out, { hint = pickKey .. ": select" }) end
+		-- the "Learn …"/"Train …" line the key trains right now
+		local trainKey = slot.training == goal and Action.Key(i)
+		if trainKey then table.insert(out, { hint = trainKey .. ": train" }) end
 	end
 	return out
 end
@@ -289,6 +344,214 @@ end
 
 ns:On("GOSSIP_SHOW", Gossip)
 ns:On("GOSSIP_CLOSED", GossipDone)
+-- the professions window opening or closing: a craft line's click and key change (open it / make it)
+ns:On("TRADE_SKILL_SHOW", function() ns:Fire("OBVIGUIDE_UPDATE") end)
+ns:On("TRADE_SKILL_CLOSE", function() ns:Fire("OBVIGUIDE_UPDATE") end)
+
+-- Crafting: a "Make …" line that names its recipe (`:Crafts`) makes it when clicked, or with its action key. While
+-- the profession's window is closed, the press opens it the way the spellbook does, by casting the profession (a
+-- secure action: C_TradeSkillUI.OpenTradeSkill from our own code didn't open it on Forever); once it's open and has
+-- read its recipes, the press makes what the line asks (or all you can, when that's fewer, or the line gives no count),
+-- through the window's own calls as Zygor does, which need no secure button.
+
+--- Whether a line's recipe can be made now: it's known and its profession's window is open, with the recipe in it.
+---@param g ObviGuideGoal
+---@return boolean
+function Action.CraftReady(g)
+	if not (g.craft and C_SpellBook.IsSpellKnown(g.craft)) then return false end
+	local frame = _G["ProfessionsFrame"]   -- (the professions window, loaded on demand)
+	return frame ~= nil and frame:IsShown() and C_TradeSkillUI.IsTradeSkillReady()
+		and C_TradeSkillUI.GetRecipeInfo(g.craft) ~= nil
+end
+
+--- The spell that opens a craft line's profession (its name, as the spellbook has it), or nil.
+---@param g ObviGuideGoal
+---@return string?
+function Action.ProfessionSpell(g)
+	local line = g.craftSkill and ns.Conditions.SkillLine(g.craftSkill)
+	if not (line and GetProfessions) then return nil end
+	for _, i in pairs({ GetProfessions() }) do
+		local name, _, _, _, _, _, skillLine = GetProfessionInfo(i)
+		if skillLine == line then return name end
+	end
+end
+
+--- How many a craft line still needs made: its count, for the skill points its range has left (25 for 105-125, at
+--- 115: 13), else its count; nil when it has none (all you can).
+---@param g ObviGuideGoal
+---@return integer?
+function Action.CraftCount(g)
+	local n, from, to = g.craftCount, g.craftFrom, g.craftTo
+	-- (up to N in your bags: what's still to make)
+	if g.craftItem and n then return math.max(0, n - C_Item.GetItemCount(g.craftItem)) end
+	if not (n and from and to and to > from and g.craftSkill) then return n end
+	local skill = ns.Conditions.Skill(g.craftSkill) or from
+	local left = math.min(to - from, math.max(0, to - math.max(skill, from)))
+	return math.ceil(n * left / (to - from))
+end
+
+--- Makes a line's recipe, when its window is open. Returns whether it did.
+---@param g ObviGuideGoal
+---@return boolean
+function Action.Craft(g)
+	if not Action.CraftReady(g) then return false end
+	local recipe = g.craft --[[@as integer]]
+	local page = _G["ProfessionsFrame"].CraftingPage
+	if page and page.SelectRecipe then pcall(page.SelectRecipe, page, C_TradeSkillUI.GetRecipeInfo(recipe)) end
+	local can = C_TradeSkillUI.GetCraftableCount(recipe) or 0
+	-- (none to make: one, so the game says what's missing)
+	local n = Action.CraftCount(g)
+	if n == 0 then return true end   -- (nothing left to make)
+	C_TradeSkillUI.CraftRecipe(recipe, math.max(1, math.min(n or can, can)))
+	return true
+end
+
+-- Selling: while a merchant's window is open, clicking a "Sell …" line sells your spare of it (what you have beyond
+-- what the guide still needs): whole stacks, smallest first, while they fit in the spare; the rest split off a
+-- stack and sold from the cursor.
+local merchantOpen = false
+ns:On("MERCHANT_SHOW", function() merchantOpen = true ns:Fire("OBVIGUIDE_UPDATE") end)
+ns:On("MERCHANT_CLOSED", function() merchantOpen = false ns:Fire("OBVIGUIDE_UPDATE") end)
+
+--- Whether a merchant's window is open.
+function Action.MerchantOpen() return merchantOpen end
+
+--- Sells a sell line's spare at the open merchant. Returns how many it sold (nil: no merchant open).
+---@param g ObviGuideGoal
+---@return integer?
+function Action.Sell(g)
+	if not (merchantOpen and g.kind == "sell" and g.id) then return nil end
+	local spare = C_Item.GetItemCount(g.id) - (g.keep or 0)
+	local stacks = {}
+	-- the backpack, the four bags and (on a client with one) the reagent bag, where crafting reagents may go
+	for bag = 0, _G["NUM_TOTAL_EQUIPPED_BAG_SLOTS"] or 4 do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and info.itemID == g.id and not info.isLocked then
+				table.insert(stacks, { bag = bag, slot = slot, count = info.stackCount or 1 })
+			end
+		end
+	end
+	table.sort(stacks, function(a, b) return a.count < b.count end)
+	local sold, rest = 0, nil
+	for _, st in ipairs(stacks) do
+		if st.count <= spare - sold then
+			C_Container.UseContainerItem(st.bag, st.slot)
+			sold = sold + st.count
+		else
+			rest = rest or st
+		end
+	end
+	-- the rest of the spare shares a stack with what's kept: split it off onto the cursor and sell that
+	local left = spare - sold
+	if rest and left > 0 and not CursorHasItem() then
+		C_Container.SplitContainerItem(rest.bag, rest.slot, left)
+		if CursorHasItem() then
+			SellCursorItem()
+			sold = sold + left
+		end
+	end
+	return sold
+end
+
+-- Training: while a trainer's window is open, a "Learn …" line (a recipe, by its spell) or a "Train …" line (a
+-- profession, or its next rank) that the trainer offers is trained by clicking it, and the action key that talked to
+-- the trainer trains the first one the step still needs, then the next. Buying a trainer's service needs no secure
+-- button either. A recipe is found by its spell (the service's tooltip has it), else its name; a rank by its English
+-- words, as the trainer lists it ("Journeyman Engineer").
+-- On WoW Forever GetTrainerServiceInfo gives the name, then the service's state ("available", "used", ...); the
+-- rank text comes fifth (as WhatsTraining reads it).
+local RANK = { [75] = "Apprentice", [150] = "Journeyman", [225] = "Expert", [300] = "Artisan" }
+local trainerOpen = false
+
+--- The open trainer's service for a line, or nil when the trainer doesn't offer it now (or no trainer is open).
+---@param g ObviGuideGoal
+---@return integer?
+function Action.Service(g)
+	if not trainerOpen then return nil end
+	local spell, name, rank
+	if g.kind == "learn" and g.id then
+		spell, name = g.id, C_Spell.GetSpellName(g.id)
+	elseif g.kind == "skill" and g.skill and (g.cap or g.level == 1) then
+		rank = RANK[g.cap or 75]
+	end
+	if not (spell or rank) then return nil end
+	for i = 1, GetNumTrainerServices() do
+		local service, state = GetTrainerServiceInfo(i)
+		if state == "available" and service then
+			if spell then
+				-- (the tooltip data's id: the spell, for a spell's service)
+				local data = C_TooltipInfo and C_TooltipInfo.GetTrainerService and C_TooltipInfo.GetTrainerService(i) --[[@as table?]]
+				if (data and data.id == spell) or service == name then return i end
+			elseif service:find(rank, 1, true) and service:find(g.skill:sub(1, 5), 1, true) then
+				return i
+			end
+		end
+	end
+end
+
+--- Trains a line's service at the open trainer. Returns whether there was one to train.
+---@param g ObviGuideGoal
+---@return boolean
+function Action.Train(g)
+	local i = Action.Service(g)
+	if i then BuyTrainerService(i) end
+	return i ~= nil
+end
+
+local trainer = CreateFrame("Button", "ObviGuideTrainButton", UIParent)
+trainer:Hide()
+trainer:SetScript("OnClick", function(self)
+	local g = self["goal"]
+	if g then Action.Train(g) end
+end)
+
+--- Lets go of training: the slot's key goes back to what the step needs.
+local function TrainDone()
+	trainer["goal"] = nil
+	if InCombatLockdown() then return end
+	local any = false
+	for _, slot in ipairs(slots) do
+		if slot.training then
+			ClearOverrideBindings(slot.button)
+			slot.training, slot.interacting, any = nil, false, true
+		end
+	end
+	if any then Action.Rebind() ns:Fire("OBVIGUIDE_UPDATE") end
+end
+
+--- The first line of the step that the open trainer can train now, onto the key that talked to the trainer.
+local function Training()
+	if not trainerOpen or InCombatLockdown() then return end
+	local _, step = Engine.Current()
+	if not step then TrainDone() return end
+	local goal
+	for _, g in ipairs(step.goals) do
+		if Engine.IsVisible(g) and not Engine.IsComplete(g, step) and Action.Service(g) then goal = g break end
+	end
+	ns.Debug("trainer: %d services; %s", GetNumTrainerServices(), goal and ("trains '" .. goal.text .. "'") or "nothing to train")
+	if not goal then TrainDone() return end
+	trainer["goal"] = goal
+	local slot = slots[1]
+	for _, s in ipairs(slots) do
+		if s.training then slot = s break end
+		if s.current and s.current.kind == "target" and not s.current.enemy then slot = s break end
+	end
+	if slot.training == goal then return end
+	local keys = { GetBindingKey(slot.binding) }
+	if #keys == 0 then return end
+	ClearOverrideBindings(slot.button)
+	for _, key in ipairs(keys) do SetOverrideBindingClick(slot.button, true, key, "ObviGuideTrainButton") end
+	slot.training = goal
+	ns:Fire("OBVIGUIDE_UPDATE")
+end
+
+ns:On("TRAINER_SHOW", function() trainerOpen = true Training() end)
+-- after each thing trained (the list changes): on to the next
+ns:On("TRAINER_UPDATE", function() Training() end)
+ns:On("TRAINER_CLOSED", function() trainerOpen = false TrainDone() end)
+-- the guide moved on with the window still open (the step trained all it needed): the next step's lines
+ns:On("OBVIGUIDE_STEP", function() if trainerOpen then Training() end end)
 
 ns:On("OBVIGUIDE_STEP", function() Apply() Action.Rebind() end)
 ns:On("OBVIGUIDE_UPDATE", function() Apply() Action.Rebind() end)

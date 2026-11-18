@@ -71,6 +71,11 @@ local SKILL_LINES = { alchemy = 171, blacksmithing = 164, enchanting = 333, engi
 	leatherworking = 165, mining = 186, skinning = 393, tailoring = 197, jewelcrafting = 755, inscription = 773,
 	cooking = 185, fishing = 356, ["first aid"] = 129, archaeology = 794 }
 
+--- A profession's skill line id, by its English name ("Engineering"), or nil.
+---@param profession string
+---@return integer?
+function Conditions.SkillLine(profession) return SKILL_LINES[profession:lower()] end
+
 --- A profession's skill and its cap (what the trainer has taught up to), by its English name; nil when the
 --- character hasn't got it. Forever and retail list professions with GetProfessions; a classic-style client's skill
 --- lines are the fallback.

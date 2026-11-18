@@ -92,6 +92,49 @@ local function TestNames()
 	end)
 end
 
+--- /og trainers <profession>: what QuestieDB knows of the NPCs whose title names the profession ("Journeyman
+--- Engineer", "Engineering Supplies"): id, name, title, flags, who they're friendly to, and where they stand (the
+--- first spawn in each zone), by title. To see whether trainers can be picked from QuestieDB rather than listed in each guide. Read a batch of NPCs
+--- a frame, so the game doesn't stall.
+---@param profession string
+local function Trainers(profession)
+	local DB = _G["LibQuestieDB"] ---@type table?
+	if not (DB and DB.Npc) then ns.Print("this needs QuestieDB") return end
+	if profession == "" then ns.Print("which profession? e.g. /og trainers Engineering") return end
+	local stem = profession:sub(1, 5):lower()   -- "Engin": Engineer, Engineering Supplies
+	local ids, i, found = DB.Npc.GetAllIds(), 1, {} ---@type integer[], integer, table[]
+	ns.Print("looking through %d NPCs for '%s'...", #ids, profession)
+	local function batch()
+		for _ = 1, 1500 do
+			local id = ids[i]
+			if not id then break end
+			i = i + 1
+			local title = DB.Npc.Get(id, "subName")
+			if type(title) == "string" and title:lower():find(stem, 1, true) then
+				local spawns, where = DB.Npc.Get(id, "spawns") or {}, {}
+				for area, list in pairs(spawns) do
+					local p = list[1]
+					local info = C_Map.GetAreaInfo(area)
+					if p then table.insert(where, ("%s %.1f,%.1f%s"):format(info or ("area " .. area), p[1], p[2],
+						#list > 1 and (" (+" .. (#list - 1) .. ")") or "")) end
+				end
+				table.insert(found, { id = id, name = DB.Npc.Get(id, "name") or "?", title = title,
+					flags = DB.Npc.Get(id, "npcFlags") or 0, friendly = DB.Npc.Get(id, "friendlyToFaction") or "-",
+					where = table.concat(where, "; ") })
+			end
+		end
+		if ids[i] then C_Timer.After(0, batch) return end
+		table.sort(found, function(a, b) return a.title < b.title or (a.title == b.title and a.name < b.name) end)
+		local out = { ("%d NPCs titled like '%s' (QuestieDB): id | name | title | npcFlags (16 trainer, 4 vendor) |"
+			.. " friendly to | where"):format(#found, profession) }
+		for _, n in ipairs(found) do
+			table.insert(out, ("%d | %s | %s | %d | %s | %s"):format(n.id, n.name, n.title, n.flags, n.friendly, n.where))
+		end
+		ns.Copy("Obvi Guide: " .. profession .. " NPCs", table.concat(out, "\n"))
+	end
+	batch()
+end
+
 SLASH_OBVIGUIDE1, SLASH_OBVIGUIDE2, SLASH_OBVIGUIDE3 = "/obvi", "/og", "/obviguide"
 -- SlashCmdList is a FrameXML global the WoW annotations do not declare, hence the _G lookup.
 local slashCmdList = _G["SlashCmdList"] ---@type table<string, fun(msg: string)>
@@ -124,6 +167,8 @@ slashCmdList.OBVIGUIDE = function(msg)
 		ns.Copy("Obvi Guide: current step", ns.Engine.DebugStep() .. "\n" .. ns.Travel.DebugObjective())
 	elseif cmd == "names" then
 		TestNames()
+	elseif cmd == "trainers" then
+		Trainers((msg or ""):match("^%s*%S+%s*(.-)%s*$"))
 	else
 		ns.Window.Toggle()
 	end

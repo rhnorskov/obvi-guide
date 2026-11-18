@@ -151,6 +151,8 @@ local Lines = {}
 ---@class ObviGuideStepBuilder : ObviGuideLinesBuilder
 ---@field label? string                a name for `g:Side(untilStep)` to refer to
 ---@field skip? ObviGuideCondition      counts as done while this holds, e.g. "area 16638" (already in Valanaar)
+---@field nearest? boolean   its Goto lines are places to choose from (several trainers), each with the Talk lines
+---  right after it: the step goes to the nearest (re-picked when you enter another zone), and shows its NPCs only
 
 ---@class ObviGuideSideBuilder : ObviGuideLinesBuilder
 
@@ -174,6 +176,25 @@ function Line:Done(condition) end
 --- when it is done), e.g. `s:Equip(pole):Optional()` beside `s:Skill("Fishing", 75)`.
 ---@return ObviGuideLine
 function Line:Optional() end
+
+--- The line makes a recipe: clicking it (or its action key) opens the profession, then makes `count` of it (all you
+--- can, without a count), e.g. `s:Say("Make 25 ", tube, "."):Crafts(g.Spell("Bronze Tube", 3938), 25, 105)`. With
+--- `from`, the skill the range starts at, it makes only what the points left need: the count, for the points from
+--- where you are to the step's `Skill` line (25 for 105-125, at 115: 13), so stopping and starting again is right.
+---@param recipe ObviGuideMarker|string   the recipe's spell (g.Spell, with its id)
+---@param count? integer
+---@param from? integer
+---@return ObviGuideLine
+function Line:Crafts(recipe, count, from) end
+
+--- The line makes a recipe up to `count` of `item` in your bags (a part for later: "Make 30 Heavy Blasting Powder"):
+--- clicking it (or its action key) makes what's still missing.
+---@param recipe ObviGuideMarker|string
+---@param item integer
+---@param count integer
+---@param profession string   its profession (English name): the step may have no skill line to tell
+---@return ObviGuideLine
+function Line:CraftsUpTo(recipe, item, count, profession) end
 
 --- The step's destination. Done when you come within `radius` yards (default 10).
 ---@param map integer      uiMapID
@@ -218,12 +239,25 @@ function Lines:Quest(quest, objective, ...) end
 ---@field count? integer
 ---@field quest? integer       with `objective`: done once that quest objective is
 ---@field objective? integer
+---@field range? {[1]: string, [2]: integer, [3]: integer}   Collect: the count is for this skill range ({profession, from,
+---  to}): only what the points left in it need is needed (60 for 1-30, at 15: 30)
+---@field toMake? {item: integer, count: integer, each: integer}   Collect: the reagent for parts to make: what the ones
+---  still to make need (`count` of `item`, less what's in your bags, `each` apiece)
+---@field at? {map: integer, x: number, y: number, name?: string}[]   Collect: where to get it (a vendor): clicking the
+---  line shows the way to the nearest
 
 --- Kill mobs. The line and an action key target them.
 ---@param mob ObviGuideMarker   g.Mob(...)
 ---@param options? ObviGuideCountOptions
 ---@return ObviGuideLine
 function Lines:Kill(mob, options) end
+
+--- Items to sell: shown while you have more than `keep` (what the guide still needs), with how many are to spare, and
+--- only when vendors buy them; done once you don't. For a side box of things to sell.
+---@param item ObviGuideMarker   g.Item(...)
+---@param keep? integer
+---@return ObviGuideLine
+function Lines:Sell(item, keep) end
 
 --- Get items. Done once you have the count (or the quest objective is done).
 ---@param item ObviGuideMarker   g.Item(...)

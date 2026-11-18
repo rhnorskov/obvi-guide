@@ -240,11 +240,25 @@ function LineMT.__index:Optional()
 	self.optional = true
 	return self
 end
+function LineMT.__index:Crafts(recipe, count, from)
+	self.crafts = Need(recipe, "spell", "Crafts")
+	self.craftCount = tonumber(count)
+	self.craftFrom = tonumber(from)
+	return self
+end
+function LineMT.__index:CraftsUpTo(recipe, item, count, profession)
+	self.crafts = Need(recipe, "spell", "CraftsUpTo")
+	self.craftCount = tonumber(count)
+	self.craftItem = tonumber(item)
+	self.craftSkill = profession
+	return self
+end
 
 ---@class ObviGuideLinesImpl
 ---@field only? any
 ---@field label? string
 ---@field skip? any
+---@field nearest? boolean   its Goto lines are places to choose from: the step goes to the nearest
 ---@field _lines ObviGuideLineImpl[]
 
 local Lines = {}
@@ -271,6 +285,9 @@ end
 function Lines:Kill(mob, options) return Add(self, { op = "Kill", marker = Need(mob, "mob", "Kill"), options = options or {} }) end
 function Lines:Collect(item, options)
 	return Add(self, { op = "Collect", marker = Need(item, "item", "Collect"), options = options or {} })
+end
+function Lines:Sell(item, keep)
+	return Add(self, { op = "Sell", marker = Need(item, "item", "Sell"), keep = tonumber(keep) or 0 })
 end
 function Lines:Use(item) return Add(self, { op = "Use", marker = Need(item, "item", "Use") }) end
 function Lines:Equip(item) return Add(self, { op = "Equip", marker = Need(item, "item", "Equip") }) end
@@ -347,7 +364,7 @@ function Guide.Buy(...) return TextMarker("buy", ...) end
 
 -- lines a step waits for (as RestedXP's reader counts them; arriving at a goto counts only on its own)
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
-	cast = true, learn = true, level = true, home = true, hearth = true, confirm = true, skill = true, challenge = true }
+	cast = true, learn = true, level = true, home = true, hearth = true, confirm = true, skill = true, challenge = true, sell = true }
 
 -- profession ranks by the skill cap they bring
 local RANKS = { [75] = "Apprentice", [150] = "Journeyman", [225] = "Expert", [300] = "Artisan" }
@@ -384,8 +401,17 @@ local function Goal(l)
 	elseif op == "Collect" then
 		local o = l.options
 		if not (m.id or o.objective) then return { kind = "confirm", text = "Collect " .. Render(m) } end
-		return { kind = "collect", id = m.id, count = o.count or 1, quest = o.quest, objective = o.objective,
-			text = "Collect " .. Render(m) }
+		-- (where to get it: the nearest is where clicking the line shows the way)
+		local places
+		for _, p in ipairs(o.at or {}) do
+			places = places or {}
+			table.insert(places, { point = { map = p.map, x = p.x / 100, y = p.y / 100 }, name = p.name })
+		end
+		return { kind = "collect", id = m.id, count = o.count or 1, range = o.range, toMake = o.toMake, places = places,
+			quest = o.quest, objective = o.objective, text = "Collect " .. Render(m) }
+	elseif op == "Sell" then
+		-- shown while you have more than `keep` (what the guide still needs), done once you don't
+		return { kind = "sell", id = m.id, keep = l.keep, text = "Sell " .. Render(m) }
 	elseif op == "Use" then
 		return { kind = "use", id = m.id, text = "Use " .. Render(m) }
 	elseif op == "Equip" or op == "Cast" or op == "Learn" then
@@ -439,10 +465,18 @@ local function BuildStep(lines, untilStep, ctx)
 	local firstTalk     -- the step's NPC
 	local firstMob      -- the first enemy the step names
 	local points, isPoint = {}, {} ---@type table[], table<any, table>
+	-- a step with places to choose from (lines.nearest): each Goto is one, with the Talk lines right after it
+	local options = {} ---@type ObviGuideOption[]
+	local option ---@type ObviGuideOption?   the place the Talk lines that follow belong to
 	for _, l in ipairs(lines._lines) do
 		local cond = Cond(l.only, ctx)
 		local goal
-		if l.op == "Goto" or l.op == "Path" then
+		if l.op ~= "Talk" then option = nil end
+		if l.op == "Goto" and lines.nearest and not untilStep then
+			option = { point = { map = l.map, x = (tonumber(l.x) or 0) / 100, y = (tonumber(l.y) or 0) / 100,
+				radius = l.radius }, cond = cond, chosen = #options == 0 }
+			table.insert(options, option)
+		elseif l.op == "Goto" or l.op == "Path" then
 			local p = { map = l.map, x = (tonumber(l.x) or 0) / 100, y = (tonumber(l.y) or 0) / 100, radius = l.radius }
 			-- the line before this point and any points right before it (nil: none; "a and b or c" would skip a nil b)
 			local prev = last
@@ -464,17 +498,27 @@ local function BuildStep(lines, untilStep, ctx)
 			goal.cond = cond
 			if l.doneWhen ~= nil then goal.done = Cond(l.doneWhen, ctx) end
 			goal.optional = l.optional
+			-- a "Make …" line: clicking it (or its action key) makes the recipe (Action.Craft)
+			if l.crafts and l.crafts.id then
+				goal.craft, goal.craftCount, goal.craftFrom, goal.craftItem = l.crafts.id, l.craftCount, l.craftFrom, l.craftItem
+				goal.craftSkill = l.craftSkill
+			end
 			-- a challenge's line goes once it is finished, so the step lists what is left
 			if goal.kind == "challenge" then goal.cond = cond and { "and", cond, { "not", goal.done } } or { "not", goal.done } end
 			if (goal.kind == "accept" or goal.kind == "turnin") and talk then goal.target = talk end
-			if goal.kind == "talk" then
+			if goal.kind == "talk" and option then
+				-- the NPC at one of the places to choose from: shown (and targeted) while that place is the one chosen
+				goal.option = option
+				option.target = option.target or goal.target
+			elseif goal.kind == "talk" then
 				talk = goal.target
 				firstTalk = firstTalk or goal.target
 			end
 			if (goal.kind == "objective" or goal.kind == "collect") and l.mob then goal.target = TargetOf(l.mob, true) end
 			table.insert(step.goals, goal)
 			last = goal
-			if COMPLETABLE[goal.kind] then hasCompletable = true end
+			-- (a line with its own done condition counts too, as the engine has it: a Use line ticked once the recipe is known)
+			if COMPLETABLE[goal.kind] or (goal.done and not goal.optional) then hasCompletable = true end
 		end
 		firstMob = firstMob or (l.marker and l.marker.kind == "mob" and l.marker) or l.mob
 	end
@@ -494,10 +538,28 @@ local function BuildStep(lines, untilStep, ctx)
 		end
 	end
 
-	-- destination: the last Goto; earlier ones and Path lines are points along the way
+	-- a "Make …" line's profession and the skill it makes for: the step's skill line's (its window is opened by
+	-- casting the profession; only what the points left need is made)
+	for _, g in ipairs(step.goals) do
+		if g.kind == "skill" and g.skill and not g.cap and (g.level or 0) > 1 then
+			for _, c in ipairs(step.goals) do
+				if c.craft and not c.craftSkill then c.craftSkill, c.craftTo = g.skill, g.level end
+			end
+		end
+	end
+
+	-- destination: the last Goto; earlier ones and Path lines are points along the way. With places to choose from,
+	-- the one chosen (the first until the engine picks the nearest; Path lines are then all along the way)
 	local dest
-	for _, pt in ipairs(points) do if not pt.path then dest = pt end end
-	for _, pt in ipairs(points) do if pt ~= dest then table.insert(step.path, pt.p) end end
+	if #options > 0 then
+		step.options = options
+		step.dest = options[1].point
+		step.target = options[1].target or step.target
+		for _, pt in ipairs(points) do table.insert(step.path, pt.p) end
+	else
+		for _, pt in ipairs(points) do if not pt.path then dest = pt end end
+		for _, pt in ipairs(points) do if pt ~= dest then table.insert(step.path, pt.p) end end
+	end
 	local gotoGoal
 	if dest then
 		step.dest = dest.p

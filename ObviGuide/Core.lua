@@ -43,7 +43,8 @@ local ADDON, ns = ...
 ---@field previewSteps? integer   how many upcoming steps the window shows dimmed (default 0)
 ---@field minimap? boolean        the step's points on the minimap (nil: on)
 ---@field worldMap? boolean       the step's points on the world map (nil: on)
----@field waypoints? ObviGuideWaypoints   how the way is shown (nil: Obvi Guide's own arrow)
+---@field waypoints? ObviGuideWaypoints   how the way is shown (nil: Auto, Shortest Path Forever when installed, else
+---                               the arrow; before Auto, nil was the arrow, so players who left it alone get Auto)
 ---@field arrow? {point: string, relPoint: string, x: number, y: number}   where the arrow was dragged
 ---@field flip? boolean           the window's header at the bottom (it grows upwards)
 ---@field autoAccept? boolean     accept the guide's quests when talking to the NPC (nil: on)
@@ -104,10 +105,17 @@ local ADDON, ns = ...
 ---@field tips ObviGuideTip[]
 ---@field label? string
 ---@field dest? ObviGuidePoint    where the step leads (the waypoint)
+---@field options? ObviGuideOption[]   places to choose from (several trainers): dest is the one chosen
 ---@field target? ObviGuideTarget  who the action key targets (the step's NPC or what it kills)
 ---@field path ObviGuidePoint[]   extra map points along the way
 ---@field markers? ObviGuidePoint[]   where the step's mobs or things are (dots on the maps, not a route)
 ---@field jumps? ObviGuideJump[]  where to go on when the step is done, instead of the next step (the first that is open)
+
+---@class ObviGuideOption
+---@field point ObviGuidePoint
+---@field cond? ObviGuideCond     one to choose only while this holds
+---@field target? ObviGuideTarget  the NPC there
+---@field chosen? boolean        the one the step goes to (Engine.Pick: the nearest)
 
 ---@class ObviGuideJump
 ---@field to integer             the step to go on at
@@ -130,7 +138,7 @@ local ADDON, ns = ...
 ---@field y number               0..1
 ---@field radius? number         yards; arriving this close completes a 'goto' goal
 
----@alias ObviGuideGoalKind "text"|"goto"|"talk"|"hearth"|"accept"|"turnin"|"objective"|"collect"|"kill"|"use"|"cast"|"learn"|"level"|"home"|"fly"|"equip"|"confirm"|"skill"|"challenge"
+---@alias ObviGuideGoalKind "text"|"goto"|"talk"|"hearth"|"accept"|"turnin"|"objective"|"collect"|"kill"|"use"|"cast"|"learn"|"level"|"home"|"fly"|"equip"|"confirm"|"skill"|"challenge"|"sell"
 
 ---@class ObviGuideGoal
 ---@field kind ObviGuideGoalKind
@@ -138,6 +146,13 @@ local ADDON, ns = ...
 ---@field cond? ObviGuideCond     the line is shown (and counts) only while this holds
 ---@field done? ObviGuideCond     the line is done while this holds (besides what its kind checks)
 ---@field optional? boolean  not needed for its step to be done; shows its own state
+---@field option? ObviGuideOption  the place to choose from it belongs to (a talk line): shown only while it's chosen
+---@field craft? integer         the recipe (spell) the line makes: clicking it or its action key crafts it
+---@field craftCount? integer    how many to make (nil: all you can)
+---@field craftSkill? string     its profession (English name), from its step's skill line
+---@field craftFrom? integer     the skill its range starts at (with craftTo: only what the points left need is made)
+---@field craftTo? integer       the skill its step reaches
+---@field craftItem? integer     with craftCount: make up to that many of this item in your bags
 ---@field orGroup? string        lines with the same group are alternatives: once orCount of them are done, the
 ---@field orCount? integer       step counts them all as done (default 1)
 ---@field finishes? boolean      once this line is done, so is the step (Zygor's confirm lines)
@@ -148,6 +163,12 @@ local ADDON, ns = ...
 ---@field objective? integer
 ---@field id? integer            npc, item or spell id, by kind
 ---@field count? integer
+---@field range? {[1]: string, [2]: integer, [3]: integer}   a collect line's skill range: only what the points left need
+---@field keep? integer          a sell line: how many to keep (what the guide still needs); the rest is to sell
+---@field toMake? {item: integer, count: integer, each: integer}   a collect line for parts to make: needs the reagents
+---  for the ones still to make (count less what's in your bags, so many each)
+---@field places? {point: ObviGuidePoint, name?: string}[]   where to get it (a collect line): clicking it shows the way
+---  to the nearest
 ---@field need? integer        done once its quest objective has reached this many (part of the objective)
 ---@field flight? string       a "get the flight path" line: the flight point's name (done once the game lists it discovered)
 ---@field gossip? integer      a "Select …" line: the dialogue option's id (the action key picks it while it shows)

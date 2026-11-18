@@ -18,7 +18,7 @@ local index = 1
 
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
 	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true, skill = true,
-	challenge = true }
+	challenge = true, sell = true }
 
 --- Whether a line counts towards its step being done: one the game can check (or that is ticked off), or any line
 --- with its own done condition (a Use line ticked once the recipe it uses is known); not an optional one.
@@ -467,6 +467,14 @@ end
 ---@return boolean
 function Engine.IsVisible(goal)
 	if not Conditions.Eval(goal.cond) then return false end
+	-- a "Sell …" line: only while you have more than the guide still needs, and vendors buy it
+	if goal.kind == "sell" then
+		if C_Item.GetItemCount(goal.id) <= (goal.keep or 0) then return false end
+		local price = select(11, C_Item.GetItemInfo(goal.id))
+		return price == nil or price > 0
+	end
+	-- the NPC at one of a step's places to choose from: only at the one chosen
+	if goal.option and not goal.option.chosen then return false end
 	-- (the "Skip hearthstone steps" setting: hearth and set-hearth lines left out, so a step with nothing else is
 	-- skipped)
 	if (goal.kind == "hearth" or goal.kind == "home") and ns.db and ns.db.skipHearth then return false end
@@ -545,6 +553,26 @@ function Engine.SideOpen(box, step)
 	return not any
 end
 
+-- Collect lines for a skill range that have been met: the need drops at each skill point, the bags at each craft (and
+-- a yellow craft gives no point), so such a line would flick on and off while you make things. Once met it stays
+-- ticked until you run out of the item; a new step starts afresh.
+local met = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGoal, boolean>
+
+--- How many a collect line needs now: its count, or for a line with a skill range, what the points left in it need
+--- (60 for 1-30, at 15: 30; none once past it).
+---@param goal ObviGuideGoal
+---@return integer
+function Engine.Need(goal)
+	local n, r = goal.count or 1, goal.range
+	-- (the reagents for the parts still to make: N of an item, so many each)
+	local p = goal.toMake
+	if p then return math.max(0, p.count - C_Item.GetItemCount(p.item)) * p.each end
+	if not r or r[3] <= r[2] then return n end
+	local skill = Conditions.Skill(r[1]) or 0
+	local left = math.min(r[3] - r[2], math.max(0, r[3] - math.max(skill, r[2])))
+	return math.ceil(n * left / (r[3] - r[2]))
+end
+
 ---@param goal ObviGuideGoal
 ---@param step ObviGuideStep
 ---@return boolean
@@ -574,7 +602,17 @@ function Engine.IsComplete(goal, step)
 		if o and goal.need then return (o.numFulfilled or 0) >= goal.need end
 		return o and o.finished or false
 	end
-	if k == "collect" then return C_Item.GetItemCount(goal.id) >= (goal.count or 1) end
+	if k == "sell" then return C_Item.GetItemCount(goal.id) <= (goal.keep or 0) end
+	if k == "collect" then
+		local have = C_Item.GetItemCount(goal.id)
+		if have >= Engine.Need(goal) then
+			if goal.range then met[goal] = true end
+			return true
+		end
+		if met[goal] and have > 0 then return true end
+		met[goal] = nil
+		return false
+	end
 	if k == "equip" then return goal.id and C_Item.IsEquippedItem(goal.id) or false end
 	if k == "learn" then return C_SpellBook.IsSpellKnown(goal.id) end
 	if k == "cast" then
@@ -613,9 +651,13 @@ function Engine.Progress(goal)
 		if o and (o.numRequired or 0) > 1 then return o.numFulfilled .. "/" .. o.numRequired end
 	elseif goal.kind == "skill" and not goal.cap and (goal.level or 1) > 1 then
 		return math.min(Conditions.Skill(goal.skill) or 0, goal.level) .. "/" .. goal.level
+	elseif goal.kind == "sell" and goal.id then   -- (how many to sell)
+		return tostring(math.max(0, C_Item.GetItemCount(goal.id) - (goal.keep or 0)))
 	elseif goal.kind == "collect" and goal.id then   -- (also a count of 1: "Buy Soothing Spices (0/1)")
-		local need = goal.count or 1
-		return math.min(C_Item.GetItemCount(goal.id), need) .. "/" .. need
+		local need, have = Engine.Need(goal), C_Item.GetItemCount(goal.id)
+		-- (a met scaled line, a little short while you make things: just what you have)
+		if met[goal] and have < need then return tostring(have) end
+		return math.min(have, need) .. "/" .. need
 	end
 end
 
@@ -709,15 +751,63 @@ local paused = false
 -- (you went back), the window's next arrow pulses
 local reached = 0
 
+--- Where to get a collect line's item (goal.places): the nearest one on your continent, else the first; nil without any.
+---@param goal ObviGuideGoal
+---@return {point: ObviGuidePoint, name?: string}?
+function Engine.NearestPlace(goal)
+	local best, bestD
+	for _, p in ipairs(goal.places or {}) do
+		local d = Distance(p.point)
+		if not best or (d and (not bestD or d < bestD)) then best, bestD = p, d end
+	end
+	return best
+end
+
+--- For a step with places to choose from (step.options, e.g. several trainers): the nearest one that applies becomes
+--- its waypoint, its NPC the one the action key targets and its talk line the one shown. Nearest as the crow flies,
+--- on your continent; when none is, the first that applies. Picked when the step comes up and when you enter
+--- another zone, so it doesn't flip back and forth on the way. Returns whether the choice changed.
+---@param step? ObviGuideStep
+---@return boolean
+function Engine.Pick(step)
+	local options = step and step.options
+	if not (step and options) then return false end
+	local best, bestD
+	for i, o in ipairs(options) do
+		if Conditions.Eval(o.cond) then
+			local d = Distance(o.point)
+			if not best or (d and (not bestD or d < bestD)) then best, bestD = i, d end
+		end
+	end
+	best = best or 1
+	if options[best].chosen then return false end
+	for i, o in ipairs(options) do o.chosen = i == best end
+	step.dest = options[best].point
+	step.target = options[best].target or step.target
+	return true
+end
+
 local function Changed()
+	-- (a scaled material line met in another step starts afresh)
+	for g in pairs(met) do met[g] = nil end
 	if not paused then reached = math.max(reached, index) end
 	local tab = Tabs()[ns.charDB and ns.charDB.tab or 1]
 	-- (a tab whose guide isn't here, its pack not loaded, keeps it)
 	if tab and guide then tab.guide, tab.step, tab.reached = guide.name or guide.title, index, reached end
 	local _, step = Engine.Current()
+	Engine.Pick(step)
 	ns.Travel.Show(step)
 	ns:Fire("OBVIGUIDE_STEP")
 end
+
+-- a step with places to choose from picks again in another zone (you may have come nearer another of them)
+ns:On("ZONE_CHANGED_NEW_AREA", function()
+	local _, step = Engine.Current()
+	if Engine.Pick(step) then
+		ns.Travel.Show(step)
+		ns:Fire("OBVIGUIDE_STEP")
+	end
+end)
 
 -- a guide in any order (guide.nearest): the route is planned again when the guide is opened
 local replan = false

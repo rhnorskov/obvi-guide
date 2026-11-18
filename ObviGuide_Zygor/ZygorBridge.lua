@@ -1,6 +1,7 @@
 -- Hands the guides of my own installed Zygor addon to Obvi Guide, in game: each guide Zygor has registered (with its
 -- text, so not the premium placeholders of the trial) goes to ObviGuide.Add with its title and header as plain values.
--- Nothing is copied to disk. Personal use only (guides I own); not for sharing.
+-- Nothing is copied to disk. Personal use only (guides I own); not for sharing. Then Zygor itself is stopped (see
+-- "Zygor off" below), unless "/og zygor" says to keep it running.
 --
 -- When: Zygor registers its guides as its files load (before this pack), then reads their headers (who each guide is
 -- for) in its startup a few seconds after login, and sets ZGV.guidesloaded once that is done; no guides come after it
@@ -89,6 +90,72 @@ local function HandOver()
 		ZGV.guidesloaded and "" or "; Zygor hadn't finished loading"))
 end
 
+-- Zygor off: once its guides are loaded, Zygor itself is stopped, so it can't clash with Obvi Guide (its window,
+-- arrow, map pins, auto accept, bag upgrade marks, timers). On by default; "/og zygor" keeps Zygor running instead
+-- (from the next /reload), or stops it again. Kept in ObviGuideZygorDB.
+
+--- The saved settings. (The game sets ObviGuideZygorDB after this file has run, so it's looked up each time.)
+---@return {keepZygor: boolean?}
+local function Settings()
+	ObviGuideZygorDB = ObviGuideZygorDB or {}
+	return ObviGuideZygorDB
+end
+
+--- Calls f, quietly: a part of Zygor that isn't there (another version) is skipped.
+---@param f fun()
+local function Try(f) pcall(f) end
+
+local stopped = false
+--- Stops Zygor: its startup (the modules that come after the guides, loading the last guide), then the addon itself
+--- (Ace's Disable hides its window and map button and drops all its events, timers and hooks), its arrow and
+--- waypoints, and the event frames it keeps outside Ace. Its guides stay registered for Obvi Guide to read.
+local function StopZygor()
+	if stopped then return end
+	stopped = true
+	local master = _G["ZygorGuidesViewerFrameMaster"] ---@type Frame?
+	if master then master:SetScript("OnUpdate", nil) end
+	local Pointer = ZGV.Pointer
+	if Pointer then
+		Try(function() Pointer:ClearWaypoints() end)
+		Try(function() Pointer:HideArrow() end)
+		Try(function() Pointer.ArrowFrame:Hide() end)
+		Try(function() Pointer.EventFrame:UnregisterAllEvents() end)
+	end
+	Try(function() ZGV:Disable() end)
+	Try(function() ZGV.Frame:Hide() end)
+	Try(function() ZGV.EventDelayFrame:UnregisterAllEvents() end)
+	Try(function() ZGV.Listener:UnregisterAllEvents() end)
+end
+
+-- Zygor's startup checks the guides' jumps right after setting guidesloaded (in its startup coroutine): stop there,
+-- before the rest of its startup runs. Yielding "waiting..." ends that frame's startup run; with the startup frame's
+-- OnUpdate gone it never resumes.
+if type(ZGV.CheckGuideJumps) == "function" then
+	local check = ZGV.CheckGuideJumps
+	ZGV.CheckGuideJumps = function(...)
+		check(...)
+		if Settings().keepZygor then return end
+		local master = _G["ZygorGuidesViewerFrameMaster"] ---@type Frame?
+		if master then master:SetScript("OnUpdate", nil) end
+		if coroutine.running() then coroutine.yield("waiting: stopped by Obvi Guide") end
+	end
+end
+
+-- "/og zygor": Zygor off or kept running. The rest of /og is Obvi Guide's own.
+local slashCmdList = _G["SlashCmdList"] ---@type table<string, fun(msg: string)>
+local obvi = slashCmdList.OBVIGUIDE
+slashCmdList.OBVIGUIDE = function(msg)
+	if (msg or ""):lower():match("^%s*(%S*)") ~= "zygor" then return obvi(msg) end
+	local db = Settings()
+	db.keepZygor = not db.keepZygor
+	if db.keepZygor then
+		print("|cff4fc3f7Obvi Guide|r: Zygor will keep running after the next /reload (its guides are still handed over)")
+	else
+		print("|cff4fc3f7Obvi Guide|r: Zygor " .. (ZGV.guidesloaded and "stopped" or "will stop once its guides are handed over"))
+		if ZGV.guidesloaded then StopZygor() end
+	end
+end
+
 local waited = 0
 local ticker ---@type FunctionContainer
 ticker = C_Timer.NewTicker(0.5, function()
@@ -96,4 +163,8 @@ ticker = C_Timer.NewTicker(0.5, function()
 	if not ZGV.guidesloaded and waited < 60 then return end
 	ticker:Cancel()
 	HandOver()
+	if not Settings().keepZygor then
+		StopZygor()
+		print("|cff4fc3f7Obvi Guide|r: Zygor stopped (/og zygor keeps it running)")
+	end
 end)

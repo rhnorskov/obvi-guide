@@ -50,7 +50,9 @@ end)
   you are through the steps left, planned again each time a step is done.
 - **A step** (`g:Step`) is a few lines done together. It may have a `label`, `only` (shown only while it holds;
   otherwise passed over) and `skip` (counts as done while it holds, e.g. "already in Valanaar"). A step is done when
-  all of its lines that can be done are done.
+  all of its lines that can be done are done. With `nearest = true` its `Goto` lines are places to choose from
+  (several trainers), each with the `Talk` lines right after it: the step goes to the nearest one (picked again when
+  you enter another zone) and shows only that one's NPCs.
 - **Side tasks** (`g:Side(untilStep, ...)`) are shown with each step from here up to and including the step labelled
   `untilStep` (`"next"`: the next step). They never hold a step up and disappear early once done: once its lines that
   can be done are done (or hidden), the whole side task goes, its notes and plain lines with it.
@@ -81,6 +83,7 @@ end)
 | `Train(profession, cap?)` | Learn a profession, or train the rank that raises its cap (75, 150, 225, 300). | You have it / your cap is that high. |
 | `Explore(achievement, name, ids?)` | Discover an area of an exploration challenge (found in its list by id, or else by name). | The game counts it as found. |
 | `Challenge(achievement, guide, text...)` | A challenge still to finish; shown only until it is, and clicking it opens `guide` (id or title) in a tab of its own. | The challenge is finished. |
+| `Sell(item, keep?)` | Items to sell: shown while you have more than `keep`, with how many are spare (and only if vendors buy them); at a merchant, clicking it sells the spare. | You have no more than `keep`. |
 | `Do(text...)` | An instruction the player ticks off by clicking it. | Clicked. |
 | `Say(text...)` | Plain text: an instruction with nothing to tick off. | - |
 | `Note(text...)` | A note, shown right after the line above it. | - |
@@ -88,7 +91,9 @@ end)
 Every line can be limited with `:Only(condition)`, and ticked off by a condition with `:Done(condition)` (a purchase
 you no longer need stays in the list, ticked, where `:Only` would hide it); any line with it counts towards its step, a
 `Use` line too. `:Optional()` makes a line optional: the
-step is done once its other lines are, and the optional one shows its own state.
+step is done once its other lines are, and the optional one shows its own state. `:Crafts(recipe, count, from)` makes a
+line ("Make 25 Bronze Tube") make its recipe when clicked or with its action key, opening the profession first;
+with `from` (where its skill range starts) it makes only what the points left to the step's `Skill` line need.
 
 ## Markers
 
