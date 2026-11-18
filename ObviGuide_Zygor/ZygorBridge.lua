@@ -125,6 +125,36 @@ local function StopZygor()
 	Try(function() ZGV.Frame:Hide() end)
 	Try(function() ZGV.EventDelayFrame:UnregisterAllEvents() end)
 	Try(function() ZGV.Listener:UnregisterAllEvents() end)
+	-- what it draws on the maps: its world map layers (unexplored-area overlay, points of interest, waypoint pins and
+	-- lines) and its waypoint icons on the world map and minimap
+	local map = _G["WorldMapFrame"] ---@type table   (FrameXML; the annotations don't declare it)
+	local providers = map and map.dataProviders ---@type table?
+	for _, provider in ipairs({ ZGV.Foglight and ZGV.Foglight.DataProvider, ZGV.Poi and ZGV.Poi.DataProvider,
+		ZGV.Poi and ZGV.Poi.CurrentZoneDataProvider, Pointer and Pointer.OverlayProvider, Pointer and Pointer.Provider }) do
+		if providers and providers[provider] then Try(function() map:RemoveDataProvider(provider) end) end
+	end
+	if ZGV.HBDPins and Pointer then
+		Try(function() ZGV.HBDPins:RemoveAllWorldMapIcons(Pointer) end)
+		Try(function() ZGV.HBDPins:RemoveAllMinimapIcons(Pointer) end)
+	end
+	-- its action bar (trash, talk-to and use buttons): a secure frame, so hidden out of combat, with its combat
+	-- show/hide driver dropped so combat can't bring it back
+	local bar = ZGV.ActionBar and ZGV.ActionBar.Frame ---@type table?
+	if bar then
+		local function HideBar()
+			-- (a FrameXML global the annotations don't declare)
+			Try(function() _G["UnregisterAttributeDriver"](bar, "state-combathide") end)
+			Try(function() bar.Overlay:Hide() end)
+			Try(function() bar:Hide() end)
+		end
+		if InCombatLockdown() then
+			local wait = CreateFrame("Frame")
+			wait:RegisterEvent("PLAYER_REGEN_ENABLED")
+			wait:SetScript("OnEvent", function(self) self:UnregisterAllEvents() HideBar() end)
+		else
+			HideBar()
+		end
+	end
 end
 
 -- Zygor's startup checks the guides' jumps right after setting guidesloaded (in its startup coroutine): stop there,
