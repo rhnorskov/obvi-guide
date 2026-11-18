@@ -1,20 +1,17 @@
--- Hands the guides of my own installed Zygor addon to Obvi Guide, in game: each guide Zygor has registered (with its
+-- Hands the guides of your own installed Zygor addon to Obvi Guide, in game: each guide Zygor has registered (with its
 -- text, so not the premium placeholders of the trial) goes to ObviGuide.Add with its title and header as plain values.
--- Nothing is copied to disk. Personal use only (guides I own); not for sharing. Then Zygor itself is stopped (see
--- "Zygor off" below), unless "/og zygor" says to keep it running.
+-- Nothing is copied to disk. Not published anywhere (friends may use it, but it isn't promoted). Then Zygor itself is
+-- stopped (see "Zygor off" below), unless "/og zygor" says to keep it running.
 --
 -- When: Zygor registers its guides as its files load (before this pack), then reads their headers (who each guide is
 -- for) in its startup a few seconds after login, and sets ZGV.guidesloaded once that is done; no guides come after it
 -- ("Too late to RegisterGuide"). So the guides are handed over then, or after a minute if Zygor never gets there.
 -- Obvi Guide reads a guide's text only when it is first opened; the text (with Zygor's #include pieces filled in and
 -- the fixes below) is made at that moment.
--- Zygor's addon is ZygorGuidesViewer on retail and ZygorGuidesViewerForever on Forever (both optional dependencies,
--- so it loads first); both set the same global. Without either, nothing to do.
+-- Zygor's addon is ZygorGuidesViewerForever (an optional dependency, so it loads first); it sets the global
+-- ZygorGuidesViewer. Without it, nothing to do.
 local ZGV = _G["ZygorGuidesViewer"] ---@type table
 if not ZGV then return end
-
-local BUILD = select(4, GetBuildInfo()) or 0
-local FOREVER = BUILD >= 16000 and BUILD < 20000
 
 -- Fixes to Zygor's guide text, applied when a guide is read: the exact text in the guide and what it becomes. A fix
 -- whose guide or text isn't there (another client, or Zygor changed the line) does nothing.
@@ -69,8 +66,6 @@ local function Visible(guide)
 end
 
 local function HandOver()
-	-- retail: Zygor's map table (zone names it makes up, and its floors: "Orgrimmar/1"); Forever uses Obvi Guide's own
-	local maps = not FOREVER and ZGV.MapIDsByName or nil
 	local added, hidden = 0, 0
 	for _, guide in ipairs(ZGV.registeredguides or {}) do
 		if type(guide.rawdata) == "string" and not guide.missing then
@@ -79,7 +74,6 @@ local function HandOver()
 				added = added + ObviGuide.Add("zygor", function() return Text(guide) end, {
 					title = guide.title,
 					header = { next = type(nextTitle) == "string" and ZGV:SanitizeGuideTitle(nextTitle) or nil },
-					maps = maps,
 				})
 			else
 				hidden = hidden + 1
@@ -278,11 +272,8 @@ if type(ZGV.CheckGuideJumps) == "function" then
 	end
 end
 
--- "/og zygor": Zygor off or kept running. The rest of /og is Obvi Guide's own.
-local slashCmdList = _G["SlashCmdList"] ---@type table<string, fun(msg: string)>
-local obvi = slashCmdList.OBVIGUIDE
-slashCmdList.OBVIGUIDE = function(msg)
-	if (msg or ""):lower():match("^%s*(%S*)") ~= "zygor" then return obvi(msg) end
+-- "/og zygor": Zygor off or kept running (a command added to Obvi Guide's /og, see ObviGuide\ObviHub.lua).
+local function ToggleZygor()
 	local db = Settings()
 	db.keepZygor = not db.keepZygor
 	if db.keepZygor then
@@ -292,6 +283,7 @@ slashCmdList.OBVIGUIDE = function(msg)
 		if ZGV.guidesloaded then StopZygor() end
 	end
 end
+ObviHub.AddCommand("guide", { "zygor", ToggleZygor, "keeps Zygor running, or stops it again" })
 
 local waited = 0
 local ticker ---@type FunctionContainer

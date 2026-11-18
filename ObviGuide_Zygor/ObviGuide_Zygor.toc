@@ -1,9 +1,9 @@
-## Interface: 16001, 120105
+## Interface: 16001
 ## Title: Obvi Guide: Zygor
-## Notes: Personal use only: hands the guides of my own installed Zygor addon to Obvi Guide in game (nothing is copied), then stops Zygor (/og zygor keeps it running). Not for sharing.
+## Notes: Hands the guides of your own installed Zygor addon to Obvi Guide in game (nothing is copied), then stops Zygor (/og zygor keeps it running). Not published: friends may use it, but it isn't promoted.
 ## Dependencies: ObviGuide
 ## SavedVariables: ObviGuideZygorDB
-## OptionalDeps: ZygorGuidesViewer, ZygorGuidesViewerForever
+## OptionalDeps: ZygorGuidesViewerForever
 
 ZygorParser.lua
 ZygorBridge.lua

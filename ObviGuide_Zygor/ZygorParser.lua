@@ -5,7 +5,6 @@
 --   ObviGuide.Add("zygor", [[ ...guide text... ]], { title = "Leveling Guides\\Westfall (13-15)", header = {...} })
 -- header: next (a Zygor title), faction ("Alliance"/"Horde"), visible and hideif (Zygor's Lua expressions as text;
 -- visible may also be a plain true/false the pack worked out), trial (true for the free trial's copy of a guide).
--- meta.maps (optional, retail): Zygor's map table, zone name -> { [floor] = uiMapID }, for the names it makes up.
 -- A guide is listed from its meta alone (Zygor.Head); its text is read when it is first opened.
 --
 -- The format, as far as ObviGuide uses it (Zygor's own reader is Parser.lua, the line kinds are in Goal.lua):
@@ -40,48 +39,14 @@ local MAPS = {
 	["Alterac Valley"] = 1459, ["Arathi Basin"] = 1461, ["Warsong Gulch"] = 1460,
 }
 
--- Which client this is: Forever (interface 16xxx) has the classic zones above (its guides already use its own, redrawn
--- maps: Stormwind, Redridge, Mulgore and Eastern Plaguelands); anywhere else
--- (retail) zone names are looked up on the running client.
-local BUILD = select(4, GetBuildInfo()) or 0
-local FOREVER = BUILD >= 16000 and BUILD < 20000
-
--- retail: the client's own zone names -> uiMapIDs, built on first use from the whole map tree (946 is the Cosmic
--- map). A name used by several maps goes to a zone before other kinds of map, then to the lowest id.
-local liveMaps ---@type table<string, integer>?
-local function LiveMaps()
-	if liveMaps then return liveMaps end
-	liveMaps = {}
-	local rank = {} ---@type table<string, integer>
-	for _, info in ipairs(C_Map.GetMapChildrenInfo(946, nil, true) or {}) do
-		local r = info.mapType == Enum.UIMapType.Zone and -1 or info.mapType
-		local had = liveMaps[info.name]
-		if not had or r < rank[info.name] or (r == rank[info.name] and info.mapID < had) then
-			liveMaps[info.name], rank[info.name] = info.mapID, r
-		end
-	end
-	return liveMaps
-end
-
---- A zone as a guide writes it ("Elwynn Forest", "Orgrimmar/1", "Name##84", "84") -> uiMapID. On retail Zygor's own
---- map table (meta.maps, name -> {[floor] = id}) comes first when the pack hands it over: it knows Zygor's floors and
---- made-up names.
+--- A zone as a guide writes it ("Elwynn Forest", "Orgrimmar/1", "Name##84", "84") -> uiMapID (Forever's guides use
+--- its own, redrawn maps: Stormwind, Redridge, Mulgore and Eastern Plaguelands).
 ---@param text string
----@param maps? table
 ---@return integer?
-local function MapOf(text, maps)
-	local name, floor = text:match("^(.-)%s*/%s*(%d+)$")
-	name = name or text
+local function MapOf(text)
+	local name = text:match("^(.-)%s*/%s*%d+$") or text
 	local id = tonumber(name) or tonumber(text:match("##(%d+)") or "")
-	if id then return id end
-	if FOREVER then return MAPS[name] end
-	local z = maps and maps[name]
-	if type(z) == "number" then return z end
-	if type(z) == "table" then
-		local f = tonumber(floor) or tonumber(z.default) or (z[0] and 0) or next(z)
-		if type(z[f]) == "number" then return z[f] end
-	end
-	return LiveMaps()[name]
+	return id or MAPS[name]
 end
 
 -- Zygor's colour braces ({o}text{}) and _highlights_, as its apply_colours has them
@@ -247,10 +212,10 @@ local CALLS = {
 	hasbuff = function(a) if type(a[1]) == "number" then return C({ "aura", a[1], a[2] }) end return UNKNOWN end,
 	equipped = function(a) if type(a[1]) == "number" then return C({ "equipped", a[1] }) end return UNKNOWN end,
 	subzone = function(a) if type(a[1]) == "string" then return C({ "subzone", a[1] }) end return UNKNOWN end,
-	-- a zone with a map here (Forever) by its map; others (dungeons, and every zone on retail) by name
+	-- a zone with a map here by its map; others (dungeons) by name
 	zone = function(a)
 		if type(a[1]) ~= "string" then return UNKNOWN end
-		local m = FOREVER and MAPS[a[1]]
+		local m = MAPS[a[1]]
 		return C(m and { "map", m } or { "zone", a[1] })
 	end,
 	rep = function(a) if type(a[1]) == "string" then return { num = "rep", id = FACTIONS[a[1]] or a[1] } end return UNKNOWN end,
@@ -502,7 +467,6 @@ local IGNORE = { walk = true, notinsticky = true, onlyinsticky = true, notravel 
 
 ---@class ObviGuideZygorCtx
 ---@field map? integer        the map the last coordinates were on (lines may leave the zone out)
----@field maps? table          Zygor's map table, when the pack hands it over (meta.maps)
 ---@field counts table<string, integer>
 ---@field order string[]
 
@@ -525,7 +489,7 @@ local function Point(s, ctx)
 	local radius = tonumber(rest:match("^<%s*([%d%.]+)") or rest:match("^,%s*([%d%.]+)") or "")
 	local map
 	if mapText ~= "" then
-		map = MapOf(mapText, ctx.maps)
+		map = MapOf(mapText)
 		if not map then Warn(ctx, ("no map for the zone '%s'; its points are left out"):format(mapText)) return nil end
 		ctx.map = map
 	else
@@ -555,7 +519,7 @@ local function ReadLine(line, step, ctx)
 			if cmd == "label" then
 				step.label = params:gsub('^"(.-)"$', "%1")
 			elseif cmd == "map" then
-				local m = MapOf(params, ctx.maps)
+				local m = MapOf(params)
 				if m then ctx.map = m end
 			elseif cmd == "mapmarker" then
 				-- where the mobs or things of a step are (Zygor's orange dots on the maps), not a point to walk to
@@ -577,7 +541,7 @@ local function ReadLine(line, step, ctx)
 				rec.point = Point(params, ctx) or rec.point
 				-- "goto Zone" without coordinates: nothing to point at, but the lines after it may leave the zone out
 				if not params:find("%d,") then
-					local m = MapOf((params:gsub('%s*"[^"]*"%s*$', ""):gsub("%s*[<>]%s*[%d%.]+%s*$", "")), ctx.maps)
+					local m = MapOf((params:gsub('%s*"[^"]*"%s*$', ""):gsub("%s*[<>]%s*[%d%.]+%s*$", "")))
 					if m then ctx.map = m end
 				end
 			elseif cmd == "q" or cmd == "quest" then
@@ -1071,7 +1035,6 @@ end
 local function ParseGuide(text, source, meta, ctx)
 	local g, why = Head(source, meta, ctx)
 	if not g then return nil, why end
-	ctx.maps = type(meta.maps) == "table" and meta.maps or nil
 
 	text = text:gsub("\r", ""):gsub("||", "\n")
 	local raw = {} ---@type {lines: string[], sticky: string[]}[]

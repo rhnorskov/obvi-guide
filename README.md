@@ -1,6 +1,7 @@
 # Obvi Guide
 
-A guide viewer for WoW Forever, plus the addons around it. Each folder is its own addon, released as its own CurseForge project (except the Zygor bridge, which is never released):
+A guide viewer for WoW Forever, plus the addons around it. Each folder is its own addon, released as its own
+CurseForge project (except the Zygor bridge, which isn't published):
 
 | Folder | Addon | What it is |
 |---|---|---|
@@ -9,7 +10,7 @@ A guide viewer for WoW Forever, plus the addons around it. Each folder is its ow
 | `ObviGuide_Dungeons` | Obvi Guide: Dungeons | Dungeon quest guides and dungeon keys. |
 | `ObviGuide_Professions` | Obvi Guide: Professions | Profession leveling guides. |
 | `ObviGuide_Extras` | Obvi Guide: Extras | Guides for other unlocks, such as the Aqual Quintessence and the Cozy Sleeping Bag. |
-| `ObviGuide_Zygor` | Obvi Guide: Zygor | Personal: reads the guides of your own installed Zygor addon in game (it brings its own Zygor reader), then stops Zygor so it can't clash (`/og zygor` keeps it running). Not released. |
+| `ObviGuide_Zygor` | Obvi Guide: Zygor | Reads the guides of your own installed Zygor addon in game (it brings its own Zygor reader), then stops Zygor so it can't clash (`/og zygor` keeps it running). Not published anywhere: friends are welcome to it, but it isn't promoted. |
 
 Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 
