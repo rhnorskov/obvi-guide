@@ -5,6 +5,7 @@ list under **Professions**. All are for Alliance characters (trainers in Stormwi
 
 - Mining (1-300)
 - Blacksmithing (1-300)
+- Engineering (1-300)
 - Cooking (1-300)
 - First Aid (1-300)
 - Fishing and Cooking (1-300): both together, every fish you catch cooked on the way. Starts in Elwynn Forest, Dun
@@ -18,6 +19,7 @@ The routes, zones, recipes, counts, skill ranges and rank-ups come from **WoW-Pr
 
 - Mining: https://www.wow-professions.com/forever/mining-leveling-guide
 - Blacksmithing: https://www.wow-professions.com/forever/blacksmithing-leveling-guide
+- Engineering: https://www.wow-professions.com/forever/engineering-leveling-guide
 - Cooking: https://www.wow-professions.com/forever/cooking-leveling-guide
 - First Aid: https://www.wow-professions.com/forever/first-aid-leveling-guide
 - Fishing and Cooking: https://www.wow-professions.com/forever/fishing-and-cooking-leveling-guide
@@ -25,12 +27,14 @@ The routes, zones, recipes, counts, skill ranges and rank-ups come from **WoW-Pr
 
 Used with credit; will be removed on request. The step text is our own and short; read their pages for the full
 reasoning, route maps and alternatives. Their guides were written on the Forever beta (level cap 30), so the later
-parts may change; their Blacksmithing, Cooking and First Aid routes past 225 and the Artisan Fishing quest were not
-tested on the beta.
+parts may change; their Blacksmithing, Cooking and First Aid routes past 225, Engineering's later part and the
+Artisan Fishing quest were not tested on the beta.
 
 ## Other sources
 
-- **WhatsTraining**: the cooking recipes' spell ids, so a recipe you already know isn't on the shopping list.
+- **WhatsTraining**: the recipes' spell ids and the skill each is learned at, so a recipe you know is ticked off.
+- **Zygor Guides** (Forever): the Engineering trainers' and vendors' ids and positions, the recipes' reagents
+  (Engineering, Blacksmithing, First Aid's bandages), and the Imperial Plate quests.
 - **QuestieDB** (Forever data): trainer and vendor ids and positions, item and quest ids, and the ore vein spawns behind each
   mining zone's waypoint (a spot where that ore's veins are dense; it is not the site's route).
 - The fishing spots' waypoints (Crystal Lake, Iceflow Lake, Lake Al'Ameth, Stormwind's canals, Mystral Lake) are our own

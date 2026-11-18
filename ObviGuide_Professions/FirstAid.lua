@@ -1,126 +1,84 @@
--- First Aid 1-300 (Alliance). The recipes, counts, skill ranges, rank-ups, trainers and vendors follow
--- wow-professions.com's WoW Forever First Aid guide: https://www.wow-professions.com/forever/first-aid-leveling-guide
--- (used with credit; will be removed on request). The step text is our own. The site's Artisan part (225-300) was not
--- tested on the Forever beta. NPC ids and positions come from QuestieDB's Forever data. See README.md.
+-- First Aid 1-300 (Alliance), as data: Profession.lua makes the guide from it (GUIDELINES.md).
+-- The route (ranges, recipes, counts, choices) follows wow-professions.com's WoW Forever First Aid guide:
+-- https://www.wow-professions.com/forever/first-aid-leveling-guide (used with credit; will be removed on request).
+-- The site's Artisan part (225-300) was not tested on the Forever beta. The recipes' spells, the skill each is learned
+-- at and the manuals that teach them come from WhatsTraining's Forever recipe list (Forever's First Aid makes the
+-- healing potions); the bandages' reagents from Zygor's Forever recipe data, the potions' from the site; NPC ids and
+-- positions from QuestieDB's and Zygor's Forever data. See README.md.
+--
+-- Where this differs from the site: the trainer visits are worked out from when each recipe can be learned
+-- (Profession.lua), and the manuals sold with the Expert book are bought in the same visit.
+local _, pack = ...
+local P = pack.Place
 
-local SW, IF, ARATHI, DUSTWALLOW = 1453, 1455, 1417, 1445
-local FA = "First Aid"
+local SW, IF, ELWYNN, DUNMOROGH, ARATHI, DUSTWALLOW = 1453, 1455, 1429, 1426, 1417, 1445
 
--- who trains where: Ironforge for dwarves and gnomes, Stormwind for everyone else
-local IN_IF, IN_SW = "Dwarf or Gnome", "not (Dwarf or Gnome)"
+-- Deneb Walker in Arathi Highlands: the Expert book and two manuals
+local DENEB = { P(ARATHI, 26.97, 58.83, "Deneb Walker", 2805) }
+-- Doctor Gustaf VanHowzen in Theramore: Artisan (his Triage quest), and two bandages after it
+local DOCTOR = { P(DUSTWALLOW, 67.76, 48.97, "Doctor Gustaf VanHowzen", 12939) }
 
-ObviGuide.Guide(function(g)
-	g.title = "First Aid (1-300)"
-	g.group = "Professions"
-	g.id    = "obvi-first-aid"
-	g.only  = "Alliance"
+pack.Guide({
+	title = "First Aid (1-300)",
+	id = "obvi-first-aid",
+	only = "Alliance",
+	skill = "First Aid",
+	credit = "Route after wow-professions.com's WoW Forever First Aid guide, used with credit.",
+	intro = "First Aid takes no profession slot in Forever, and it makes the healing potions.",
 
-	local linen, wool, silk = g.Item("Linen Cloth", 2589), g.Item("Wool Cloth", 2592), g.Item("Silk Cloth", 4306)
-	local mageweave, runecloth = g.Item("Mageweave Cloth", 4338), g.Item("Runecloth", 14047)
+	-- the trainers, by the highest rank they train (all four teach Silk Bandage too)
+	trainers = {
+		[150] = { P(SW, 53.00, 44.68, "Shaina Fuller", 2327), P(IF, 55.09, 58.26, "Nissa Firestone", 5150),
+			P(ELWYNN, 43.39, 65.54, "Michelle Belle", 2329), P(DUNMOROGH, 47.17, 52.61, "Thamner Pol", 2326) },
+	},
+	ranks = {
+		{ cap = 150, skill = 50 },
+		{ cap = 225, skill = 125, book = 16084, sold = DENEB },
+		{ cap = 300, skill = 225, level = 35, at = DOCTOR,
+			note = "His Triage quest: save 15 patients with the bandages he gives, the critical ones first." },
+	},
 
-	--- A visit to your race's First Aid trainer (Stormwind, or Ironforge for dwarves and gnomes).
-	---@param build fun(s: ObviGuideStepBuilder)
-	local function Trainer(build)
-		g:Step(function(s)
-			s.only = IN_SW
-			s:Goto(SW, 53.00, 44.68)
-			s:Talk(g.Npc("Shaina Fuller", 2327))
-			build(s)
-		end)
-		g:Step(function(s)
-			s.only = IN_IF
-			s:Goto(IF, 55.09, 58.26)
-			s:Talk(g.Npc("Nissa Firestone", 5150))
-			build(s)
-		end)
-	end
+	items = {
+		[2589] = "Linen Cloth", [2592] = "Wool Cloth", [4306] = "Silk Cloth", [4338] = "Mageweave Cloth",
+		[14047] = "Runecloth", [8838] = "Sungrass", [13464] = "Golden Sansam", [3713] = "Soothing Spices",
+		[8925] = "Crystal Vial", [16084] = "Expert First Aid - Under Wraps", [16112] = "Manual: Heavy Silk Bandage",
+		[16113] = "Manual: Mageweave Bandage", [255725] = "Manual: Superior Healing Potion",
+		[255729] = "Manual: Major Healing Potion",
+	},
 
-	--- Making `count` of an item, up to a skill level.
-	---@param to integer
-	---@param count integer
-	---@param item ObviGuideMarker
-	---@param notes? fun(s: ObviGuideStepBuilder)
-	local function Make(to, count, item, notes)
-		g:Step(function(s)
-			s:Say("Make " .. count .. " ", item, ".")
-			if notes then notes(s) end
-			s:Skill(FA, to)
-		end)
-	end
+	recipes = {
+		["Linen Bandage"] = { spell = 3275, item = 1251, learn = 1, known = true, reagents = { [2589] = 1 } },
+		["Heavy Linen Bandage"] = { spell = 3276, item = 2581, learn = 40, reagents = { [2589] = 2 } },
+		["Wool Bandage"] = { spell = 3277, item = 3530, learn = 80, reagents = { [2592] = 1 } },
+		["Heavy Wool Bandage"] = { spell = 3278, item = 3531, learn = 115, reagents = { [2592] = 2 } },
+		["Silk Bandage"] = { spell = 7928, item = 6450, learn = 150, tier = 150, reagents = { [4306] = 1 } },
+		["Heavy Silk Bandage"] = { spell = 7929, item = 6451, learn = 180, teach = 16112, sold = DENEB,
+			reagents = { [4306] = 2 } },
+		["Mageweave Bandage"] = { spell = 10840, item = 8544, learn = 210, teach = 16113, sold = DENEB,
+			reagents = { [4338] = 1 } },
+		["Superior Healing Potion"] = { spell = 1244435, item = 3928, learn = 215, teach = 255725,
+			source = "The manual drops; no vendor sells it.", reagents = { [8838] = 1, [3713] = 1, [8925] = 1 } },
+		["Heavy Mageweave Bandage"] = { spell = 10841, item = 8545, learn = 240, at = DOCTOR, reagents = { [4338] = 2 } },
+		["Runecloth Bandage"] = { spell = 18629, item = 14529, learn = 260, at = DOCTOR, reagents = { [14047] = 1 } },
+		["Major Healing Potion"] = { spell = 1244436, item = 13446, learn = 275, teach = 255729,
+			source = "No vendor sells the manual.", reagents = { [13464] = 1, [3713] = 3, [8925] = 1 } },
+	},
 
-	-- Apprentice (1-75)
-	Trainer(function(s)
-		s:Train(FA)
-		s:Note("Route after wow-professions.com's WoW Forever First Aid guide, used with credit.")
-		s:Note("First Aid takes no profession slot in Forever, and it makes the healing potions Alchemy made in Classic.")
-		s:Note("The physicians in Goldshire (Michelle Belle) and Kharanos (Thamner Pol) teach Apprentice and Journeyman too.")
-	end)
-	Make(40, 50, g.Item("Linen Bandage"), function(s)
-		s:Note("50 ", linen, ". Linen comes from humanoids around level 5-15, or the Auction House.")
-	end)
-	Make(75, 40, g.Item("Heavy Linen Bandage"), function(s)
-		s:Note("80 ", linen, ". It turns yellow from 50.")
-		s:Note("Or, from the potions tab: about 81 ", g.Item("Minor Healing Potion"), " (Peacebloom, Mild Spices and an Empty Vial each; spices from Cooking suppliers, vials from Alchemy suppliers).")
-	end)
-
-	-- Journeyman (75-150)
-	Trainer(function(s)
-		s:Train(FA, 150)
-		s:Note("Needs First Aid 50.")
-	end)
-	Make(80, 12, g.Item("Heavy Linen Bandage"), function(s)
-		s:Note("24 ", linen, ". Green now: about every second one gives a point.")
-	end)
-	Make(115, 50, g.Item("Wool Bandage"), function(s)
-		s:Note("50 ", wool, ". The trainer teaches it at 80.")
-	end)
-	Make(150, 50, g.Item("Heavy Wool Bandage"), function(s)
-		s:Note("100 ", wool, ". The trainer teaches it at 115.")
-	end)
-
-	-- Expert (150-225): a book, sold in Arathi Highlands
-	g:Step(function(s)
-		s.skip = "skill " .. FA .. " >= 151"   -- (past 150 only with the book learned)
-		s:Goto(ARATHI, 26.97, 58.83)
-		s:Talk(g.Npc("Deneb Walker", 2805))
-		s:Do(g.Buy("Buy Expert First Aid - Under Wraps"), ", and Manual: Heavy Silk Bandage and Manual: Mageweave Bandage for later.")
-		s:Note("Needs First Aid 125 to use. Use the book and the two manuals from your bags.")
-	end)
-	g:Step(function(s)
-		s:Train(FA, 225)
-		s:Note("Use Expert First Aid - Under Wraps from your bags.")
-	end)
-	Make(180, 42, g.Item("Silk Bandage"), function(s)
-		s:Note("42 ", silk, ". Your trainer teaches it.")
-	end)
-	Make(210, 46, g.Item("Heavy Silk Bandage"), function(s)
-		s:Note("92 ", silk, ". From Manual: Heavy Silk Bandage.")
-	end)
-	Make(225, 17, g.Item("Mageweave Bandage"), function(s)
-		s:Note("17 ", mageweave, ". From Manual: Mageweave Bandage. Mageweave drops only from level 40+ mobs.")
-		s:Note("Without Mageweave: 42 more Heavy Silk Bandages (84 ", silk, ").")
-	end)
-
-	-- Artisan (225-300): the Triage quest in Theramore
-	g:Step(function(s)
-		s.only = "level >= 35"
-		s:Goto(DUSTWALLOW, 67.76, 48.97)
-		s:Talk(g.Npc("Doctor Gustaf VanHowzen", 12939))
-		s:Train(FA, 300)
-		s:Note("Needs First Aid 225 and level 35. Do his Triage quest: save 15 patients with the bandages he gives, the critical ones first, and hand it in as soon as you reach 15.")
-		s:Note("He also teaches Heavy Mageweave Bandage at 240 and Runecloth Bandage at 260.")
-	end)
-	Make(240, 16, g.Item("Superior Healing Potion"), function(s)
-		s:Note("16 Sungrass, 16 Soothing Spices, 16 Crystal Vial. From Manual: Superior Healing Potion, which no vendor sells. It turns yellow at 230.")
-	end)
-	Make(260, 30, g.Item("Heavy Mageweave Bandage"), function(s)
-		s:Note("60 ", mageweave, ". The doctor teaches it at 240.")
-	end)
-	Make(275, 20, g.Item("Runecloth Bandage"), function(s)
-		s:Note("20 ", runecloth, ". The doctor teaches it at 260.")
-	end)
-	Make(300, 30, g.Item("Major Healing Potion"), function(s)
-		s:Note("30 Golden Sansam, 90 Soothing Spices, 30 Crystal Vial. From Manual: Major Healing Potion, which no vendor sells.")
-		s:Note("The site didn't test 225-300 on the Forever beta: it should be as in Classic.")
-	end)
-end)
+	-- from, to, what to make (how many: one per point, unless said)
+	route = {
+		{ 1, 40, { "Linen Bandage", 50 } },
+		{ 40, 75, "Heavy Linen Bandage",
+			alt = "Or about 81 Minor Healing Potion (Peacebloom, Mild Spices and an Empty Vial each)." },
+		{ 75, 80, { "Heavy Linen Bandage", 12 }, note = "Green now: about every second one gives a point." },
+		{ 80, 115, { "Wool Bandage", 50 } },
+		{ 115, 150, { "Heavy Wool Bandage", 50 } },
+		{ 150, 180, { "Silk Bandage", 42 } },
+		{ 180, 210, { "Heavy Silk Bandage", 46 } },
+		{ 210, 225, { "Mageweave Bandage", 17 },
+			note = "Mageweave drops from level 40+ mobs. Without it: 42 more Heavy Silk Bandages." },
+		{ 225, 240, { "Superior Healing Potion", 16 } },
+		{ 240, 260, { "Heavy Mageweave Bandage", 30 } },
+		{ 260, 275, { "Runecloth Bandage", 20 } },
+		{ 275, 300, { "Major Healing Potion", 30 } },
+	},
+})
