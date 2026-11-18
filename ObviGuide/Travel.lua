@@ -237,20 +237,45 @@ function Travel.Already(p)
 	return math.sqrt(dx * dx + dy * dy) <= math.max(CLOSE, p.radius or 0)
 end
 
+--- The way's title: the step's first shown line that's still to do (else its first shown line), not a "Talk to" line
+--- or a note. Lines come and go as you play ("Use Draught of Water Breathing" only until you have its buff).
+---@param step ObviGuideStep
+---@return string?
+local function Title(step)
+	local first
+	for _, g in ipairs(step.goals) do
+		if g.kind ~= "talk" and not g.note and ns.Engine.IsVisible(g) then
+			if not ns.Engine.IsComplete(g, step) then return g.text end
+			first = first or g.text
+		end
+	end
+	return first
+end
+
+local shownStep ---@type ObviGuideStep?
+
 --- Shows the way to a step's destination, or clears ours when the step has none.
 ---@param step? ObviGuideStep
 function Travel.Show(step)
 	local dest = step and step.dest
-	local title
-	if step and dest then
-		for _, g in ipairs(step.goals) do
-			if g.kind ~= "talk" and not g.note and ns.Engine.IsVisible(g) then title = g.text break end
-		end
-	end
+	local title = step and dest and Title(step) or nil
+	shownStep = step
 	Place(dest, title, true)
 	objectiveText = dest and title or nil
 	ShowObjective()
 end
+
+-- the step's lines changed (a buff, an item, an objective done): the title under the arrow follows, without asking
+-- for the way anew
+ns:On("OBVIGUIDE_UPDATE", function()
+	local step = shownStep
+	if not (step and step.dest and placed == step.dest) then return end
+	local title = Title(step)
+	if title == objectiveText then return end
+	objectiveText = title
+	if Travel.Provider() == "arrow" then ns.Arrow.Set(step.dest, title) end
+	ShowObjective()
+end)
 
 --- Shows the current step's waypoint again (after the setting changed, or after combat).
 function Travel.Refresh()
