@@ -27,52 +27,25 @@ local listening = false
 local afterCombat = false   -- a journey to plan once combat is over
 
 
--- The step's objective under Shortest Path Forever's arrow, while it guides our journey: the arrow shows the distance,
--- and the stop's title only on routes of several stops ("Stop 1 of 3: ..."), so not on ours. Its frame has no name;
--- it is found by its parts (Icon, Arrow, Distance, Progress) once Shortest Path has made it. The line is our own
--- frame under the arrow's text.
-local objective      ---@type Frame|{text: FontString}?
-local objectiveText  ---@type string?
-local spfArrow       ---@type Frame|{Distance: FontString, Progress: FontString}?
-local lookFor = 0    -- looks for the arrow made in a row
+-- What Shortest Path Forever is told about a step's stop besides its place, so it can do its part:
+--   questIDs  the quests whose objectives are done there: arriving anywhere in their area counts, and the lines under
+--             its arrow are the quests' own live progress ("Wolf slain: 3/8")
+--   handins   the quests turned in there: the game's own "?" pins there are hidden, not shown twice
+--   npc       the NPC there: its nameplate is marked, and the walk ends on that NPC's floor (in a city or a cave)
+--   kind      the stop pin's icon (Shortest Path's names)
+---@class ObviGuideStopInfo
+---@field questIDs? integer[]
+---@field handins? integer[]
+---@field npc? integer
+---@field kind? string
 
-local function FindArrow()
-	if spfArrow then return spfArrow end
-	local f = EnumerateFrames()
-	while f do
-		local t = f --[[@as table]]
-		if t.Distance and t.Progress and t.Arrow and t.Icon and t.MoverHint and f:GetParent() == UIParent then
-			spfArrow = f --[[@as Frame|{Distance: FontString, Progress: FontString}]]
-			return spfArrow
-		end
-		f = EnumerateFrames(f)
-	end
-end
+local LOOK = {
+	turnin = "turnin", accept = "pickup", objective = "objective", kill = "objective", collect = "objective",
+	fly = "flightmaster", home = "innkeeper", learn = "trainer",
+}
 
-local function ShowObjective()
-	local show = objectiveText ~= nil and ourJourney and Travel.Provider() == "spf"
-	local arrow = show and FindArrow() or spfArrow
-	if not arrow then
-		-- Shortest Path makes its arrow when it first guides, maybe just after us: a few more looks
-		if show and lookFor < 5 then lookFor = lookFor + 1 C_Timer.After(1, ShowObjective) end
-		return
-	end
-	lookFor = 0
-	if not objective then
-		if not show then return end
-		-- a child of the arrow: it moves, scales, fades and hides with it
-		local f = CreateFrame("Frame", nil, arrow) --[[@as Frame|{text: FontString}]]
-		f:SetSize(220, 20)
-		f:SetPoint("TOP", arrow.Progress, "BOTTOM", 0, -2)   -- under the arrow's title line (empty on our routes)
-		f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		f.text:SetPoint("TOP")
-		f.text:SetWidth(220)
-		f.text:SetWordWrap(true)
-		objective = f
-	end
-	objective.text:SetText(show and objectiveText or "")
-	objective:SetShown(show)
-end
+local shownTitle  ---@type string?   the way's title as last shown
+local shownSig    ---@type string?   that title and the stop's info, to tell when either changed
 
 -- Shortest Path Forever's public API (an optional dependency, so looked up at run time)
 local function SPF()
@@ -83,7 +56,6 @@ local function SPF()
 		api.Subscribe(function(changes)
 			if changes.ended then ourJourney = false end
 			if (changes.started or changes.changed) and api.CurrentStop(OWNER) == nil then ourJourney = false end
-			ShowObjective()
 		end)
 	end
 	return api
@@ -180,7 +152,8 @@ end
 ---@param p? ObviGuidePoint
 ---@param title? string    colour codes kept: the arrow shows them
 ---@param step? boolean    a step's destination (a journey the player planned in Shortest Path is then left alone)
-local function Place(p, title, step)
+---@param info? ObviGuideStopInfo   what Shortest Path is told about the stop besides its place
+local function Place(p, title, step, info)
 	local kind = Travel.Provider()
 	placed = p
 	ClearOthers(kind)
@@ -192,7 +165,14 @@ local function Place(p, title, step)
 		if step and api.Active() and not ourJourney then return end   -- the player's own journey: left alone
 		-- Shortest Path plans no journey in combat (a step often moves on there, as the mob dies): again after it
 		if InCombatLockdown() then afterCombat = true return end
-		ourJourney = api.NavigateRoute(OWNER, { { map = p.map, x = p.x, y = p.y, title = Plain(title), hold = true, radius = p.radius } }) ~= false
+		local stop = { map = p.map, x = p.x, y = p.y, title = Plain(title), hold = true, radius = p.radius }
+		if info then
+			stop.questIDs, stop.handins, stop.npc, stop.kind = info.questIDs, info.handins, info.npc, info.kind
+		end
+		-- the line under its arrow: the quests' own live progress when the stop has quests to do, else the step's line
+		if not stop.questIDs then stop.tooltip = title end
+		-- Sending the same place again (the step's line or quests changed) only relabels the stop: no new route search
+		ourJourney = api.NavigateRoute(OWNER, { stop }) ~= false
 	elseif kind == "tomtom" then
 		ClearTomTom()
 		if not p then return end
@@ -216,8 +196,7 @@ end
 ---@param title? string
 function Travel.To(p, title)
 	Place(p, title, false)
-	objectiveText = title
-	ShowObjective()
+	shownTitle, shownSig = title, nil
 end
 
 local CLOSE = 20   -- yards: as good as there
@@ -252,6 +231,39 @@ local function Title(step)
 	return first
 end
 
+--- What Shortest Path is told about a step's stop, from the step's shown lines still to do.
+---@param step ObviGuideStep
+---@return ObviGuideStopInfo
+local function Info(step)
+	local quests, handins, kind = {}, {}, nil
+	for _, g in ipairs(step.goals) do
+		if ns.Engine.IsVisible(g) and not ns.Engine.IsComplete(g, step) then
+			kind = kind or LOOK[g.kind]
+			local q = g.quest
+			if q and g.kind == "turnin" then
+				if not tContains(handins, q) then handins[#handins + 1] = q end
+			elseif q and (g.kind == "objective" or g.kind == "kill" or (g.kind == "collect" and g.objective)) then
+				if not tContains(quests, q) then quests[#quests + 1] = q end
+			end
+		end
+	end
+	local target = step.target
+	return {
+		questIDs = quests[1] and quests or nil,   -- (an empty list is refused)
+		handins = handins[1] and handins or nil,
+		npc = target and not target.enemy and target.id or nil,
+		kind = kind,
+	}
+end
+
+---@param title? string
+---@param info ObviGuideStopInfo
+---@return string
+local function Signature(title, info)
+	return table.concat({ title or "", table.concat(info.questIDs or {}, ","), table.concat(info.handins or {}, ","),
+		tostring(info.npc), tostring(info.kind) }, "|")
+end
+
 local shownStep ---@type ObviGuideStep?
 
 --- Shows the way to a step's destination, or clears ours when the step has none.
@@ -259,22 +271,30 @@ local shownStep ---@type ObviGuideStep?
 function Travel.Show(step)
 	local dest = step and step.dest
 	local title = step and dest and Title(step) or nil
+	local info = step and dest and Info(step) or nil
 	shownStep = step
-	Place(dest, title, true)
-	objectiveText = dest and title or nil
-	ShowObjective()
+	Place(dest, title, true, info)
+	shownTitle, shownSig = title, info and Signature(title, info) or nil
 end
 
--- the step's lines changed (a buff, an item, an objective done): the title under the arrow follows, without asking
--- for the way anew
+-- the step's lines changed (a buff, an item, an objective done): the title and the stop's quests follow, without
+-- asking for the way anew (Shortest Path relabels a stop sent again at the same place)
 ns:On("OBVIGUIDE_UPDATE", function()
 	local step = shownStep
 	if not (step and step.dest and placed == step.dest) then return end
-	local title = Title(step)
-	if title == objectiveText then return end
-	objectiveText = title
-	if Travel.Provider() == "arrow" then ns.Arrow.Set(step.dest, title) end
-	ShowObjective()
+	local title, info = Title(step), Info(step)
+	local sig = Signature(title, info)
+	if sig == shownSig then return end
+	local titleChanged = title ~= shownTitle
+	shownTitle, shownSig = title, sig
+	local kind = Travel.Provider()
+	if kind == "arrow" then
+		if titleChanged then ns.Arrow.Set(step.dest, title) end
+	elseif kind == "spf" and ourJourney then
+		-- (it takes no journey in combat: sent again once combat is over)
+		if InCombatLockdown() then afterCombat = true return end
+		Place(step.dest, title, true, info)
+	end
 end)
 
 --- Shows the current step's waypoint again (after the setting changed, or after combat).
@@ -303,13 +323,12 @@ ns:On("ADDON_LOADED", function(_, name)
 	end
 end)
 
---- The objective line under the waypoint marker, for /og step: what it would show and why it shows or not.
+--- The waypoint as last shown, for /og step: its title, what Shortest Path was told about the stop, and whose journey
+--- it guides.
 ---@return string
 function Travel.DebugObjective()
 	local api = SPF()
-	local arrow = FindArrow()
-	return ("objective line: text %q, ours %s, provider %s, spf active %s, our stop %s, spf arrow %s, line %s")
-		:format(tostring(objectiveText), tostring(ourJourney), Travel.Provider(), tostring(api and api.Active()),
-			tostring(api and api.CurrentStop(OWNER)), arrow and (arrow:IsVisible() and "shown" or "hidden") or "not found",
-			objective and (objective:IsVisible() and "shown" or "hidden") or "not made")
+	return ("waypoint: title %q, stop %s, ours %s, provider %s, spf active %s, our stop %s")
+		:format(tostring(shownTitle), tostring(shownSig), tostring(ourJourney), Travel.Provider(),
+			tostring(api and api.Active()), tostring(api and api.CurrentStop(OWNER)))
 end
