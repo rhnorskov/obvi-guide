@@ -1,7 +1,8 @@
 # Obvi Guide: Dungeons
 
-## Unreleased
+## v0.5.0
 
+- WoW Forever only: retail is no longer supported.
 - New: quest guides for every dungeon up to Stratholme, for Alliance and Horde: Ragefire Chasm, Shadowfang Keep,
   Excavation Site, Blackfathom Deeps, The Stockade, City of Dalaran, Razorfen Kraul, Gnomeregan, Scarlet Monastery,
   Razorfen Downs, Uldaman, Zul'Farrak, Maraudon, The Temple of Atal'Hakkar, Blackrock Depths, Dire Maul, Lower and

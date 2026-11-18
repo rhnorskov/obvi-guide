@@ -1,4 +1,4 @@
-## Interface: 16001, 120105
+## Interface: 16001
 ## Title: Obvi Guide: Dungeons
 ## Version: @project-version@
 ## Notes: Dungeon quest guides and dungeon key guides for Obvi Guide, Alliance and Horde, from The Hall of Thanes to Stratholme.

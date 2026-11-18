@@ -1,12 +1,31 @@
 # Obvi Guide
 
-## Unreleased
+## v0.5.0
 
+- WoW Forever only: retail is no longer supported.
+- Waypoints (setting) has Auto, now the default: Shortest Path Forever shows the way when it's installed, else
+  Obvi Guide's arrow. If you never changed the setting you get Auto; pick Obvi Guide arrow to keep the arrow.
+- QuestieDB now comes with Obvi Guide in WoW Forever: the CurseForge app installs it as a required dependency, and
+  `tools/install.ps1` installs and updates it.
 - Auto accept and turn in work as Zygor's: only what the step you're on still has to do (no longer the next step's
   quests, nor lines hidden for you), and declining a quest leaves auto accept off for a few seconds.
 - A mob two lines name shows its action key on both (Kill Kurzen Jungle Fighter [a-3] under the line it came from).
 - Pressing the action key again in an NPC's quest window no longer accepts the quest shown (the game took the key as
   Accept): the key only interacts once the window is closed.
+- At an open trainer, clicking a step's "Learn …" or "Train …" line trains it, and the action key that talked to the
+  trainer trains the step's next one, then the next.
+- A Collect line can be for a skill range (`range`): it needs only what the points left in it need. Once
+  met, it stays ticked while you make things, until you run out of the item.
+- A Sell line (`Sell(item, keep)`) shows items to sell: while you have more than the guide still needs, with how
+  many are spare, and only if vendors buy them. At a merchant, clicking it sells the spare.
+- A Collect line can say where the item is sold (`at`): clicking it shows the way to the nearest seller.
+- A Collect line can be for parts still to make (`toMake`): it needs the reagents for the ones not in your bags yet.
+  A Make line can make up to a count in your bags (`:CraftsUpTo`).
+- A "Make …" line can name its recipe: clicking it, or its action key, opens the profession and makes what the skill
+  points left in its range need. Its key shows what the next press does: "open" while the profession's window is
+  closed, "make 13" once it's open.
+- A step can offer several places to go (`nearest = true`, e.g. trainers in Stormwind, Ironforge and Darkshore): it
+  takes you to the nearest one, picked again when you enter another zone, and shows only that one's NPC.
 - The next-step arrow pulses gold while you're on an earlier step than the guide has got to (you went back); its
   tooltip says which step that is. Kept across a reload.
 - The current step on the world map: its destination as a gold pin and the spots it marks ("multiple locations") as

@@ -7,6 +7,12 @@ manual-changelog:
   filename: CHANGELOG.md
   markup-type: markdown
 
+# CurseForge relations, set on every upload: the CurseForge app installs QuestieDB (its own project, slug questiedb)
+# with Obvi Guide. It isn't embedded: it's a 15 MB addon of its own whose data isn't all under a
+# licence that allows passing it on, and it reads its data from its own TOC, so it only works as the QuestieDB addon.
+required-dependencies:
+  - questiedb
+
 # development files stay out of the zip
 ignore:
   - docs
