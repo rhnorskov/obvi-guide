@@ -1,5 +1,10 @@
 # Obvi Guide
 
+## Unreleased
+
+- The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
+  you have its buff) or done no longer shows there.
+
 ## v0.5.0
 
 - WoW Forever only: retail is no longer supported.
