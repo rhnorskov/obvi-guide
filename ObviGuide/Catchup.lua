@@ -182,6 +182,7 @@ function Catchup.Bars(xp)
 	local max = UnitXPMax("player")
 	if not max or max <= 0 then return Catchup.Number(xp) .. " XP" end
 	local bars = xp / (max / 20)
+	if bars < 0.05 then return "under 0.1 bars" end
 	local count = bars >= 10 and tostring(math.floor(bars + 0.5)) or ("%.1f"):format(bars)
 	return ("%s bar%s"):format(count, count == "1.0" and "" or "s")
 end
@@ -265,18 +266,29 @@ local function Way(a, b)
 end
 
 --- The guide's own pace: the XP (at your level) of the quests it turns in, per second of following it (its steps,
---- and the way between them). Nil when it has none.
+--- and the way between them). Only the steps and lines for this character: a class guide's other races' quests, and
+--- its quests far above your level, aren't your pace. Nil when it has none.
 ---@param g ObviGuideGuide
 ---@return number?
 local function Rate(g)
 	if rates[g] == nil then
 		local total, seconds, last = 0, 0, nil
+		local me = UnitLevel("player")
+		local DB = _G["LibQuestieDB"] ---@type table?
+		local ok, xpdb = pcall(function() return DB and DB.Support.Get("QuestXP").db end)
 		for _, s in ipairs(g.steps) do
-			for _, goal in ipairs(s.goals) do
-				if goal.kind == "turnin" and goal.quest then total = total + (Engine.QuestXP(goal.quest) or 0) end
+			if ns.Conditions.Eval(s.cond) then
+				for _, goal in ipairs(s.goals) do
+					local q = goal.kind == "turnin" and goal.quest and ns.Conditions.Eval(goal.cond) and goal.quest
+					local e = q and ok and xpdb and xpdb[q]
+					-- (a quest more than 5 levels above you: not one you'd do on the way now)
+					if q and not (type(e) == "table" and e[1] and e[1] > me + 5) then
+						total = total + (Engine.QuestXP(q) or 0)
+					end
+				end
+				seconds = seconds + STEP_SECONDS
+				if s.dest then seconds, last = seconds + Way(last, s.dest), s.dest end
 			end
-			seconds = seconds + STEP_SECONDS
-			if s.dest then seconds, last = seconds + Way(last, s.dest), s.dest end
 		end
 		rates[g] = total > 0 and seconds > 0 and total / seconds or false
 	end

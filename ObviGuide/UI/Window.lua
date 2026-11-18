@@ -444,8 +444,9 @@ local function RenderLine(line)
 		-- "Needs Blessed Arm · Catch up: not worth it"
 		if ns.db and ns.db.catchupDetails then
 			if pace and xp then
-				worth = (": %s, ~%d min, %.1fx this guide's XP per minute"):format(ns.Catchup.Bars(xp),
-					math.max(1, math.floor(pace.minutes + 0.5)), pace.ratio)
+				worth = (": %s, ~%d min, %s this guide's XP per minute"):format(ns.Catchup.Bars(xp),
+					math.max(1, math.floor(pace.minutes + 0.5)),
+					pace.ratio < 0.05 and "under 0.1x" or ("%.1fx"):format(pace.ratio))
 				local behind = ns.Catchup.Behind()
 				if behind then
 					worth = worth .. (behind >= 0.05 and (", %.1f levels behind the guide"):format(behind)
