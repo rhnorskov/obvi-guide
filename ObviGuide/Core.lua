@@ -338,11 +338,16 @@ end
 --- Zygor's target buttons. Only slash commands: SetRaidTarget is Blizzard-only on this client, and a /run line in an
 --- addon's macro is tainted (the game blocks it). /tm toggles, so "/tm 0" clears first and "/tm N" then always sets.
 --- Several names (a line naming several mobs): the first one found, trying them in the order given.
+--- Where the client has pings, the target is pinged too (contextual: attack on an enemy, assist on an NPC), so a group
+--- sees it as well.
 ---@param name string|string[]
 ---@param enemy? boolean
 ---@return string
 function ns.TargetMacro(name, enemy)
-	local mark = enemy and 8 or 1
+	local mark = ("/tm [@target,exists] 0\n/tm [@target,exists] %d"):format(enemy and 8 or 1)
+	if C_Ping and (not C_Ping.IsPingSystemEnabled or C_Ping.IsPingSystemEnabled()) then
+		mark = mark .. "\n/ping [@target,exists]"
+	end
 	if type(name) == "table" and #name > 1 then
 		-- each next name only while nothing (living) is targeted yet; a macro can't pick the nearest of two names
 		local target = "/cleartarget\n"
@@ -350,7 +355,7 @@ function ns.TargetMacro(name, enemy)
 			target = target .. (i == 1 and "/targetexact %s\n" or "/targetexact [noexists] %s\n"):format(n)
 			if enemy then target = target .. ("/targetexact [dead] %s\n/cleartarget [dead]\n"):format(n) end
 		end
-		return target .. ("/tm [@target,exists] 0\n/tm [@target,exists] %d"):format(mark)
+		return target .. mark
 	end
 	if type(name) == "table" then name = name[1] end
 	local target = ("/cleartarget\n/targetexact %s\n"):format(name)
@@ -363,7 +368,7 @@ function ns.TargetMacro(name, enemy)
 		target = target .. ("/targetexact [dead] %s\n/target [noexists] %s\n/target [dead] %s\n/cleartarget [dead]\n")
 			:format(name, stem, stem)
 	end
-	return target .. ("/tm [@target,exists] 0\n/tm [@target,exists] %d"):format(mark)
+	return target .. mark
 end
 
 --- The guide with this title or name, read and ready to follow.
