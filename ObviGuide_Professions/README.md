@@ -34,7 +34,7 @@ Artisan Fishing quest were not tested on the beta.
 
 - **WhatsTraining**: the recipes' spell ids and the skill each is learned at, so a recipe you know is ticked off.
 - **Zygor Guides** (Forever): the Engineering trainers' and vendors' ids and positions, the recipes' reagents
-  (Engineering, Blacksmithing, First Aid's bandages), and the Imperial Plate quests.
+  (Engineering, Blacksmithing, First Aid's bandages, Cooking), and the Imperial Plate quests.
 - **QuestieDB** (Forever data): trainer and vendor ids and positions, item and quest ids, and the ore vein spawns behind each
   mining zone's waypoint (a spot where that ore's veins are dense; it is not the site's route).
 - The fishing spots' waypoints (Crystal Lake, Iceflow Lake, Lake Al'Ameth, Stormwind's canals, Mystral Lake) are our own

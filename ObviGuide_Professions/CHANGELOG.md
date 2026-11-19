@@ -1,5 +1,10 @@
 # Obvi Guide: Professions
 
+## Unreleased
+
+- Cooking is written as data too: a main dish per range (raw fish and recipes from vendors, clicked to the nearest
+  seller), the site's other dishes as a choice; the Expert Cookbook and Dirge's Artisan quest made into steps.
+
 ## v0.5.0
 
 - WoW Forever only: retail is no longer supported.

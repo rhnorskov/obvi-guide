@@ -381,6 +381,8 @@ function pack.Guide(def)
 			local shop = shops[sold]
 			if not shop then shop = { first = i, last = i, goods = {} } shops[sold] = shop end
 			shop.first, shop.last = math.min(shop.first, i), math.max(shop.last, route[i][2])
+			-- (each thing once: two ranges may make the same recipe)
+			for _, x in ipairs(shop.goods) do if x.item == item then return end end
 			table.insert(shop.goods, { item = item, has = has })
 		end
 		for i, r in ipairs(route) do

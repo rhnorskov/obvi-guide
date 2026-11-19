@@ -5,10 +5,10 @@ How the profession guides in this pack are built, so each one works the same way
 
 ## Write the data, not the steps
 
-A profession guide is data: [Engineering.lua](Engineering.lua), [Blacksmithing.lua](Blacksmithing.lua) and
-[FirstAid.lua](FirstAid.lua) are written so. [Profession.lua](Profession.lua) makes the steps from it by the rules
-below (`pack.Guide`), so they hold for every guide without writing them again. (Mining and Fishing and Cooking are
-gathering routes, written as steps.)
+A profession guide is data: [Engineering.lua](Engineering.lua), [Blacksmithing.lua](Blacksmithing.lua),
+[FirstAid.lua](FirstAid.lua) and [Cooking.lua](Cooking.lua) are written so. [Profession.lua](Profession.lua) makes the
+steps from it by the rules below (`pack.Guide`), so they hold for every guide without writing them
+again. (Mining, and Fishing and Cooking, are gathering routes, written as steps.)
 The data:
 
 - **route**: the site's ranges, `{ from, to, "Recipe" }`, or `{ from, to, { "Recipe", count } }` where the site's
@@ -101,8 +101,9 @@ they're in your bags; passed over once the last range that uses them is done. A 
 ### Choices
 
 Where the site gives a choice (Silver Contacts or Flying Tiger Goggles), the guide follows the main option and the
-other is one note: "Or 5 Flying Tiger Goggles, if Silver Bars are dear." No materials step for that range; count the
-main option into the totals by hand (`Count`).
+others are one note (`alt`): "Or 5 Flying Tiger Goggles, if Silver Bars are dear." The materials and totals count
+the main one. Where the site lists several dishes for a range (Cooking), the main one is the one you can get most
+easily from vendors (raw fish, recipes), and the rest are the note.
 
 ### The totals
 
