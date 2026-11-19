@@ -119,6 +119,16 @@ local function Build()
 		.. "XP per minute), about even, or not.",
 		function() ns.Window.Refresh() end)
 
+	Header("Targeting")
+	local function Retarget() ns.Window.Refresh() ns:Fire("OBVIGUIDE_UPDATE") end
+	Checkbox("Raid marker on targets", "marker", true,
+		"Targeting a mob or NPC from a step (its line or the action key) puts a raid marker on it: a skull on an enemy, "
+		.. "a star on an NPC.", Retarget)
+	if ns.CanPing() then
+		Checkbox("Ping targets", "ping", true,
+			"Targeting a mob or NPC from a step also pings it: attack on an enemy, assist on an NPC.", Retarget)
+	end
+
 	Header("Troubleshooting")
 	local debug = Settings.RegisterProxySetting(category, "ObviGuide_debug", Settings.VarType.Boolean, "Debug messages",
 		false, function() return ns.debug end, function(value) ns.debug = value end)

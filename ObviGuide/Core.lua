@@ -29,6 +29,7 @@ local ADDON, ns = ...
 ---@field FindGuide fun(title: string): ObviGuideGuide?
 ---@field Ready fun(g: ObviGuideGuide): ObviGuideGuide?
 ---@field TargetMacro fun(name: string|string[], enemy?: boolean): string
+---@field CanPing fun(): boolean
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
 ---@field DestroyCheapest fun()   asks to destroy the cheapest item in the bags (UI\Junk.lua)
@@ -53,6 +54,8 @@ local ADDON, ns = ...
 ---@field skipHearth? boolean     leave out the hearth and set-hearth lines; a step with nothing else is skipped (nil: off)
 ---@field catchupDetails? boolean show the catch-up's XP, time and pace, not only whether it's worth it (nil: off)
 ---@field autoTurnin? boolean     turn in the guide's quests, no choice of rewards (nil: on)
+---@field marker? boolean         target buttons put a raid marker on the target (nil: on)
+---@field ping? boolean           target buttons ping the target, where the client has pings (nil: on)
 
 ---@class ObviGuideTab
 ---@field guide? string          the guide in this tab (name, or title); none: an empty tab
@@ -334,20 +337,29 @@ function ns.Ready(g)
 	Announce()
 end
 
+--- Whether this client has pings (the /ping command).
+---@return boolean
+function ns.CanPing()
+	return C_Ping ~= nil and (not C_Ping.IsPingSystemEnabled or C_Ping.IsPingSystemEnabled() == true)
+end
+
 --- The macro that targets someone by name and puts a raid marker on them (skull for enemies, star for NPCs), like
 --- Zygor's target buttons. Only slash commands: SetRaidTarget is Blizzard-only on this client, and a /run line in an
 --- addon's macro is tainted (the game blocks it). /tm toggles, so "/tm 0" clears first and "/tm N" then always sets.
 --- Several names (a line naming several mobs): the first one found, trying them in the order given.
 --- Where the client has pings, the target is pinged too (contextual: attack on an enemy, assist on an NPC), so a group
---- sees it as well.
+--- sees it as well. Each is a setting (marker, ping).
 ---@param name string|string[]
 ---@param enemy? boolean
 ---@return string
 function ns.TargetMacro(name, enemy)
-	local mark = ("/tm [@target,exists] 0\n/tm [@target,exists] %d"):format(enemy and 8 or 1)
-	if C_Ping and (not C_Ping.IsPingSystemEnabled or C_Ping.IsPingSystemEnabled()) then
-		mark = mark .. "\n/ping [@target,exists]"
+	local db = ns.db or {}
+	local mark = ""
+	if db.marker ~= false then
+		mark = mark .. ("\n/tm [@target,exists] 0\n/tm [@target,exists] %d"):format(enemy and 8 or 1)
 	end
+	if db.ping ~= false and ns.CanPing() then mark = mark .. "\n/ping [@target,exists]" end
+	mark = mark:sub(2)
 	if type(name) == "table" and #name > 1 then
 		-- each next name only while nothing (living) is targeted yet; a macro can't pick the nearest of two names
 		local target = "/cleartarget\n"

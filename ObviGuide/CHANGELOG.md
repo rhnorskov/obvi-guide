@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Targeting a mob or NPC from a step also pings it, where the game has pings. **Raid marker on targets** and
+  **Ping targets** (in the settings, under Targeting) turn each off.
 - Slash commands: `/og help` lists every command, and `/og options` opens the options. `/obvi` now lists your Obvi
   addons (`/obvi guide` is the same as `/og`); `/obviguide` is gone. Scribe's command is now `/ogs` (was `/scribe`).
 - The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
