@@ -86,9 +86,11 @@ local function Build()
 
 	Header("Quests")
 	Checkbox("Auto accept guide quests", "autoAccept", true,
-		"Accepts the quests of the current and next step when you talk to the NPC (other quests are left alone). Hold Shift to skip it.")
+		"Accepts the quests the step you're on still has to pick up when you talk to the NPC (other quests are left alone). "
+			.. "Hold Shift to skip it; declining a quest also pauses it for a few seconds.")
 	Checkbox("Auto turn in guide quests", "autoTurnin", true,
-		"Turns in the quests of the current and next step (other quests are left alone). A choice of rewards is left to you. Hold Shift to skip it.")
+		"Turns in the quests the step you're on still has to hand in (other quests are left alone). A choice of rewards is "
+			.. "left to you. Hold Shift to skip it.")
 	local missing = Settings.RegisterProxySetting(category, "ObviGuide_skipMissing", Settings.VarType.String,
 		"Quests missing a prerequisite", "show",
 		function() return ns.Engine.SkipMissing() end,
