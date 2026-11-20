@@ -60,6 +60,7 @@ local BRACES = { o = "ff7d40", orange = "ff7d40", g = "00ff00", green = "00ff00"
 local function Colour(s)
 	s = s:gsub("_(.-)_", "|cffffee88%1|r"):gsub("{}", "|r")
 	s = s:gsub("{#(%x+)}", "|cff%1"):gsub("{(%w+)}", function(k) return BRACES[k] and ("|cff" .. BRACES[k]) end)
+	s = s:gsub("#(%d+)#", "%1")   -- Zygor's count ("Slay #10# Lost Ones"): just the number
 	s = s:gsub("%%UNDER%%", "_")
 	return (s:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", ""))
 end
