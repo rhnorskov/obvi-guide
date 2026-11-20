@@ -37,6 +37,9 @@ local MAPS = {
 	["Stonetalon Mountains"] = 1442, ["Tanaris"] = 1446, ["Teldrassil"] = 1438, ["The Barrens"] = 1413,
 	["Thousand Needles"] = 1441, ["Thunder Bluff"] = 1456, ["Un'Goro Crater"] = 1449, ["Winterspring"] = 1452,
 	["Alterac Valley"] = 1459, ["Arathi Basin"] = 1461, ["Warsong Gulch"] = 1460,
+	-- Forever's own zones
+	["Riverglades"] = 2548, ["Zephras Isle"] = 2521, ["Darkspear Islands"] = 2524, ["Shen'dralas"] = 2652,
+	["Mount Hyjal"] = 2482,
 }
 
 --- A zone as a guide writes it ("Elwynn Forest", "Orgrimmar/1", "Name##84", "84") -> uiMapID (Forever's guides use
