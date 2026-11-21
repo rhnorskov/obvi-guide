@@ -1,6 +1,6 @@
 -- Scarlet Monastery (28-40): the quests Attune and DungeonJournal (Exehn) list for each faction. Alliance: Brother
 -- Anton and both Down the Scarlet Path quests up to In the Name of the Light, Mythology of the Titans, and Past Due
--- (Magus Olvek, Dalaran). Horde: Into The Scarlet Monastery, Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal
+-- (Magus Olvek, Dalaran), and for paladins Aeonas (A Brother In Need .. Aeonas the Vindicated). Horde: Into The Scarlet Monastery, Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal
 -- (after Going, Going, Guano! from Razorfen Kraul), and the Test of Faith, Endurance, Strength and Lore chain that ends
 -- in the Library, then Final Passage back to Dorn Plainstalker. The Eye of Bhossca (rogues only) is left out. Quest,
 -- NPC, item and object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance and the
@@ -30,6 +30,7 @@ ObviGuide.Guide(function(g)
 	local anton   = g.Npc("Brother Anton", 1182)
 	local raleigh = g.Npc("Raleigh the Devout", 3980)
 	local olvek   = g.Npc("Magus Olvek", 264265)
+	local aeonas  = g.Npc("Aeonas")
 
 	-- Stormwind and Ironforge
 	g:Step(function(s)
@@ -37,6 +38,16 @@ ObviGuide.Guide(function(g)
 		s:Talk(g.Npc("Brother Crowley", 12336))
 		s:Accept(6141, "Brother Anton")
 		s:Note("In the Cathedral of Light. The Scarlet Path chain needs level 34.")
+	end)
+
+	-- Paladins: Aeonas, at the end of Katherine the Pure's chain (the Strange Orb from Darkshore, then her quests from
+	-- level 35, up to Orders from the Grand Crusader). From DungeonJournal (Exehn).
+	g:Step(function(s)
+		s.only = "Paladin and done 79945"
+		s:Goto(STORMWIND, 48.5, 49.1)
+		s:Talk(g.Npc("Katherine the Pure"))
+		s:Accept(79946, "A Brother In Need")
+		s:Note("Also in the Cathedral of Light. Let her finish talking about Aeonas before you leave: players report that skipping it can block the next step.")
 	end)
 
 	g:Step(function(s)
@@ -118,12 +129,25 @@ ObviGuide.Guide(function(g)
 		s:Note("The last boss of the Armory, in the big hall at the end.")
 	end)
 
-	wing(g, "Cathedral", "ready 1053 or done 1053", "Its door needs the Scarlet Key too.")
+	wing(g, "Cathedral", "(ready 1053 or done 1053) and not onquest 79946 and not onquest 79963",
+		"Its door needs the Scarlet Key too.")
 
 	g:Step(function(s)
 		s:Kill(g.Mob("Scarlet Commander Mograine", 3976), { quest = 1053, objective = 2 })
 		s:Kill(g.Mob("High Inquisitor Whitemane", 3977), { quest = 1053, objective = 1 })
 		s:Note("At the far end of the Cathedral. Whitemane comes in when Mograine falls, and raises him once.")
+	end)
+
+	-- Paladins: Aeonas waits in the Cathedral's rear chamber
+	g:Step(function(s)
+		s.only = "Paladin and (onquest 79946 or onquest 79963 or done 79946)"
+		s:Talk(aeonas)
+		s:Turnin(79946, "A Brother In Need")
+		s:Accept(79963, "By The Light's Grace")
+		s:Quest(79963, 1, "Heal ", aeonas, " to full health.")
+		s:Turnin(79963, "By The Light's Grace")
+		s:Accept(79970, "Aeonas the Vindicated")
+		s:Note("In the rear chamber of the Cathedral.")
 	end)
 
 	-- out: Dalaran on the way back to Southshore
@@ -145,6 +169,14 @@ ObviGuide.Guide(function(g)
 		s:Goto(IRONFORGE, 75.0, 12.5)
 		s:Talk(mae)
 		s:Turnin(1050, "Mythology of the Titans")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin and (onquest 79970 or done 79970)"
+		s:Goto(STORMWIND, 48.6, 49.2)
+		s:Talk(g.Npc("Aeonas the Vindicated"))
+		s:Turnin(79970, "Aeonas the Vindicated")
+		s:Note("Back in the Cathedral of Light: Pauldrons of Vindication. The chain goes on from him with Some Good News at level 45.")
 	end)
 end)
 
