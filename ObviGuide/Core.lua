@@ -28,7 +28,7 @@ local ADDON, ns = ...
 ---@field Debug fun(fmt: string, ...: any)
 ---@field FindGuide fun(title: string): ObviGuideGuide?
 ---@field Ready fun(g: ObviGuideGuide): ObviGuideGuide?
----@field TargetMacro fun(name: string|string[], enemy?: boolean): string
+---@field TargetMacro fun(name: string|string[], enemy?: boolean, keep?: boolean): string
 ---@field CanPing fun(): boolean
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
@@ -349,10 +349,14 @@ end
 --- Several names (a line naming several mobs): the first one found, trying them in the order given.
 --- Where the client has pings, the target is pinged too (contextual: attack on an enemy, assist on an NPC), so a group
 --- sees it as well. Each is a setting (marker, ping).
+--- keep: the target (one of these names) is tagged by someone else, so the macro doesn't let go of it first: targeting
+--- the same name again goes on to the next one, as it does from a corpse.
 ---@param name string|string[]
 ---@param enemy? boolean
+---@param keep? boolean
 ---@return string
-function ns.TargetMacro(name, enemy)
+function ns.TargetMacro(name, enemy, keep)
+	local clear = keep and "" or "/cleartarget\n"
 	local db = ns.db or {}
 	local mark = ""
 	if db.marker ~= false then
@@ -362,7 +366,7 @@ function ns.TargetMacro(name, enemy)
 	mark = mark:sub(2)
 	if type(name) == "table" and #name > 1 then
 		-- each next name only while nothing (living) is targeted yet; a macro can't pick the nearest of two names
-		local target = "/cleartarget\n"
+		local target = clear
 		for i, n in ipairs(name) do
 			target = target .. (i == 1 and "/targetexact %s\n" or "/targetexact [noexists] %s\n"):format(n)
 			if enemy then target = target .. ("/targetexact [dead] %s\n/cleartarget [dead]\n"):format(n) end
@@ -370,7 +374,7 @@ function ns.TargetMacro(name, enemy)
 		return target .. mark
 	end
 	if type(name) == "table" then name = name[1] end
-	local target = ("/cleartarget\n/targetexact %s\n"):format(name)
+	local target = clear .. ("/targetexact %s\n"):format(name)
 	if enemy then
 		-- /targetexact takes the nearest match, dead or not; while the target is dead, targeting the same name again
 		-- cycles on to the next match. Guides often name mobs in the plural ("Bandit Highwaymen"), so when the exact

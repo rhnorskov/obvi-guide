@@ -26,6 +26,7 @@ local COUNT = 4
 ---@field binding string
 ---@field current? ObviGuideActionInfo
 ---@field interacting boolean  the key is "Interact with Target" now
+---@field keep? boolean   its target is tagged by someone else: the next press targets the next one of that name
 ---@field gossip? ObviGuideGoal   the "Select …" line whose dialogue option the key picks while the dialogue shows
 ---@field training? ObviGuideGoal   the "Learn …"/"Train …" line the key trains while a trainer's window is open
 
@@ -137,6 +138,8 @@ local function Pick()
 	return list
 end
 
+local SetMacro ---@type fun(slot: ObviGuideActionSlot)
+
 local function Apply()
 	if InCombatLockdown() then pending = true return end
 	pending = false
@@ -171,30 +174,48 @@ local function Apply()
 			-- (nothing to click: the key itself becomes Interact, see Rebind)
 		elseif a then
 			b:SetAttribute("type", "macro")
-			local v = a.value
-			b:SetAttribute("macrotext", ns.TargetMacro(type(v) == "table" and v or tostring(v), a.enemy))
 		end
+		SetMacro(slot)
 	end
 end
 
 -- The "magic key" part (as Zygor does it): once an action's NPC or mob is targeted, that action's key becomes the
 -- game's own "Interact with Target", so the next press talks to the NPC or attacks the mob. Override bindings can't
 -- change in combat either; the switch then waits for combat to end.
+-- A mob someone else has tagged isn't ours: the key doesn't attack it, and its next press targets the next one of
+-- that name instead (see TargetMacro's keep).
+---@param a? ObviGuideActionInfo
+---@return "ours"|"tagged"|nil
+local function TargetMatch(a)
+	if not (a and a.kind == "target") then return nil end
+	local ok, match = pcall(function()
+		if not UnitExists("target") or UnitIsDead("target") then return nil end
+		local name = UnitName("target")
+		local v, same = a.value, false
+		if type(v) == "table" then   -- one action for several mobs: any of them
+			for _, n in ipairs(v) do if n == name then same = true end end
+		else
+			same = name == v
+		end
+		if not same then return nil end
+		return a.enemy and UnitIsTapDenied("target") and "tagged" or "ours"
+	end)
+	return ok and match or nil
+end
+
 ---@param slot ObviGuideActionSlot
 local function TargetIsOurs(slot)
+	return TargetMatch(slot.current) == "ours"
+end
+
+-- the target macro of a slot: while its target is tagged by someone else, the next press goes on to the next one
+---@param slot ObviGuideActionSlot
+function SetMacro(slot)
 	local a = slot.current
-	if not (a and a.kind == "target") then return false end
-	local ok, same = pcall(function()
-		if not UnitExists("target") or UnitIsDead("target") then return false end
-		local name = UnitName("target")
-		local v = a.value
-		if type(v) == "table" then   -- one action for several mobs: any of them
-			for _, n in ipairs(v) do if n == name then return true end end
-			return false
-		end
-		return name == a.value
-	end)
-	return ok and same or false
+	if not (a and a.kind == "target") then slot.keep = nil return end
+	slot.keep = TargetMatch(a) == "tagged"
+	local v = a.value
+	slot.button:SetAttribute("macrotext", ns.TargetMacro(type(v) == "table" and v or tostring(v), a.enemy, slot.keep))
 end
 
 -- an NPC's dialogue or quest window is open: the key isn't "Interact with Target" meanwhile, since the game takes
@@ -208,6 +229,10 @@ function Action.Rebind()
 	for _, slot in ipairs(slots) do
 		-- (a slot picking a dialogue option, or training, keeps that until the window closes, see Gossip and Training
 		-- below)
+		if slot.current and slot.current.kind == "target" and (TargetMatch(slot.current) == "tagged") ~= slot.keep then
+			SetMacro(slot)
+			changed = true
+		end
 		local want = not talking and (TargetIsOurs(slot) or (slot.current ~= nil and slot.current.kind == "interact"))
 		if not slot.gossip and not slot.training and want ~= slot.interacting then
 			ClearOverrideBindings(slot.button)
@@ -276,7 +301,7 @@ function Action.Hints(goal)
 		-- (while the key trains, it shows on the line it trains only)
 		if a and key and not slot.training then
 			local verb = a.kind == "interact" and "interact" or (a.enemy and "attack" or "talk")
-			local hint = slot.interacting and (key .. ": " .. verb) or key
+			local hint = slot.interacting and (key .. ": " .. verb) or (slot.keep and (key .. ": tagged, next") or key)
 			if slot.gossip then hint = key end   -- (the key picks the dialogue option now; that line says so)
 			-- a target's key goes after its name in the line's text (several mobs: one key after each)
 			local v = a.value
@@ -556,6 +581,8 @@ ns:On("OBVIGUIDE_STEP", function() if trainerOpen then Training() end end)
 ns:On("OBVIGUIDE_STEP", function() Apply() Action.Rebind() end)
 ns:On("OBVIGUIDE_UPDATE", function() Apply() Action.Rebind() end)
 ns:On("PLAYER_TARGET_CHANGED", function() Action.Rebind() end)
+-- the target is tagged (or let go) by someone else while targeted
+ns:On("UNIT_FLAGS", function(_, unit) if unit == "target" then Action.Rebind() end end)
 for _, event in ipairs({ "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE" }) do
 	ns:On(event, function() talking = true Action.Rebind() end)
 end
