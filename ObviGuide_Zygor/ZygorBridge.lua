@@ -10,6 +10,14 @@
 -- the fixes below) is made at that moment.
 -- Zygor's addon is ZygorGuidesViewerForever (an optional dependency, so it loads first); it sets the global
 -- ZygorGuidesViewer. Without it, nothing to do.
+local _, ns = ...
+---@class ObviGuideZygorNS
+---@field Settings fun(): ObviGuideZygorDB
+---@field FEATURES {key: string, name: string, tooltip: string}[]
+---@field SetKeepZygor fun(keepZygor: boolean)
+---@field OpenOptions? fun()
+---@cast ns ObviGuideZygorNS
+
 local ZGV = _G["ZygorGuidesViewer"] ---@type table
 if not ZGV then return end
 
@@ -86,29 +94,85 @@ end
 
 -- Zygor off: once its guides are loaded, Zygor itself is stopped, so it can't clash with Obvi Guide: nothing of it
 -- shows (window, arrow, action bar, map drawings, buttons it adds to the game's windows, tooltip lines) or runs (auto
--- accept, its events, timers and update loops). On by default; "/og zygor" keeps Zygor running instead
--- (from the next /reload), or stops it again. Kept in ObviGuideZygorDB.
+-- accept, its events, timers and update loops). On by default. Its features that work without its guides can each be
+-- left running (Options > AddOns > Obvi Guide: Zygor, see Options.lua), and "/og zygor" (or the page) keeps all of
+-- Zygor running instead, from the next /reload. Kept in ObviGuideZygorDB.
+
+---@class ObviGuideZygorDB
+---@field keepZygor? boolean            all of Zygor runs as usual
+---@field run? table<string, boolean>   features left running while Zygor is stopped, by key (FEATURES)
 
 --- The saved settings. (The game sets ObviGuideZygorDB after this file has run, so it's looked up each time.)
----@return {keepZygor: boolean?}
+---@return ObviGuideZygorDB
 local function Settings()
 	ObviGuideZygorDB = ObviGuideZygorDB or {}
 	return ObviGuideZygorDB
 end
 
+--- Zygor's features that work without its guides, which can be left running while it's stopped (all of them stop by
+--- default). Its window, arrow, action bar, auto accept and the rest run off its guides: those need all of Zygor.
+---@type {key: string, name: string, tooltip: string}[]
+local FEATURES = {
+	{ key = "talents", name = "Talent advisor",
+		tooltip = "Zygor's suggested talents on the talents window, and its button there." },
+	{ key = "gear", name = "Gear upgrades",
+		tooltip = "Zygor's upgrade marks on bag items, upgrade lines in item tooltips, and its gear finder button on the "
+			.. "character window." },
+	{ key = "vendor", name = "Vendor and bags",
+		tooltip = "Selling grey items and repairing at vendors (as Zygor's own options say), and the free bag space on the "
+			.. "backpack button." },
+	{ key = "map", name = "World map layers",
+		tooltip = "Zygor's points of interest and unexplored areas on the world map, and its menu button on the map." },
+	{ key = "auction", name = "Auction house tools",
+		tooltip = "Zygor's auction house scans and prices, and auction prices in item tooltips." },
+	{ key = "flightmap", name = "Flight map tooltips",
+		tooltip = "Zygor's extra lines in the flight map's tooltips." },
+}
+
+--- Is a feature left running while Zygor is stopped?
+---@param key string
+---@return boolean
+local function Runs(key)
+	local run = Settings().run
+	return run ~= nil and run[key] == true
+end
+
+-- for Options.lua
+ns.Settings, ns.FEATURES = Settings, FEATURES
+
 --- Calls f, quietly: a part of Zygor that isn't there (another version) is skipped.
 ---@param f fun()
 local function Try(f) pcall(f) end
 
+--- Runs one of Zygor's startup steps that its frozen startup never got to (by name), to the end.
+---@param name string
+local function RunStartup(name)
+	for _, startup in ipairs(ZGV.startups or {}) do
+		if type(startup) == "table" and startup.name == name and not startup.done and type(startup.func) == "function" then
+			startup.done = true
+			local co = coroutine.create(function() startup.func(ZGV) end)
+			-- (startup steps yield now and then; a step that never ends is given up on)
+			for _ = 1, 10000 do
+				if not coroutine.resume(co) or coroutine.status(co) == "dead" then break end
+			end
+		end
+	end
+end
+
 local stopped = false
---- Stops Zygor, so nothing of it shows or runs. Its guides stay registered for Obvi Guide to read. Each part is looked
---- up as Zygor (Forever 1.6) has it, and skipped when it isn't there.
+--- Stops Zygor, so nothing of it shows or runs but the features left running (FEATURES). Its guides stay registered
+--- for Obvi Guide to read. Each part is looked up as Zygor (Forever 1.6) has it, and skipped when it isn't there.
 local function StopZygor()
 	if stopped then return end
 	stopped = true
 	local Pointer = ZGV.Pointer ---@type table?
 	local ItemScore = ZGV.ItemScore ---@type table?
 	local Gold = ZGV.Gold ---@type table?
+	local Inventory = ZGV.Inventory ---@type table?
+	local TA = ZGV.TalentAdvisor ---@type table?
+	local Poi = ZGV.Poi ---@type table?
+	local talents, gear, vendor, mapLayers, auction, flightmap =
+		Runs("talents"), Runs("gear"), Runs("vendor"), Runs("map"), Runs("auction"), Runs("flightmap")
 
 	--- A frame of Zygor's: no events, no OnUpdate, no OnEvent.
 	---@param frame table?
@@ -126,6 +190,24 @@ local function StopZygor()
 	---@param name string
 	local function NoOp(t, name) if t and type(t[name]) == "function" then t[name] = function() end end end
 
+	-- the event handlers of the features left running (Zygor's own, as it registered them), found before they go
+	local keep = {} ---@type table<function, boolean>
+	local events = ZGV.Events_Events ---@type table<string, any[]>?
+	local function Keep(handler) if type(handler) == "function" then keep[handler] = true end end
+	if talents and TA then Keep(TA.DelayedSetTalents) end
+	if gear and ItemScore then
+		Keep(ItemScore.OnEvent)
+		Keep(ItemScore.Upgrades and ItemScore.Upgrades.AttachBagButton)
+	end
+	if vendor and Inventory then Keep(Inventory.OnEvent) end
+	if mapLayers and events then
+		-- the points of interest's handler is Zygor's local: the one handling both loot and achievement criteria
+		local loot = rawget(events, "LOOT_READY") or {}
+		for _, h in ipairs(rawget(events, "CRITERIA_UPDATE") or {}) do
+			if tContains(loot, h) then Keep(h) end
+		end
+	end
+
 	-- its startup: never resumed (it's frozen just after loading the guides, see below)
 	Quiet(_G["ZygorGuidesViewerFrameMaster"])
 
@@ -139,10 +221,37 @@ local function StopZygor()
 	-- it registered through Ace (auto accept, step completion, the rest of its event handlers)
 	Try(function() ZGV:Disable() end)
 
+	-- the features left running get their own events back, and only their own handlers (shared events, like bag
+	-- updates, no longer reach the action bar and the rest). A handler's error is swallowed: Zygor is stopped.
+	if events and next(keep) then
+		for event, handlers in pairs(events) do
+			local kept = {}
+			for _, h in ipairs(handlers) do
+				if keep[h] then kept[#kept + 1] = function(...) pcall(h, ...) end end
+			end
+			events[event] = kept
+			if kept[1] then Try(function() ZGV:RegisterEvent(event, "EventHandler_Events") end) end
+		end
+	end
+
 	-- its frames that run outside Ace: its every-frame update loop (points of interest, waypoint pins, tabs, widgets),
 	-- delayed events, startup checklist, arrow driver, map preview, travel planner (LibRover, with its own Ace timers),
 	-- flight path tracker (LibTaxi), auction house trackers
-	Quiet(ZGV.UpdateCentral)
+	local central = ZGV.UpdateCentral ---@type table?
+	if mapLayers and central and central.UpdateHandlers then
+		-- the points of interest's update is Zygor's local too: everything but the waypoints', tabs' and widgets'
+		local others = {} ---@type table<any, boolean>
+		for _, f in ipairs({ Pointer and Pointer.Provider and Pointer.Provider.OnUpdate,
+			Pointer and Pointer.OverlayProvider and Pointer.OverlayProvider.OnUpdate,
+			ZGV.Tabs and ZGV.Tabs.OnUpdate, ZGV.Widgets and ZGV.Widgets.UpdateDriver }) do
+			if f then others[f] = true end
+		end
+		local kept = {}
+		for _, h in ipairs(central.UpdateHandlers) do if not others[h] then kept[#kept + 1] = h end end
+		central.UpdateHandlers = kept
+	else
+		Quiet(central)
+	end
 	Quiet(ZGV.EventDelayFrame)
 	Quiet(ZGV.Checklist and ZGV.Checklist.Listener)
 	Quiet(Pointer and Pointer.EventFrame)
@@ -154,29 +263,43 @@ local function StopZygor()
 		Quiet(Rover.F)
 		Try(function() Rover:CancelAllTimers() end)
 	end
-	Quiet(ZGV.LibTaxi and ZGV.LibTaxi.frame)
-	Quiet(Gold and Gold.Appraiser and Gold.Appraiser.Events)
-	Quiet(Gold and Gold.Scan and Gold.Scan.FWORK)
-	Quiet(Gold and Gold.Scan and Gold.Scan.FUI)
+	if not flightmap then Quiet(ZGV.LibTaxi and ZGV.LibTaxi.frame) end
+	if auction then
+		-- its auction startup steps come after the guides, so the frozen startup never ran them
+		for _, name in ipairs({ "Gold", "Servertrends", "Gold scan startup" }) do Try(function() RunStartup(name) end) end
+	else
+		Quiet(Gold and Gold.Appraiser and Gold.Appraiser.Events)
+		Quiet(Gold and Gold.Scan and Gold.Scan.FWORK)
+		Quiet(Gold and Gold.Scan and Gold.Scan.FUI)
+	end
 
 	-- what it shows: its window, arrow, action bar (below), the menu button on the world map, the bag-space count on the
 	-- backpack button, the gear finder button on the character window, the creature viewer, the minimap button
 	Hide(ZGV.Frame)
 	Hide(Pointer and Pointer.ArrowFrame)
-	Hide(ZGV.MapCoords and ZGV.MapCoords.MapButtonFrame)
-	Hide(ZGV.Inventory and ZGV.Inventory.BagSpaceText)
-	Hide(ZGV.Inventory and ZGV.Inventory.BagSpaceTextBG)
-	Hide(ItemScore and ItemScore.GearFinder and ItemScore.GearFinder.PaperDollButton)
-	Hide(ItemScore and ItemScore.GearFinder and ItemScore.GearFinder.MainFrame)
+	if not mapLayers then Hide(ZGV.MapCoords and ZGV.MapCoords.MapButtonFrame) end
+	if not vendor then
+		Hide(Inventory and Inventory.BagSpaceText)
+		Hide(Inventory and Inventory.BagSpaceTextBG)
+	end
+	if not gear then
+		Hide(ItemScore and ItemScore.GearFinder and ItemScore.GearFinder.PaperDollButton)
+		Hide(ItemScore and ItemScore.GearFinder and ItemScore.GearFinder.MainFrame)
+	end
 	Hide(ZGV.CreatureViewer and ZGV.CreatureViewer.Frame)
 	Hide(_G["ZygorGuidesViewerMapIcon"])
 
-	-- what it draws on the maps: its world map layers (unexplored-area overlay, points of interest, waypoint pins and
-	-- lines) and its waypoint icons on the world map and minimap
+	-- what it draws on the maps: its world map layers (unexplored-area overlay and points of interest, unless left
+	-- running; waypoint pins and lines) and its waypoint icons on the world map and minimap
 	local map = _G["WorldMapFrame"] ---@type table   (FrameXML; the annotations don't declare it)
 	local providers = map and map.dataProviders ---@type table?
-	for _, provider in ipairs({ ZGV.Foglight and ZGV.Foglight.DataProvider, ZGV.Poi and ZGV.Poi.DataProvider,
-		ZGV.Poi and ZGV.Poi.CurrentZoneDataProvider, Pointer and Pointer.OverlayProvider, Pointer and Pointer.Provider }) do
+	local drop = { Pointer and Pointer.OverlayProvider, Pointer and Pointer.Provider }
+	if not mapLayers then
+		table.insert(drop, ZGV.Foglight and ZGV.Foglight.DataProvider)
+		table.insert(drop, Poi and Poi.DataProvider)
+		table.insert(drop, Poi and Poi.CurrentZoneDataProvider)
+	end
+	for _, provider in pairs(drop) do
 		if providers and providers[provider] then Try(function() map:RemoveDataProvider(provider) end) end
 	end
 	if ZGV.HBDPins and Pointer then
@@ -190,13 +313,19 @@ local function StopZygor()
 	local hidThings = false
 	if profile then
 		local keys = {
-			"talenton", "ta_toggle_icons",                     -- talent advisor: icons on the talents, its menu button
-			"autogear", "markupgrades", "itemscore_tooltips",  -- gear upgrades: bag marks, popups, tooltip lines
-			"badupgradehotkey",                                -- gear upgrades: the click on a bag item
-			"gold_tooltips_show",                              -- auction prices on item tooltips
-			"hidetracker", "hideexptracker",                   -- hiding the game's quest tracker and XP bar
-			"autoskipcutscenes",                               -- skipping cutscenes
+			"hidetracker", "hideexptracker",   -- hiding the game's quest tracker and XP bar
+			"autoskipcutscenes",               -- skipping cutscenes
 		}
+		-- the talent advisor: icons on the talents, its menu button
+		if not talents then table.insert(keys, "talenton") table.insert(keys, "ta_toggle_icons") end
+		-- gear upgrades: bag marks, popups, tooltip lines, the click on a bag item
+		if not gear then
+			for _, key in ipairs({ "autogear", "markupgrades", "itemscore_tooltips", "badupgradehotkey" }) do
+				table.insert(keys, key)
+			end
+		end
+		-- auction prices on item tooltips
+		if not auction then table.insert(keys, "gold_tooltips_show") end
 		hidThings = profile.hidetracker or profile.hideexptracker
 		-- what was saved (nil: left at Zygor's default, and put back as nil so it stays one)
 		local was = {} ---@type table<string, any>
@@ -208,29 +337,31 @@ local function StopZygor()
 		logout:RegisterEvent("PLAYER_LOGOUT")
 		logout:SetScript("OnEvent", function() for _, key in ipairs(keys) do rawset(profile, key, was[key]) end end)
 	end
-	-- the rest call these by name: clicking a map icon (suggests a guide), quest and player choices (recorded), the
-	-- talents window (the advisor), its map preview, the bag-space count, the gear finder tab, a declined equip (marks a
-	-- bad upgrade), the flight map's tooltips, the gossip options picked (recorded)
+	-- the rest call these by name: clicking a map icon (suggests a guide), quest and player choices (recorded), its map
+	-- preview, the gossip options picked (recorded), and the stopped features' own
 	NoOp(ZGV, "SuggestGuideFromBlizzardIcon")
 	NoOp(ZGV, "QuestRewardSelect")
 	NoOp(ZGV, "PlayerChoiceResponce")
-	local TA = ZGV.TalentAdvisor ---@type table?
-	if TA then
-		-- it sets itself up when the talents window first loads: marked set up so it never does, or put away if it has
-		if TA.Initialised then Try(function() TA:Toggle(false) end) else TA.Initialised = true end
-		NoOp(TA, "SetTalents")
-	end
+	NoOp(ZGV.Telemetry and ZGV.Telemetry.Miner, "GetSelectedOption")
 	local PointerMap = ZGV.PointerMap ---@type table?
 	if PointerMap then
 		if PointerMap.PreviewVisible then Try(function() PointerMap:HidePreview(true) end) end
 		NoOp(PointerMap, "HidePreview")
 		NoOp(PointerMap, "RestoreMapSettings")
 	end
-	NoOp(ZGV.Inventory, "UpdateBagspaceText")
-	NoOp(ItemScore and ItemScore.GearFinder, "UpdateSystemTab")
-	NoOp(ItemScore and ItemScore.Upgrades, "SetBadUpgrade")
-	NoOp(ZGV.LibTaxi and ZGV.LibTaxi.HooksForTaxiFrame, "ClassicTaxiButtonOnEnter")
-	NoOp(ZGV.Telemetry and ZGV.Telemetry.Miner, "GetSelectedOption")
+	if TA and not talents then
+		-- it sets itself up when the talents window first loads: marked set up so it never does, or put away if it has
+		if TA.Initialised then Try(function() TA:Toggle(false) end) else TA.Initialised = true end
+		NoOp(TA, "SetTalents")
+	end
+	if not gear then
+		NoOp(ItemScore and ItemScore.GearFinder, "UpdateSystemTab")
+		NoOp(ItemScore and ItemScore.Upgrades, "SetBadUpgrade")
+	end
+	-- (at a vendor, it also looks for things to buy for its own guide's step: not while it's stopped)
+	NoOp(Inventory, "FindItemsToBuyDelayed")
+	if not vendor then NoOp(Inventory, "UpdateBagspaceText") end
+	if not flightmap then NoOp(ZGV.LibTaxi and ZGV.LibTaxi.HooksForTaxiFrame, "ClassicTaxiButtonOnEnter") end
 	-- the quest tracker and XP bar Zygor hides while its window is up (when set to): shown again, and no longer hidden
 	local Replacements = ZGV.Replacements ---@type table?
 	if Replacements then
@@ -272,18 +403,28 @@ if type(ZGV.CheckGuideJumps) == "function" then
 	end
 end
 
--- "/og zygor": Zygor off or kept running (a command added to Obvi Guide's /og, see ObviGuide\ObviHub.lua).
-local function ToggleZygor()
-	local db = Settings()
-	db.keepZygor = not db.keepZygor
-	if db.keepZygor then
+--- All of Zygor kept running (from the next /reload), or stopped again (now, once its guides are handed over).
+---@param keepZygor boolean
+local function SetKeepZygor(keepZygor)
+	Settings().keepZygor = keepZygor or nil
+	if keepZygor then
 		print("|cff4fc3f7Obvi Guide|r: Zygor will keep running after the next /reload (its guides are still handed over)")
 	else
 		print("|cff4fc3f7Obvi Guide|r: Zygor " .. (ZGV.guidesloaded and "stopped" or "will stop once its guides are handed over"))
 		if ZGV.guidesloaded then StopZygor() end
 	end
 end
-ObviHub.AddCommand("guide", { "zygor", ToggleZygor, "keeps Zygor running, or stops it again" })
+ns.SetKeepZygor = SetKeepZygor
+
+-- "/og zygor": Zygor kept running or stopped again (a command added to Obvi Guide's /og, see ObviGuide\ObviHub.lua);
+-- "/og zygor options": the page in the game's Options
+ObviHub.AddCommand("guide", { "zygor", function(rest)
+	if (rest or ""):lower():match("^%s*option") or (rest or ""):lower():match("^%s*config") then
+		if ns.OpenOptions then ns.OpenOptions() end
+		return
+	end
+	SetKeepZygor(not Settings().keepZygor)
+end, "keeps Zygor running, or stops it again; /og zygor options: which of its features to keep" })
 
 local waited = 0
 local ticker ---@type FunctionContainer
@@ -294,6 +435,6 @@ ticker = C_Timer.NewTicker(0.5, function()
 	HandOver()
 	if not Settings().keepZygor then
 		StopZygor()
-		print("|cff4fc3f7Obvi Guide|r: Zygor stopped (/og zygor keeps it running)")
+		print("|cff4fc3f7Obvi Guide|r: Zygor stopped (/og zygor keeps it running; /og zygor options for its features)")
 	end
 end)
