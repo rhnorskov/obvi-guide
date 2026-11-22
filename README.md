@@ -10,7 +10,7 @@ CurseForge project (except the Zygor bridge, which isn't published):
 | `ObviGuide_Dungeons` | Obvi Guide: Dungeons | Dungeon quest guides and dungeon keys. |
 | `ObviGuide_Professions` | Obvi Guide: Professions | Profession leveling guides. |
 | `ObviGuide_Extras` | Obvi Guide: Extras | Guides for other unlocks, such as the Aqual Quintessence and the Cozy Sleeping Bag. |
-| `ObviGuide_Zygor` | Obvi Guide: Zygor | Reads the guides of your own installed Zygor addon in game (it brings its own Zygor reader), then stops Zygor so it can't clash. Its page in Options > AddOns (or `/og zygor options`) keeps all of Zygor running, or picks which of its features stay on (talent advisor, gear upgrades, vendor and bags, world map layers, auction tools, flight map tooltips). Not published anywhere: friends are welcome to it, but it isn't promoted. |
+| `ObviGuide_Zygor` | Obvi Guide: Zygor | Reads the guides of your own installed Zygor addon in game, straight from Zygor's folder (it brings its own Zygor reader), so Zygor itself can stay disabled. Only the guides your Zygor licence covers. Not published anywhere: friends are welcome to it, but it isn't promoted. |
 
 Writing guides: see [ObviGuide/docs/FORMAT.md](ObviGuide/docs/FORMAT.md).
 

@@ -1,0 +1,9 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- Zygor's licence and guide files, read from Zygor's own folder (nothing is copied; Zygor can stay disabled). They
+	run against the stand-in (ZygorStandIn.lua). The guides come through Zygor's own list of them, its
+	Guides-Forever\Autoload.xml, so guides and files Zygor adds come along by themselves. That list also has files that
+	hold no guides (gear scores, talent builds, points of interest): the stand-in takes their data and drops it. Without
+	Zygor installed these files aren't there, and nothing loads. -->
+	<Script file="..\ZygorGuidesViewerForever\Licence.lua"/>
+	<Include file="..\ZygorGuidesViewerForever\Guides-Forever\Autoload.xml"/>
+</Ui>
