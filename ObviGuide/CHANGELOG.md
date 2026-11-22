@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Several guide windows**, each following its own guide at the same time (a leveling guide in one, a profession or
+  a dungeon in another), each with its own tabs and place on screen. The title's menu has **Add guide in a new
+  window...**, and **Move this guide to a new window** for a window with several guides; the gear menu closes a
+  window. The waypoint, the action keys and the map pins follow the window you last used (clicked a line or a step
+  arrow in, or opened a guide in); the others' titles are greyed. Auto accept and turn in, Quest Cleanup and Destroy
+  cheapest item go by every window's guide. `/og` shows and hides them all.
 - Targeting a mob or NPC from a step also pings it, where the game has pings. **Raid marker on targets** and
   **Ping targets** (in the settings, under Targeting) turn each off.
 - Slash commands: `/og help` lists every command, and `/og options` opens the options. `/obvi` now lists your Obvi
