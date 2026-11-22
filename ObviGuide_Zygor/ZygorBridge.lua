@@ -302,6 +302,16 @@ local function StopZygor()
 	for _, provider in pairs(drop) do
 		if providers and providers[provider] then Try(function() map:RemoveDataProvider(provider) end) end
 	end
+	-- Foglight leaves its pin on the map when it's removed, and that pin still draws a zone's art when the map zooms,
+	-- which then stays on every map after it: the pin goes too (and is emptied and hidden, should that fail)
+	local fog = ZGV.Foglight and ZGV.Foglight.DataProvider ---@type table?
+	local fogPin = fog and fog.pin ---@type table?
+	if fogPin and not (providers and providers[fog]) then
+		Try(function() fogPin:RemoveAllData() end)
+		fogPin:Hide()
+		Try(function() map:RemovePin(fogPin) end)
+		fog.pin = nil
+	end
 	if ZGV.HBDPins and Pointer then
 		Try(function() ZGV.HBDPins:RemoveAllWorldMapIcons(Pointer) end)
 		Try(function() ZGV.HBDPins:RemoveAllMinimapIcons(Pointer) end)
