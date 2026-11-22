@@ -265,6 +265,7 @@ local function Signature(title, info)
 end
 
 local shownStep ---@type ObviGuideStep?
+local shownOpen = false   -- the shown step was seen not done (see Ahead)
 
 --- Shows the way to a step's destination, or clears ours when the step has none.
 ---@param step? ObviGuideStep
@@ -272,10 +273,40 @@ function Travel.Show(step)
 	local dest = step and step.dest
 	local title = step and dest and Title(step) or nil
 	local info = step and dest and Info(step) or nil
+	if step ~= shownStep then shownOpen = false end
 	shownStep = step
 	Place(dest, title, true, info)
 	shownTitle, shownSig = title, info and Signature(title, info) or nil
 end
+
+-- A step that turns done stays a moment for its "done" effect before the guide moves on. Meanwhile the way to the step
+-- it moves on to is already asked for, so the route is there when it does (the guide showing that step then sends
+-- the same place again: only a relabel). Only for a step seen open (one gone back to, done already, stays put), and
+-- only where the next step is plain to see: no jumps, not a guide in any order.
+
+---@param step ObviGuideStep
+---@return ObviGuideStep?
+local function Ahead(step)
+	local guide, current = ns.Engine.Current()
+	if not guide or current ~= step or guide.nearest or step.jumps then return nil end
+	for i = step.index + 1, #guide.steps do
+		local s = guide.steps[i]
+		local applies, done = ns.Engine.StepState(s)
+		if applies and not done then return s end
+		if s.jumps then return nil end
+	end
+end
+
+ns:On("OBVIGUIDE_UPDATE", function()
+	local step = shownStep
+	if not step then return end
+	local _, done = ns.Engine.StepState(step)
+	if not done then shownOpen = true return end
+	if not shownOpen then return end
+	shownOpen = false
+	local nxt = Ahead(step)
+	if nxt and nxt.dest then Travel.Show(nxt) end
+end)
 
 -- the step's lines changed (a buff, an item, an objective done): the title and the stop's quests follow, without
 -- asking for the way anew (Shortest Path relabels a stop sent again at the same place)

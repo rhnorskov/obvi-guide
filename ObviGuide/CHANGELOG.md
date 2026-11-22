@@ -8,6 +8,8 @@
   addons (`/obvi guide` is the same as `/og`); `/obviguide` is gone. Scribe's command is now `/ogs` (was `/scribe`).
 - A mob someone else has tagged: the action key doesn't attack it, and its next press targets the next one of that
   name. The line says so ("tagged, next").
+- When a step is done, the way to the next one is asked for while the step shows its "done" effect, so the arrow is
+  ready when the guide moves on.
 - The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
   you have its buff) or done no longer shows there.
 
