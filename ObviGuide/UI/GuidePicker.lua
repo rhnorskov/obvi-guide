@@ -536,6 +536,17 @@ local scrolled = {} ---@type table<string, number>   how far each folder's colum
 local timer ---@type FunctionContainer?
 local names = {} ---@type table<ObviGuideGuide, ObviGuideNames>   the guides' quest and NPC names, kept for the session
 local indexer ---@type thread?   gathering them, while the picker is open
+-- the guide picked goes beside the ones open (Picker.Open(true)), or in a window of its own ("window"), not in place of
+-- the one shown; in the guide window `into` (else the active one)
+local besides = false ---@type boolean|"window"
+local into ---@type ObviGuideFollower?
+
+--- The guide the picker is for: the one shown in the window it opens a guide in.
+---@return ObviGuideGuide?
+local function Current()
+	if into then return (into:Current()) end
+	return (ns.Engine.Current())
+end
 
 --- Whether a guide is only for the other faction: its "only" asks for a faction this character isn't (alone, or as a
 --- part of an "and").
@@ -687,7 +698,7 @@ end
 
 --- Scrolls each column to its chosen folder, or to the current guide.
 local function Reveal()
-	local current = ns.Engine.Current()
+	local current = Current()
 	local C = _G["ScrollBoxConstants"]
 	for c = 1, panes do
 		local col = columns[c]
@@ -753,16 +764,14 @@ local function StartIndex()
 	frame:SetScript("OnUpdate", Index)
 end
 
-local besides = false   -- the guide picked goes beside the ones open (Picker.Open(true)), not in place of the one shown
-
---- Opens a guide and closes the picker: the guide's own if it's open already, or else beside the others or in place
---- of the one shown, from its first step (the engine moves on past the steps already done); or at a step the search
---- found, held there as if chosen with the arrows.
+--- Opens a guide and closes the picker: the guide's own if it's open already, or else beside the others, in place of
+--- the one shown or in a new window, from its first step (the engine moves on past the steps already done); or at a
+--- step the search found, held there as if chosen with the arrows.
 ---@param g ObviGuideGuide
 ---@param step? integer
 local function Load(g, step)
 	if frame then frame:Hide() end
-	ns.Engine.Open(g.name or g.title, besides)
+	ns.Engine.Open(g.name or g.title, besides, into)
 	if step and ns.Engine.Current() == g then ns.Engine.GoTo(step) end
 end
 
@@ -880,7 +889,7 @@ local function InitRow(b, row)
 	b.tab:SetShown(kind == "header")
 	b.glow:SetShown(isGuide)
 	b.icon:SetShown(isGuide and not row.step)
-	local current = isGuide and not row.step and row.guide ~= nil and row.guide == ns.Engine.Current()
+	local current = isGuide and not row.step and row.guide ~= nil and row.guide == Current()
 	b.box:SetShown(current)
 	b.check:SetShown(current)
 	b.count:SetText(row.count and tostring(row.count) or "")
@@ -1192,15 +1201,18 @@ local function Build()
 end
 
 --- Opens the picker: search cleared and focused, the columns opened down to the current guide's folder.
----@param beside? boolean  the guide picked opens beside the ones open (else in place of the one shown)
-function Picker.Open(beside)
-	besides = beside == true
+---@param beside? boolean|"window"  the guide picked opens beside the ones open, or in a new window (else in place of
+---                                 the one shown)
+---@param window? ObviGuideFollower  the guide window it opens in (else the active one)
+function Picker.Open(beside, window)
+	besides = (beside == true or beside == "window") and beside or false
+	into = window
 	if not frame then Build() end
 	---@cast frame Frame
 	Rebuild()
 	---@cast tree ObviGuideTree
 	for i = #chosen, 1, -1 do chosen[i] = nil end
-	local current = ns.Engine.Current()
+	local current = Current()
 	if current then
 		for _, path in ipairs(Picker.Ancestors(current.group or "")) do
 			if not tree.folders[path] then break end   -- (a guide hidden for this character)

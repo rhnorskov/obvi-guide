@@ -38,7 +38,7 @@ local ADDON, ns = ...
 ---@field Options ObviGuideOptions
 
 ---@class ObviGuideDB
----@field window? {point: string, relPoint?: string, x: number, y: number, width: number, height: number}
+---@field window? {point: string, relPoint?: string, x: number, y: number, width: number, height: number}   the first guide window's place
 ---@field picker? {w: number, h: number, point?: string, relPoint?: string, x?: number, y?: number}   the guide picker's size and place
 ---@field pickerShowOtherFaction? boolean   the guide picker also lists the guides only for the other faction (its gear menu; nil: left out)
 ---@field previewSteps? integer   how many upcoming steps the window shows dimmed (default 0)
@@ -62,11 +62,19 @@ local ADDON, ns = ...
 ---@field step? integer          the step it is on
 ---@field reached? integer       the furthest step the guide has gone to by itself (going back leaves it there)
 
----@class ObviGuideCharDB
+-- A guide window's saved tabs: the first window's are the character's own (ObviGuideCharDB has them), the others' are
+-- in charDB.windows, with where each was put.
+---@class ObviGuideWindowSave
 ---@field tabs? ObviGuideTab[]   the guides open in tabs
 ---@field tab? integer           the tab shown
----@field guide? string          (before tabs) the guide this character followed
----@field step? integer          (before tabs) the step it was on
+---@field guide? string          (before tabs; the first window) the guide this character followed
+---@field step? integer          (before tabs; the first window) the step it was on
+---@field at? {point: string, relPoint?: string, x: number, y: number, width: number}   where the window is (the first
+---                              window's place is account-wide: ObviGuideDB.window)
+
+---@class ObviGuideCharDB : ObviGuideWindowSave
+---@field windows? ObviGuideWindowSave[]   the guide windows besides the first, each with its own tabs
+---@field focus? integer         the active window (the waypoint and keys follow its step) when not the first: its number
 ---@field marks? table<string, table<string, boolean>>  [guide title]["step:goal"] = ticked off / reached
 ---@field flights? table<string, boolean>   flight points seen known (lower-case names; flight maps opened, paths learned)
 ---@field recent? string[]       the guides opened last, newest first (name, or title), for the guide picker

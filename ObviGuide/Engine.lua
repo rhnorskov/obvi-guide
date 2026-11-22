@@ -1,5 +1,6 @@
--- Engine: follows one guide for this character. It decides which goals are visible and done from the game's state,
--- moves on to the next step that applies, and remembers manual ticks and reached waypoints.
+-- Engine: follows the guides of this character's guide windows, each its own (a follower per window, see Follower
+-- below), all at once. It decides which goals are visible and done from the game's state, moves each window on to its
+-- next step that applies, and remembers manual ticks and reached waypoints.
 --
 -- A goal is visible when its condition holds; goals tied to a quest objective also need the quest in the log.
 -- A step applies when its condition holds and it has at least one visible goal that can complete; it is done when
@@ -13,8 +14,46 @@ local Conditions = ns.Conditions
 local Engine = {}
 ns.Engine = Engine
 
-local guide ---@type ObviGuideGuide?
-local index = 1
+local followers = {} ---@type ObviGuideFollower[]   one per guide window, the first window's first
+local active ---@type ObviGuideFollower?   the one the waypoint, the action keys and the map pins follow
+
+-- Which guide a step or line is in: each guide a window follows notes its own (Own). One no window follows counts as
+-- the active window's.
+local stepOwner = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideStep, ObviGuideGuide>
+local goalOwner = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGoal, ObviGuideGuide>
+local owned = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideStep[], boolean>
+
+---@param g ObviGuideGuide
+local function Own(g)
+	if owned[g.steps] then return end
+	owned[g.steps] = true
+	for _, s in ipairs(g.steps) do
+		stepOwner[s] = g
+		for _, list in ipairs({ s.goals, s.side }) do
+			for _, goal in ipairs(list) do
+				goalOwner[goal] = g
+				for _, w in ipairs(goal.with or {}) do goalOwner[w] = g end
+			end
+		end
+	end
+end
+
+--- The guide a step or line is in (the active window's when no window follows it).
+---@param step? ObviGuideStep
+---@param goal? ObviGuideGoal
+---@return ObviGuideGuide?
+function Engine.GuideOf(step, goal)
+	return step and stepOwner[step] or goal and goalOwner[goal] or active and active.guide or nil
+end
+
+--- The window following a guide: the active one if it does, else the first that does.
+---@param g? ObviGuideGuide
+---@return ObviGuideFollower?
+local function FollowerOf(g)
+	if not g then return nil end
+	if active and active.guide == g then return active end
+	for _, f in ipairs(followers) do if f.guide == g then return f end end
+end
 
 local COMPLETABLE = { accept = true, turnin = true, objective = true, kill = true, collect = true, equip = true,
 	cast = true, learn = true, level = true, home = true, hearth = true, ["goto"] = true, confirm = true, skill = true,
@@ -29,11 +68,12 @@ local function Counts(g)
 end
 
 -- manual ticks and reached waypoints: charDB.marks[guide title]["step:goal"] = true
-local function Marks()
-	if not (guide and ns.charDB) then return {} end
+---@param g? ObviGuideGuide
+local function Marks(g)
+	if not (g and ns.charDB) then return {} end
 	ns.charDB.marks = ns.charDB.marks or {}
-	ns.charDB.marks[guide.title] = ns.charDB.marks[guide.title] or {}
-	return ns.charDB.marks[guide.title]
+	ns.charDB.marks[g.title] = ns.charDB.marks[g.title] or {}
+	return ns.charDB.marks[g.title]
 end
 local function MarkKey(step, goal)
 	for i, g in ipairs(step.goals) do if g == goal then return step.index .. ":" .. i end end
@@ -138,18 +178,36 @@ local function RememberFlights()
 	end
 end
 
+--- Yards between the player and a point, or nil when they are not on the same continent.
+---@param p ObviGuidePoint
+local function Distance(p)
+	local c1, w1 = ns.Travel.PlayerWorld()
+	local c2, w2 = ns.Travel.World(p)
+	if not (w1 and w2) or c1 ~= c2 then return nil end
+	local dx, dy = w1.x - w2.x, w1.y - w2.y
+	return math.sqrt(dx * dx + dy * dy)
+end
+
+-- how near another window's step's flight master must be for a flight path learned now to be its
+local FLIGHT_NEAR = 60
+
 ns:On("UI_INFO_MESSAGE", function(_, _, message)
 	if message ~= _G["ERR_NEWTAXIPATH"] then return end
 	wipe(discovered)
-	-- learned just now: the current step's flight lines count as done, whatever the flight map lists, and their flight
-	-- points are remembered as known (Zygor notes the flight master's node the same way)
-	local _, step = Engine.Current()
-	if step then
-		for _, g in ipairs(step.goals) do
-			local key = g.flight and MarkKey(step, g)
-			if key then
-				Marks()[key] = true
-				Seen()[FlightName(g.flight)] = true
+	-- learned just now: the flight lines of the active window's step count as done, whatever the flight map lists (and
+	-- of another window's step, those whose flight master is right here), and their flight points are remembered as
+	-- known (Zygor notes the flight master's node the same way)
+	for _, f in ipairs(followers) do
+		local _, step = f:Current()
+		if step then
+			for _, g in ipairs(step.goals) do
+				local key = g.flight and MarkKey(step, g)
+				local at = g.point or step.dest
+				local d = f ~= active and at and Distance(at)
+				if key and (f == active or (d and d <= FLIGHT_NEAR)) then
+					Marks(f.guide)[key] = true
+					Seen()[FlightName(g.flight)] = true
+				end
 			end
 		end
 	end
@@ -185,16 +243,6 @@ local function Objective(goal)
 		end
 	end
 	return match or o
-end
-
---- Yards between the player and a point, or nil when they are not on the same continent.
----@param p ObviGuidePoint
-local function Distance(p)
-	local c1, w1 = ns.Travel.PlayerWorld()
-	local c2, w2 = ns.Travel.World(p)
-	if not (w1 and w2) or c1 ~= c2 then return nil end
-	local dx, dy = w1.x - w2.x, w1.y - w2.y
-	return math.sqrt(dx * dx + dy * dy)
 end
 
 -- Whether a quest can be taken as far as its pre-quests go (QuestieDB knows them; without it, always). A pre-quest in
@@ -258,10 +306,10 @@ local function LineTitle(text)
 end
 
 ---@param q integer
----@param g? ObviGuideGuide   (the current guide when not given)
+---@param g? ObviGuideGuide   (the active window's guide when not given)
 ---@return integer[]?
 function Engine.ChainedIn(q, g)
-	local of = g or guide
+	local of = g or active and active.guide
 	if not of then return nil end
 	local map = chained[of]
 	if not map then
@@ -298,10 +346,12 @@ local KNOWN = {
 	[98219] = 98191,   -- The Shamed Lieutenant, after A Friend of the Family
 }
 
---- A quest's pre-quests: all of `all`, and one of `any` (if any); nil when nothing is known.
+--- A quest's pre-quests: all of `all`, and one of `any` (if any); nil when nothing is known. The guide's word for it
+--- (ChainedIn) is the given guide's, else the active window's.
 ---@param q integer
+---@param g? ObviGuideGuide
 ---@return {all: integer[], any: integer[]}?
-local function PreOf(q)
+local function PreOf(q, g)
 	local pre = preQuests[q]
 	if pre == nil then
 		local DB = _G["LibQuestieDB"] ---@type table?
@@ -324,7 +374,7 @@ local function PreOf(q)
 	end
 	if pre and (#pre.all > 0 or #pre.any > 0) then return pre end
 	if KNOWN[q] then return { all = { KNOWN[q] }, any = {} } end
-	local inGuide = Engine.ChainedIn(q)
+	local inGuide = Engine.ChainedIn(q, g)
 	if inGuide then return { all = {}, any = inGuide } end
 	return nil
 end
@@ -382,9 +432,10 @@ function Engine.QuestLabel(q)
 end
 
 ---@param q integer
+---@param g? ObviGuideGuide   the guide asking (see PreOf)
 ---@return boolean
-function Engine.CanTake(q)
-	local pre = PreOf(q)
+function Engine.CanTake(q, g)
+	local pre = PreOf(q, g)
 	if not pre then return true end
 	for _, p in ipairs(pre.all) do if not PreDone(p) then return false end end
 	if #pre.any == 0 then return true end
@@ -400,15 +451,17 @@ end
 ---@return string?, boolean?
 function Engine.Locked(goal)
 	if not goal.quest or Had(goal.quest) or not Conditions.Eval(goal.cond) then return nil end
+	local g = Engine.GuideOf(nil, goal)
 	if goal.kind == "turnin" then
-		-- (not when this guide gives it on the way: at this step or later, before the turn-in)
-		local a, at = Engine.AcceptedAt(goal.quest), Engine.StepOf(goal)
-		if a and at and a <= at and a >= index then return nil end
+		-- (not when this guide gives it on the way: at the step its window is on or later, before the turn-in)
+		local a, at = Engine.AcceptedAt(goal.quest, g), Engine.StepOf(goal, g)
+		local f = FollowerOf(g)
+		if a and at and a <= at and a >= (f and f.index or 1) then return nil end
 		return "not in your quest log", false
 	end
 	if goal.kind ~= "accept" then return nil end
-	if Engine.CanTake(goal.quest) then return nil end
-	local pre = PreOf(goal.quest)
+	if Engine.CanTake(goal.quest, g) then return nil end
+	local pre = PreOf(goal.quest, g)
 	local names = {}
 	local function add(p) names[#names + 1] = Engine.QuestLabel(p) end
 	local waiting = false
@@ -427,8 +480,9 @@ end
 -- Per guide: the step each goal is in, and the first step that accepts each quest; worked out the first time asked.
 local places = setmetatable({}, { __mode = "k" }) ---@type table<ObviGuideGuide, {goal: table<ObviGuideGoal, integer>, accept: table<integer, integer>}>
 
+---@param guide? ObviGuideGuide
 ---@return {goal: table<ObviGuideGoal, integer>, accept: table<integer, integer>}?
-local function Places()
+local function Places(guide)
 	if not guide then return nil end
 	local p = places[guide]
 	if not p then
@@ -444,15 +498,17 @@ local function Places()
 	return p
 end
 
---- The step of the current guide a goal is in (nil: not one of its steps).
+--- The step a goal is in, in a guide (by default the one it's in); nil: not one of its steps.
 ---@param goal ObviGuideGoal
+---@param g? ObviGuideGuide
 ---@return integer?
-function Engine.StepOf(goal) local p = Places() return p and p.goal[goal] end
+function Engine.StepOf(goal, g) local p = Places(g or Engine.GuideOf(nil, goal)) return p and p.goal[goal] end
 
---- The first step of the current guide that accepts a quest (nil: none).
+--- The first step of a guide (the active window's) that accepts a quest (nil: none).
 ---@param quest integer
+---@param g? ObviGuideGuide
 ---@return integer?
-function Engine.AcceptedAt(quest) local p = Places() return p and p.accept[quest] end
+function Engine.AcceptedAt(quest, g) local p = Places(g or active and active.guide) return p and p.accept[quest] end
 
 --- The "Quests missing a prerequisite" setting: "show" them (the default), skip them when catching up is "notworth"
 --- it, or skip "all" of them. (Once a checkbox: ticked was skipping them all.)
@@ -478,7 +534,8 @@ function Engine.IsVisible(goal)
 	-- (the "Skip hearthstone steps" setting: hearth and set-hearth lines left out, so a step with nothing else is
 	-- skipped)
 	if (goal.kind == "hearth" or goal.kind == "home") and ns.db and ns.db.skipHearth then return false end
-	if goal.kind == "accept" and goal.quest and not Had(goal.quest) and not Engine.CanTake(goal.quest) then
+	if goal.kind == "accept" and goal.quest and not Had(goal.quest)
+		and not Engine.CanTake(goal.quest, Engine.GuideOf(nil, goal)) then
 		return false
 	end
 	if goal.quest and (goal.kind == "objective" or goal.kind == "kill" or (goal.kind == "collect" and goal.objective)) then
@@ -504,8 +561,9 @@ local function QuestTitle(text)
 end
 
 ---@param quest integer
+---@param guide? ObviGuideGuide   the guide the line is in
 ---@return boolean
-local function LaterNamesakeTaken(quest)
+local function LaterNamesakeTaken(quest, guide)
 	if not guide then return false end
 	local later = namesakes[guide]
 	if not later then
@@ -586,10 +644,12 @@ function Engine.IsComplete(goal, step)
 		return true
 	end
 	local k = goal.kind
+	local guide = Engine.GuideOf(step, goal)
 	if k == "accept" then
-		return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or LaterNamesakeTaken(goal.quest)
+		return C_QuestLog.IsOnQuest(goal.quest) or C_QuestLog.IsQuestFlaggedCompleted(goal.quest)
+			or LaterNamesakeTaken(goal.quest, guide)
 	end
-	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or LaterNamesakeTaken(goal.quest) end
+	if k == "turnin" then return C_QuestLog.IsQuestFlaggedCompleted(goal.quest) or LaterNamesakeTaken(goal.quest, guide) end
 	if k == "objective" or k == "kill" or (k == "collect" and goal.objective) then
 		if C_QuestLog.IsQuestFlaggedCompleted(goal.quest) then return true end
 		local o = Objective(goal)
@@ -637,7 +697,7 @@ function Engine.IsComplete(goal, step)
 	if goal.flight and FlightKnown(goal, step) then return true end
 	if k == "goto" or k == "confirm" or k == "hearth" then
 		local key = MarkKey(step, goal)
-		return key ~= nil and Marks()[key] == true
+		return key ~= nil and Marks(guide)[key] == true
 	end
 	return false
 end
@@ -717,39 +777,116 @@ function Engine.JumpOf(step)
 	end
 end
 
--- the guide is finished: the window shows its end (and the next guide to continue with) instead of a step
-local ended = false
+-- Followers: what each guide window follows, its guide and where it is in it, all at the same time. A window has
+-- tabs (as Zygor has them; switched in the window title's menu): several guides open in it (a leveling guide, a
+-- dungeon, a profession), one of them shown. Each tab keeps its guide (by name where the guide has one: titles may
+-- repeat across groups, Zygor's are the last part of its path) and the step it was on, in the window's slot: the first
+-- window's is charDB itself (charDB.tabs, with charDB.tab the one shown), the others' are in charDB.windows. A tab with
+-- no guide yet is empty. Every window moves on as its steps are done; the active one (the window last used) is the one
+-- the waypoint, the action keys and the map pins follow.
+---@class ObviGuideFollower
+---@field slot ObviGuideWindowSave   its tabs, saved
+---@field guide? ObviGuideGuide
+---@field index integer            its step
+---@field ended boolean            the guide is finished: the window shows its end (and the next guide) instead of a step
+---@field paused boolean           going back pauses auto-advance (see Advance)
+---@field reached integer          the furthest step the guide itself has gone to (while not paused)
+---@field replan boolean           a guide in any order: the route is planned again when it's opened
+---@field open? ObviGuideStep      its step, while it isn't done yet
+---@field lingering boolean        its step turned done in front of the player: it stays a moment
+---@field closed? boolean          its window was closed
+local Follower = {}
+Follower.__index = Follower
+
+---@param slot ObviGuideWindowSave
+---@return ObviGuideFollower
+local function NewFollower(slot)
+	local f = setmetatable({ slot = slot, index = 1, ended = false, paused = false, reached = 0, replan = false,
+		lingering = false }, Follower)
+	return f --[[@as ObviGuideFollower]]
+end
+
+-- the active window, saved by its place among the windows (charDB.focus)
+local function SaveFocus()
+	if not ns.charDB then return end
+	for i, f in ipairs(followers) do if f == active then ns.charDB.focus = i > 1 and i or nil end end
+end
+
+--- The followers, one per guide window: made from the saved windows the first time they're asked for, once the saved
+--- variables are there.
+---@return ObviGuideFollower[]
+local function Followers()
+	local db = ns.charDB
+	if followers[1] or not db then return followers end
+	followers[1] = NewFollower(db)
+	for _, slot in ipairs(db.windows or {}) do followers[#followers + 1] = NewFollower(slot) end
+	active = followers[math.max(1, math.min(db.focus or 1, #followers))]
+	return followers
+end
+
+--- The guide windows' followers, the first window's first.
+---@return ObviGuideFollower[]
+function Engine.Followers() return Followers() end
+
+--- The active window's follower (nil until the saved variables are there).
+---@return ObviGuideFollower?
+function Engine.Active()
+	Followers()
+	return active
+end
+
+--- Makes a window the active one, quietly (what the caller does next shows its step); returns whether it changed.
+---@param f ObviGuideFollower
+---@return boolean
+local function SetActive(f)
+	if active == f then return false end
+	active = f
+	SaveFocus()
+	return true
+end
+
+--- Makes a window the active one: the waypoint, the action keys and the map pins follow its step from now on.
+---@param f ObviGuideFollower
+function Engine.Focus(f)
+	if f.closed or not SetActive(f) then return end
+	local _, step = f:Current()
+	ns.Travel.Show(step)
+	ns:Fire("OBVIGUIDE_STEP", f)
+end
 
 --- The guide, and its current step (none once the guide has ended).
 ---@return ObviGuideGuide?, ObviGuideStep?
-function Engine.Current()
-	return guide, guide and not ended and guide.steps[index] or nil
+function Follower:Current()
+	local g = self.guide
+	return g, g and not self.ended and g.steps[self.index] or nil
 end
 
--- Open guides ("tabs", as Zygor has them; here switched in the window title's menu): several guides open at once (a
--- leveling guide, a dungeon, a profession), one of them shown.
--- Each tab keeps its guide (by name where the guide has one: titles may repeat across groups, Zygor's are the last part
--- of its path) and the step it was on: charDB.tabs, with charDB.tab the one shown. A tab with no guide yet is empty.
----@return ObviGuideTab[]
-local function Tabs()
-	local db = ns.charDB
-	if not db then return {} end
-	if not db.tabs then
+--- The window's tabs, and which one is shown.
+---@return ObviGuideTab[] tabs, integer shown
+function Follower:Tabs()
+	local slot = self.slot
+	if not slot.tabs then
 		-- from before tabs: the one guide followed becomes the first tab
-		db.tabs = { { guide = db.guide, step = db.step } }
-		db.tab, db.guide, db.step = 1, nil, nil
+		slot.tabs = { { guide = slot.guide, step = slot.step } }
+		slot.tab, slot.guide, slot.step = 1, nil, nil
 	end
-	if #db.tabs == 0 then db.tabs[1] = {} end
-	db.tab = math.max(1, math.min(db.tab or 1, #db.tabs))
-	return db.tabs
+	if #slot.tabs == 0 then slot.tabs[1] = {} end
+	slot.tab = math.max(1, math.min(slot.tab or 1, #slot.tabs))
+	return slot.tabs, slot.tab
 end
 
--- Going back pauses auto-advance, as Zygor does: it stays paused until the step you're on is not done (from then
--- on finishing it moves on as usual), so a finished step you went back to stays put.
-local paused = false
--- the furthest step the guide itself has gone to in this guide (while not paused): while you're on an earlier one
--- (you went back), the window's next arrow pulses
-local reached = 0
+--- What each window follows that has a guide: its guide and its step (none once ended), the active window's first.
+---@return {guide: ObviGuideGuide, step?: ObviGuideStep}[]
+function Engine.Following()
+	local list = {}
+	local function add(f)
+		local g, step = f:Current()
+		if g then list[#list + 1] = { guide = g, step = step } end
+	end
+	if Engine.Active() then add(active) end
+	for _, f in ipairs(followers) do if f ~= active then add(f) end end
+	return list
+end
 
 --- Where to get a collect line's item (goal.places): the nearest one on your continent, else the first; nil without any.
 ---@param goal ObviGuideGoal
@@ -787,30 +924,42 @@ function Engine.Pick(step)
 	return true
 end
 
-local function Changed()
-	-- (a scaled material line met in another step starts afresh)
-	for g in pairs(met) do met[g] = nil end
-	if not paused then reached = math.max(reached, index) end
-	local tab = Tabs()[ns.charDB and ns.charDB.tab or 1]
+-- a scaled material line met in a step its window has left starts afresh (the windows' current steps keep theirs)
+local function ForgetMet()
+	local current = {} ---@type table<ObviGuideGoal, boolean>
+	for _, f in ipairs(followers) do
+		local _, step = f:Current()
+		for _, list in ipairs(step and { step.goals, step.side } or {}) do
+			for _, g in ipairs(list) do current[g] = true end
+		end
+	end
+	for g in pairs(met) do if not current[g] then met[g] = nil end end
+end
+
+--- The step changed: the tab remembers it, its place to go is picked, and the active window's step gets the waypoint.
+function Follower:Changed()
+	ForgetMet()
+	if not self.paused then self.reached = math.max(self.reached, self.index) end
+	local tabs, shown = self:Tabs()
+	local tab, g = tabs[shown], self.guide
 	-- (a tab whose guide isn't here, its pack not loaded, keeps it)
-	if tab and guide then tab.guide, tab.step, tab.reached = guide.name or guide.title, index, reached end
-	local _, step = Engine.Current()
+	if tab and g then tab.guide, tab.step, tab.reached = g.name or g.title, self.index, self.reached end
+	local _, step = self:Current()
 	Engine.Pick(step)
-	ns.Travel.Show(step)
-	ns:Fire("OBVIGUIDE_STEP")
+	if self == active then ns.Travel.Show(step) end
+	ns:Fire("OBVIGUIDE_STEP", self)
 end
 
 -- a step with places to choose from picks again in another zone (you may have come nearer another of them)
 ns:On("ZONE_CHANGED_NEW_AREA", function()
-	local _, step = Engine.Current()
-	if Engine.Pick(step) then
-		ns.Travel.Show(step)
-		ns:Fire("OBVIGUIDE_STEP")
+	for _, f in ipairs(followers) do
+		local _, step = f:Current()
+		if Engine.Pick(step) then
+			if f == active then ns.Travel.Show(step) end
+			ns:Fire("OBVIGUIDE_STEP", f)
+		end
 	end
 end)
-
--- a guide in any order (guide.nearest): the route is planned again when the guide is opened
-local replan = false
 
 --- Where a map point is in the world: the continent and yards, or nil where the game can't say.
 ---@param map integer
@@ -882,14 +1031,12 @@ end
 
 --- Whether the guide is finished, and the title of the guide that follows it (when we have it).
 ---@return boolean ended, string? nextTitle
-function Engine.Ended()
-	local nxt = ended and guide and guide.next and ns.FindGuide(guide.next)
-	return ended, nxt and nxt.title or nil
+function Follower:Ended()
+	local g = self.guide
+	local nxt = self.ended and g and g.next and ns.FindGuide(g.next)
+	return self.ended, nxt and nxt.title or nil
 end
 
---- Moves forward past steps that don't apply or are done. A step meant for this character that is done (or has
---- nothing left to do) may jump elsewhere instead (Zygor's "|next"); the step it lands on starts afresh, without the
---- ticks of an earlier visit, as Zygor has it (so a menu step you come back to asks again).
 -- Loading screens: while one shows, and for a moment after it, the quest log can be empty or half filled (seen
 -- entering a follower dungeon: the steps for its quest looked as if they didn't apply and were passed over). No
 -- moving on until the game has settled; then one check.
@@ -901,258 +1048,426 @@ ns:On("LOADING_SCREEN_DISABLED", function()
 	C_Timer.After(SETTLE, function() settling = false Engine.Update() end)
 end)
 
-function Engine.Advance()
-	if not guide or ended or settling then return end
-	if paused then
-		local applies, done = Engine.StepState(guide.steps[index])
-		if applies and not done then paused = false end
+--- Moves forward past steps that don't apply or are done. A step meant for this character that is done (or has
+--- nothing left to do) may jump elsewhere instead (Zygor's "|next"); the step it lands on starts afresh, without the
+--- ticks of an earlier visit, as Zygor has it (so a menu step you come back to asks again).
+--- Going back pauses auto-advance, as Zygor does: it stays paused until the step you're on is not done (from then on
+--- finishing it moves on as usual), so a finished step you went back to stays put.
+function Follower:Advance()
+	local guide = self.guide
+	if not guide or self.ended or settling or self.closed then return end
+	if self.paused then
+		local applies, done = Engine.StepState(guide.steps[self.index])
+		if applies and not done then self.paused = false end
 		return
 	end
 	-- a guide in any order (exploration): once the step is done, or the guide has just been opened, on to the first
 	-- stop of the shortest way from here through the steps left
 	if guide.nearest then
-		local applies, done = Engine.StepState(guide.steps[index])
-		if replan or not applies or done then
-			replan = false
+		local applies, done = Engine.StepState(guide.steps[self.index])
+		if self.replan or not applies or done then
+			self.replan = false
 			local to = FirstStop(guide)
 			if to then
-				if to ~= index then index = to Changed() end
+				if to ~= self.index then
+					self.index = to
+					self:Changed()
+				end
 				return
 			end
 		end
 	end
-	local start = index
+	local start = self.index
 	local landed = {}   -- each jump target once, so two done steps can't send us round in circles
-	while index <= #guide.steps do
-		local step = guide.steps[index]
+	while self.index <= #guide.steps do
+		local step = guide.steps[self.index]
 		local applies, done = Engine.StepState(step)
 		if applies and not done then break end
 		local to = step.jumps and Conditions.Eval(step.cond) and Engine.JumpOf(step)
 		if to and guide.steps[to] and not landed[to] then
 			landed[to] = true
-			index = to
-			local marks, prefix = Marks(), to .. ":"
+			self.index = to
+			local marks, prefix = Marks(guide), to .. ":"
 			for key in pairs(marks) do if key:sub(1, #prefix) == prefix then marks[key] = nil end end
 		else
-			index = index + 1
+			self.index = self.index + 1
 		end
 	end
-	if index > #guide.steps then
+	if self.index > #guide.steps then
 		-- the guide is finished: its end is shown, with the next guide to continue with (not loaded on its own, so
 		-- the player sees the guide ended rather than another one starting)
-		index = #guide.steps
-		ended = true
-		Changed()
+		self.index = #guide.steps
+		self.ended = true
+		self:Changed()
 		return
 	end
-	if index ~= start then Changed() end
+	if self.index ~= start then self:Changed() end
 end
 
 --- From a finished guide on to the one that follows it (the end's button, or the next arrow).
-function Engine.Continue()
-	-- a catch-up guide goes back to the guide it was made for (Catchup.lua)
-	if guide and guide.back then ns.Catchup.Return(guide) return end
-	local _, nextTitle = Engine.Ended()
-	if nextTitle then Engine.Load(nextTitle, 1) end
+function Follower:Continue()
+	local g = self.guide
+	-- a catch-up guide goes back to the guide it was made for (Catchup.lua, in the active window)
+	if g and g.back then
+		SetActive(self)
+		ns.Catchup.Return(g)
+		return
+	end
+	local _, nextTitle = self:Ended()
+	if nextTitle then self:Load(nextTitle, 1) end
 end
 
 ---@param title string
 ---@param step? integer
-function Engine.Load(title, step)
+function Follower:Load(title, step)
 	local g = ns.FindGuide(title)
 	if not g then ns.Print("no guide called '%s'", title) return end
-	guide, index = g, math.max(1, math.min(step or 1, #g.steps))
-	paused, ended, reached = false, false, 0
-	replan = true
+	Own(g)
+	self.guide, self.index = g, math.max(1, math.min(step or 1, #g.steps))
+	self.paused, self.ended, self.reached = false, false, 0
+	self.replan = true
 	ns:Fire("OBVIGUIDE_LOADED", g)   -- (the guide picker's "Recent")
-	Changed()
-	Engine.Advance()
+	self:Changed()
+	self:Advance()
 end
 
---- The open tabs, and which one is shown.
----@return ObviGuideTab[] tabs, integer shown
-function Engine.Tabs()
-	local tabs = Tabs()
-	return tabs, ns.charDB and ns.charDB.tab or 1
-end
-
--- shows what the shown tab holds: its guide at its step, or nothing (an empty tab)
-local function ShowTab()
-	local tab = Tabs()[ns.charDB.tab]
+--- Shows what the shown tab holds: its guide at its step, or nothing (an empty tab).
+function Follower:ShowTab()
+	local tabs, shown = self:Tabs()
+	local tab = tabs[shown]
 	local g = tab and tab.guide and ns.FindGuide(tab.guide)
 	if g then
-		guide, index = g, math.max(1, math.min(tab.step or 1, #g.steps))
+		Own(g)
+		self.guide, self.index = g, math.max(1, math.min(tab.step or 1, #g.steps))
 	else
-		guide, index = nil, 1
+		self.guide, self.index = nil, 1
 	end
 	-- (a step you went back to stays one: the furthest step is kept with the tab)
-	paused, ended, reached = index < (tab and tab.reached or 0), false, tab and tab.reached or 0
-	Changed()
-	Engine.Advance()
+	local reached = tab and tab.reached or 0
+	self.paused, self.ended, self.reached = self.index < reached, false, reached
+	self:Changed()
+	self:Advance()
 	ns:Fire("OBVIGUIDE_UPDATE")
 end
 
 --- Shows another tab.
 ---@param i integer
-function Engine.SwitchTab(i)
-	if not ns.charDB or not Tabs()[i] or i == ns.charDB.tab then return end
-	ns.charDB.tab = i
-	ShowTab()
+function Follower:SwitchTab(i)
+	local tabs, shown = self:Tabs()
+	if not tabs[i] or i == shown then return end
+	self.slot.tab = i
+	self:ShowTab()
 end
 
---- Closes a tab (the last one left is emptied instead).
+--- Closes a tab. The last one left in the first window is emptied instead; another window closes with it.
 ---@param i integer
-function Engine.CloseTab(i)
-	if not ns.charDB then return end
-	local tabs = Tabs()
+function Follower:CloseTab(i)
+	local tabs, shown = self:Tabs()
 	if not tabs[i] then return end
+	if #tabs == 1 and self ~= followers[1] then Engine.CloseWindow(self) return end
 	table.remove(tabs, i)
 	if #tabs == 0 then tabs[1] = {} end
-	local shown = ns.charDB.tab
 	if i < shown or shown > #tabs then shown = shown - 1 end
-	ns.charDB.tab = math.max(1, shown)
-	ShowTab()
+	self.slot.tab = math.max(1, shown)
+	self:ShowTab()
 end
 
---- Opens a guide picked from the list: switches to its tab if it's open already, or else opens it from its first
---- step (the engine moves on past the steps already done) in a new tab beside the others, or in place of the one
---- shown (an empty one is always filled).
+--- Opens another guide window, empty (its guide is picked next), and returns its follower.
+---@return ObviGuideFollower?
+function Engine.NewWindow()
+	local db = ns.charDB
+	if not db then return nil end
+	Followers()
+	db.windows = db.windows or {}
+	local slot = { tabs = { {} }, tab = 1 } ---@type ObviGuideWindowSave
+	table.insert(db.windows, slot)
+	local f = NewFollower(slot)
+	table.insert(followers, f)
+	ns:Fire("OBVIGUIDE_WINDOWS")
+	return f
+end
+
+--- Closes a guide window with its tabs (not the first window). If it was the active one, the first window is now.
+---@param f ObviGuideFollower
+function Engine.CloseWindow(f)
+	local db = ns.charDB
+	if not db or f == followers[1] or f.closed then return end
+	for i, other in ipairs(followers) do if other == f then table.remove(followers, i) break end end
+	for i, slot in ipairs(db.windows or {}) do if slot == f.slot then table.remove(db.windows, i) break end end
+	if db.windows and #db.windows == 0 then db.windows = nil end
+	f.closed = true
+	ns:Fire("OBVIGUIDE_WINDOWS")
+	if active == f then
+		active = nil
+		Engine.Focus(followers[1])
+	else
+		SaveFocus()
+	end
+end
+
+--- Moves a window's tab out into a window of its own, which becomes the active one.
+---@param f ObviGuideFollower
+---@param i integer
+function Engine.MoveTab(f, i)
+	local tabs, shown = f:Tabs()
+	if #tabs < 2 or not tabs[i] then return end
+	local to = Engine.NewWindow()
+	if not to then return end
+	to.slot.tabs = { table.remove(tabs, i) }
+	local moved = i == shown
+	if i < shown or shown > #tabs then shown = shown - 1 end
+	f.slot.tab = math.max(1, shown)
+	SetActive(to)
+	if moved then f:ShowTab() end   -- (the tab next to it shows in its place)
+	to:ShowTab()
+end
+
+--- Opens a guide picked from the list: switches to its tab if it's open already (in any window), or else opens it
+--- from its first step (the engine moves on past the steps already done) in a window (`into`, else the active one):
+--- in a new tab beside the others, or in place of the one shown (an empty one is always filled); with beside
+--- "window", in a new window of its own. The window it's in becomes the active one.
 ---@param title string
----@param beside? boolean
-function Engine.Open(title, beside)
+---@param beside? boolean|"window"
+---@param into? ObviGuideFollower
+function Engine.Open(title, beside, into)
 	local g = ns.FindGuide(title)
-	local tabs = Tabs()
-	for i, tab in ipairs(tabs) do
-		if g and tab.guide and ns.FindGuide(tab.guide) == g then
-			if i == ns.charDB.tab then Engine.Load(title, 1) else Engine.SwitchTab(i) end
-			return
+	if not g then ns.Print("no guide called '%s'", title) return end
+	for _, f in ipairs(Followers()) do
+		local tabs, shown = f:Tabs()
+		for i, tab in ipairs(tabs) do
+			if tab.guide and ns.FindGuide(tab.guide) == g then
+				SetActive(f)
+				if i == shown then f:Load(title, 1) else f:SwitchTab(i) end
+				return
+			end
 		end
 	end
-	if beside and g and ns.charDB and tabs[ns.charDB.tab].guide then
+	local f = into or active
+	if beside == "window" then f = Engine.NewWindow() end
+	if not f or f.closed then return end
+	SetActive(f)
+	local tabs, shown = f:Tabs()
+	if beside == true and tabs[shown].guide then
 		table.insert(tabs, {})
-		ns.charDB.tab = #tabs
+		f.slot.tab = #tabs
 	end
-	Engine.Load(title, 1)
+	f:Load(title, 1)
 end
 
 --- One step by hand (the window's arrows, the keybinds): the next or previous step meant for this character (its
 --- condition holds), done or not. It pauses auto-advance (see Advance), so a finished step stays put; finishing an
 --- unfinished one moves on as usual.
 ---@param dir integer  1 or -1
-function Engine.Step(dir)
+function Follower:Step(dir)
+	local guide = self.guide
 	if not guide then return end
 	-- at the guide's end: back shows its last step again, next goes on to the following guide
-	if ended then
-		if dir > 0 then Engine.Continue() return end
-		ended, paused = false, true
-		Changed()
+	if self.ended then
+		if dir > 0 then self:Continue() return end
+		self.ended, self.paused = false, true
+		self:Changed()
 		return
 	end
-	local i = index + dir
+	local i = self.index + dir
 	while guide.steps[i] do
 		-- (a step with no lines only jumps elsewhere)
 		if Conditions.Eval(guide.steps[i].cond) and #guide.steps[i].goals > 0 then
-			index = i
-			paused = true
-			Changed()
+			self.index = i
+			self.paused = true
+			self:Changed()
 			return
 		end
 		i = i + dir
 	end
 	-- next past the last step: the guide's end
-	if dir > 0 then ended = true Changed() end
+	if dir > 0 then
+		self.ended = true
+		self:Changed()
+	end
 end
 
 --- Whether you're back from the furthest step the guide has gone to (you went back with the arrows or the counter):
 --- that step's number, or nil when you're on it (or past it).
 ---@return integer?
-function Engine.Behind()
-	if guide and not ended and index < reached then return reached end
+function Follower:Behind()
+	if self.guide and not self.ended and self.index < self.reached then return self.reached end
 	return nil
 end
 
 --- Straight to a step by its number (typed into the step counter), held there like a step chosen with the arrows.
 ---@param n integer
-function Engine.GoTo(n)
+function Follower:GoTo(n)
+	local guide = self.guide
 	if not guide then return end
-	index = math.max(1, math.min(math.floor(n), #guide.steps))
-	ended, paused = false, true
-	Changed()
+	self.index = math.max(1, math.min(math.floor(n), #guide.steps))
+	self.ended, self.paused = false, true
+	self:Changed()
 end
 
 --- Fast forward or back (right-click on the arrows, as in Zygor): forward to the next unfinished step, back to the
 --- nearest earlier unfinished one (or the first step).
 ---@param dir integer  1 or -1
-function Engine.Jump(dir)
+function Follower:Jump(dir)
+	local guide = self.guide
 	if not guide then return end
-	if ended then Engine.Step(dir) return end
+	if self.ended then self:Step(dir) return end
 	if dir > 0 then
-		paused = false
-		local start = index
-		index = math.min(index + 1, #guide.steps)
-		Engine.Advance()
-		if index ~= start then Changed() end
+		self.paused = false
+		local start = self.index
+		self.index = math.min(self.index + 1, #guide.steps)
+		self:Advance()
+		if self.index ~= start then self:Changed() end
 		return
 	end
 	local target
-	for i = index - 1, 1, -1 do
+	for i = self.index - 1, 1, -1 do
 		local applies, done = Engine.StepState(guide.steps[i])
 		if applies and not done then target = i break end
 	end
 	if not target then
-		for i = 1, index - 1 do
+		for i = 1, self.index - 1 do
 			if Conditions.Eval(guide.steps[i].cond) and #guide.steps[i].goals > 0 then target = i break end
 		end
 	end
 	if not target then return end
-	index = target
-	paused = true
-	Changed()
-end
-
---- Ticks off a 'confirm' goal (or any goal the window lets the player click).
----@param goal ObviGuideGoal
-function Engine.Tick(goal)
-	local _, step = Engine.Current()
-	local key = step and MarkKey(step, goal)
-	if key then Marks()[key] = not Marks()[key] end
-	Engine.Update()
+	self.index = target
+	self.paused = true
+	self:Changed()
 end
 
 -- a step that turns done in front of the player stays a moment, so its last line's "done" effect is seen
-local open           -- the current step, while it isn't done yet
-local lingering = false
-
-function Engine.Update()
-	local _, step = Engine.Current()
-	if step and not lingering then
+function Follower:Update()
+	local _, step = self:Current()
+	if step and not self.lingering then
 		local _, done = Engine.StepState(step)
 		if not done then
-			open = step
-		elseif open == step then
-			open, lingering = nil, true
+			self.open = step
+		elseif self.open == step then
+			self.open, self.lingering = nil, true
 			C_Timer.After(1, function()
-				lingering = false
-				Engine.Advance()
+				self.lingering = false
+				self:Advance()
 				ns:Fire("OBVIGUIDE_UPDATE")
 			end)
 		end
 	end
-	if not lingering then Engine.Advance() end
+	if not self.lingering then self:Advance() end
+end
+
+-- The active window's, for what follows one guide: the keybinds, the guide picker, Catchup, /og step.
+
+--- The active window's guide, and its current step (none once the guide has ended).
+---@return ObviGuideGuide?, ObviGuideStep?
+function Engine.Current()
+	local f = Engine.Active()
+	if f then return f:Current() end
+	return nil, nil
+end
+
+--- Whether the active window's guide is finished, and the title of the guide that follows it.
+---@return boolean ended, string? nextTitle
+function Engine.Ended()
+	local f = Engine.Active()
+	if f then return f:Ended() end
+	return false, nil
+end
+
+function Engine.Continue()
+	local f = Engine.Active()
+	if f then f:Continue() end
+end
+
+--- Loads a guide in the active window's shown tab, at a step.
+---@param title string
+---@param step? integer
+function Engine.Load(title, step)
+	local f = Engine.Active()
+	if f then f:Load(title, step) end
+end
+
+--- The active window's tabs, and which one is shown.
+---@return ObviGuideTab[] tabs, integer shown
+function Engine.Tabs()
+	local f = Engine.Active()
+	if f then return f:Tabs() end
+	return {}, 1
+end
+
+---@param i integer
+function Engine.SwitchTab(i)
+	local f = Engine.Active()
+	if f then f:SwitchTab(i) end
+end
+
+---@param i integer
+function Engine.CloseTab(i)
+	local f = Engine.Active()
+	if f then f:CloseTab(i) end
+end
+
+---@param dir integer  1 or -1
+function Engine.Step(dir)
+	local f = Engine.Active()
+	if f then f:Step(dir) end
+end
+
+---@return integer?
+function Engine.Behind()
+	local f = Engine.Active()
+	if f then return f:Behind() end
+	return nil
+end
+
+---@param n integer
+function Engine.GoTo(n)
+	local f = Engine.Active()
+	if f then f:GoTo(n) end
+end
+
+---@param dir integer  1 or -1
+function Engine.Jump(dir)
+	local f = Engine.Active()
+	if f then f:Jump(dir) end
+end
+
+--- Every window moves on past what's done (after a setting changed).
+function Engine.Advance()
+	for _, f in ipairs(Followers()) do f:Advance() end
+end
+
+--- Ticks off a 'confirm' goal (or any goal the window lets the player click), in its step (the active window's
+--- step when not given).
+---@param goal ObviGuideGoal
+---@param step? ObviGuideStep
+function Engine.Tick(goal, step)
+	if not step then step = select(2, Engine.Current()) end
+	local key = step and MarkKey(step, goal)
+	if key then
+		local marks = Marks(Engine.GuideOf(step, goal))
+		marks[key] = not marks[key]
+	end
+	Engine.Update()
+end
+
+--- Every window's step checked against the game again, each moving on where it's done.
+function Engine.Update()
+	for _, f in ipairs(Followers()) do f:Update() end
 	ns:Fire("OBVIGUIDE_UPDATE")
 end
 
--- reached waypoints of 'goto' goals are marked as the player arrives
+-- reached waypoints of 'goto' goals are marked as the player arrives (in any window's step)
 local function CheckArrival()
-	local _, step = Engine.Current()
-	if not step then return end
-	for _, g in ipairs(step.goals) do
-		if g.kind == "goto" and g.point and Engine.IsVisible(g) and not Engine.IsComplete(g, step) then
-			local d = Distance(g.point)
-			if d and d <= (g.point.radius or 10) then
-				Marks()[MarkKey(step, g)] = true
-				Engine.Update()
-				return
+	for _, f in ipairs(followers) do
+		local _, step = f:Current()
+		for _, g in ipairs(step and step.goals or {}) do
+			---@cast step ObviGuideStep
+			if g.kind == "goto" and g.point and Engine.IsVisible(g) and not Engine.IsComplete(g, step) then
+				local d = Distance(g.point)
+				if d and d <= (g.point.radius or 10) then
+					Marks(f.guide)[MarkKey(step, g)] = true
+					Engine.Update()
+					return
+				end
 			end
 		end
 	end
@@ -1167,7 +1482,8 @@ for _, event in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_TURNED_IN"
 end
 
 -- a "train at"/"sell to" line (goal.closes) is done once that NPC's trainer or merchant window is closed again, as Zygor
--- does: the NPC is noted when the window opens (its creature id, from the GUID's 6th field)
+-- does: the NPC is noted when the window opens (its creature id, from the GUID's 6th field). In the active window's
+-- step any such line; in another window's, one naming that NPC.
 local openedBy = {} ---@type table<string, integer|false>   window kind -> the NPC who opened it
 local function Opened(kind)
 	local guid = UnitGUID("npc")
@@ -1178,11 +1494,13 @@ local function Closed(kind)
 	local who = openedBy[kind]
 	openedBy[kind] = nil
 	if who == nil then return end
-	local _, step = Engine.Current()
-	if not step then return end
-	for _, g in ipairs(step.goals) do
-		if g.closes == kind and Engine.IsVisible(g) and (not (g.target and g.target.id) or g.target.id == who) then
-			Marks()[MarkKey(step, g)] = true
+	for _, f in ipairs(followers) do
+		local _, step = f:Current()
+		for _, g in ipairs(step and step.goals or {}) do
+			local id = g.target and g.target.id
+			if g.closes == kind and Engine.IsVisible(g) and (id == who or (not id and f == active)) then
+				Marks(f.guide)[MarkKey(step, g)] = true
+			end
 		end
 	end
 	Engine.Update()
@@ -1196,43 +1514,50 @@ ns:On("MERCHANT_CLOSED", function() Closed("vendor") end)
 local HEARTH_SPELLS = { [8690] = true, [556] = true }
 ns:On("UNIT_SPELLCAST_SUCCEEDED", function(_, unit, _, spellID)
 	if unit ~= "player" or not HEARTH_SPELLS[spellID] then return end
-	local _, step = Engine.Current()
-	if not step then return end
-	for _, g in ipairs(step.goals) do
-		if g.kind == "hearth" and Engine.IsVisible(g) then Marks()[MarkKey(step, g)] = true end
+	for _, f in ipairs(followers) do
+		local _, step = f:Current()
+		for _, g in ipairs(step and step.goals or {}) do
+			if g.kind == "hearth" and Engine.IsVisible(g) then Marks(f.guide)[MarkKey(step, g)] = true end
+		end
 	end
 	Engine.Update()
 end)
 
--- the guide this character followed is picked up again once in the world, or when its pack adds it later (a pack
+-- the guides the windows followed are picked up again once in the world, or when their pack adds them later (a pack
 -- that hands over guides only after another addon has loaded its own)
 local inWorld = false
 local function Restore()
-	if guide or not inWorld or not ns.charDB then return end
-	local tab = Tabs()[ns.charDB.tab]
-	if tab and tab.guide and ns.FindGuide(tab.guide) then Engine.Load(tab.guide, tab.step) end
+	if not inWorld or not ns.charDB then return end
+	for _, f in ipairs(Followers()) do
+		local tabs, shown = f:Tabs()
+		local tab = tabs[shown]
+		if not f.guide and tab and tab.guide and ns.FindGuide(tab.guide) then f:Load(tab.guide, tab.step) end
+	end
 end
 ns:On("PLAYER_ENTERING_WORLD", function() inWorld = true Restore() end)
 ns:On("OBVIGUIDE_GUIDES_ADDED", Restore)
 
 C_Timer.NewTicker(0.5, CheckArrival)
 
---- What the engine makes of the current step, line by line, for /og step: each line's kind, whether it's visible and
---- done, its manual tick, and for a flight path line what every map asked lists for it (fresh from the game).
+--- What the engine makes of the active window's step, line by line, for /og step: each line's kind, whether it's
+--- visible and done, its manual tick, and for a flight path line what every map asked lists for it (fresh from the game).
 ---@return string
 function Engine.DebugStep()
 	local g, step = Engine.Current()
 	if not (g and step) then return "no step" end
 	local out = { ("%s, step %d"):format(g.title, step.index) }
 	local applies, done = Engine.StepState(step)
-	out[#out + 1] = ("applies %s, done %s, paused %s"):format(tostring(applies), tostring(done), tostring(paused))
+	local f, n = Engine.Active(), 0
+	for i, o in ipairs(followers) do if o == f then n = i end end
+	out[#out + 1] = ("applies %s, done %s, paused %s, window %d of %d"):format(tostring(applies), tostring(done),
+		tostring(f and f.paused), n, #followers)
 	for _, goal in ipairs(step.goals) do
 		local key = MarkKey(step, goal)
 		out[#out + 1] = ("- [%s] %s | visible %s, complete %s, ticked %s%s"):format(goal.kind, tostring(goal.text),
-			tostring(Engine.IsVisible(goal)), tostring(Engine.IsComplete(goal, step)), tostring(key and Marks()[key]),
+			tostring(Engine.IsVisible(goal)), tostring(Engine.IsComplete(goal, step)), tostring(key and Marks(g)[key]),
 			goal.done and ", has a done condition" or "")
 		if goal.kind == "accept" and goal.quest then
-			local pre = PreOf(goal.quest)
+			local pre = PreOf(goal.quest, g)
 			out[#out + 1] = ("  quest %d: can take %s, pre-quests all {%s} any {%s}%s"):format(goal.quest,
 				tostring(Engine.CanTake(goal.quest)), pre and table.concat(pre.all, ", ") or "-",
 				pre and table.concat(pre.any, ", ") or "-", _G["LibQuestieDB"] and "" or ", no QuestieDB")

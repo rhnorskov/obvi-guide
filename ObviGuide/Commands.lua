@@ -149,7 +149,7 @@ local function Debug()
 end
 
 ObviHub.Register({ key = "guide", title = "Obvi Guide", command = "/og", commands = {
-	{ "", function() ns.Window.Toggle() end, "shows or hides the guide window" },
+	{ "", function() ns.Window.Toggle() end, "shows or hides the guide windows" },
 	{ "guides", function() ns.GuidePicker.Open() end, "picks a guide" },
 	{ "list", List, "lists the loaded guides in chat" },
 	-- (the rest as typed: a quest's id, name or link)

@@ -603,7 +603,7 @@ end)
 -- the other key bindings (Key Bindings > ObviGuide)
 _G["BINDING_NAME_OBVIGUIDE_NEXTSTEP"] = "Next step"
 _G["BINDING_NAME_OBVIGUIDE_PREVSTEP"] = "Previous step"
-_G["BINDING_NAME_OBVIGUIDE_TOGGLE"] = "Show/hide window"
+_G["BINDING_NAME_OBVIGUIDE_TOGGLE"] = "Show/hide windows"
 _G["BINDING_NAME_OBVIGUIDE_PICKER"] = "Choose a guide"
 function ObviGuide.NextStep() Engine.Step(1) end
 function ObviGuide.PrevStep() Engine.Step(-1) end

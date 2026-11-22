@@ -8,18 +8,19 @@ local _, ns = ...
 
 local Engine = ns.Engine
 
---- The item ids the loaded guide's lines still use, collect or equip, from the current step on.
+--- The item ids the guide windows' guides still use, collect or equip, each from its current step on.
 ---@return table<integer, boolean>
 local function GuideItems()
 	local keep = {}
-	local guide, step = Engine.Current()
-	if not guide then return keep end
-	for i = step and step.index or 1, #guide.steps do
-		local s = guide.steps[i]
-		for _, list in ipairs({ s.goals, s.side }) do
-			for _, g in ipairs(list) do
-				local k = g.kind
-				if g.id and (k == "use" or k == "collect" or k == "equip") then keep[g.id] = true end
+	for _, at in ipairs(Engine.Following()) do
+		local guide, step = at.guide, at.step
+		for i = step and step.index or 1, #guide.steps do
+			local s = guide.steps[i]
+			for _, list in ipairs({ s.goals, s.side }) do
+				for _, g in ipairs(list) do
+					local k = g.kind
+					if g.id and (k == "use" or k == "collect" or k == "equip") then keep[g.id] = true end
+				end
 			end
 		end
 	end

@@ -605,9 +605,11 @@ local function Rebuild()
 	local saved = ns.charDB and ns.charDB.catchup
 	if not saved then return end
 	for _, other in ipairs(ns.guides) do if other.name == NAME then return end end
-	-- (its tab closed meanwhile: nothing to make it for)
+	-- (its tab closed meanwhile, in every window: nothing to make it for)
 	local open = false
-	for _, tab in ipairs((Engine.Tabs())) do if tab.guide == NAME then open = true end end
+	for _, f in ipairs(Engine.Followers()) do
+		for _, tab in ipairs((f:Tabs())) do if tab.guide == NAME then open = true end end
+	end
 	if not open then ns.charDB.catchup = nil return end
 	if saved.guide and not ns.FindGuide(saved.guide) then return end
 	Build(saved)

@@ -11,29 +11,31 @@ local Conditions = ns.Conditions
 local SelectActiveByIndex = _G["SelectActiveQuest"] ---@type fun(index: integer)
 local SelectAvailableByIndex = _G["SelectAvailableQuest"] ---@type fun(index: integer)
 
---- The quests the step you're on still has to accept and turn in: its lines (and side tasks) that are shown and not
---- done yet. A step that is done, still shown a moment before the guide moves on, gives way to the next one that isn't
---- (the NPC may already offer its quest); no step further ahead counts.
+--- The quests the steps you're on still have to accept and turn in (the step of each guide window): their lines (and
+--- side tasks) that are shown and not done yet. A step that is done, still shown a moment before the guide moves on,
+--- gives way to the next one that isn't (the NPC may already offer its quest); no step further ahead counts.
 ---@return table<integer, boolean> accepts, table<integer, boolean> turnins
 local function StepQuests()
 	local accepts, turnins = {}, {}
-	local guide, step = Engine.Current()
-	if not (guide and step) then return accepts, turnins end
-	local applies, done = Engine.StepState(step)
-	if not applies or done then
-		local from = step.index
-		step = nil
-		for i = from + 1, #guide.steps do
-			local a, d = Engine.StepState(guide.steps[i])
-			if a and not d then step = guide.steps[i] break end
+	for _, at in ipairs(Engine.Following()) do
+		local guide, step = at.guide, at.step
+		local applies, done = false, false
+		if step then applies, done = Engine.StepState(step) end
+		if step and (not applies or done) then
+			local from = step.index
+			step = nil
+			for i = from + 1, #guide.steps do
+				local a, d = Engine.StepState(guide.steps[i])
+				if a and not d then step = guide.steps[i] break end
+			end
 		end
-		if not step then return accepts, turnins end
-	end
-	for _, list in ipairs({ step.goals, step.side }) do
-		for _, g in ipairs(list) do
-			if g.quest and Engine.IsVisible(g) and not Engine.IsComplete(g, step) then
-				if g.kind == "accept" then accepts[g.quest] = true end
-				if g.kind == "turnin" then turnins[g.quest] = true end
+		for _, list in ipairs(step and { step.goals, step.side } or {}) do
+			---@cast step ObviGuideStep
+			for _, g in ipairs(list) do
+				if g.quest and Engine.IsVisible(g) and not Engine.IsComplete(g, step) then
+					if g.kind == "accept" then accepts[g.quest] = true end
+					if g.kind == "turnin" then turnins[g.quest] = true end
+				end
 			end
 		end
 	end

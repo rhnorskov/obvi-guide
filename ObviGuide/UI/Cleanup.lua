@@ -1,5 +1,5 @@
--- Quest log cleanup: lists the quests in your log that the loaded guide doesn't need (no line from the current step
--- to the end of the guide accepts, works on or turns them in), all ticked; untick the ones to keep, and
+-- Quest log cleanup: lists the quests in your log that the guide windows' guides don't need (no line from a guide's
+-- current step to its end accepts, works on or turns them in), all ticked; untick the ones to keep, and
 -- the button abandons the rest. "/og cleanup" or the gear menu opens it.
 local _, ns = ...
 ---@cast ns ObviGuideNS
@@ -25,24 +25,29 @@ end
 
 local REASONS = { accept = "accept", turnin = "turn in", objective = "objective", kill = "kill", collect = "collect" }
 
---- The quests the loaded guide still needs, with why (the first step that needs each: "step 112: turn in"): from
---- the current step to the end of this guide. Not the guides after it, as Zygor does it: a leveling chain runs to the
---- level cap, so nearly every quest would be "needed" later.
+--- The quests the guide windows' guides still need, with why (the first step that needs each: "step 112: turn in",
+--- with the guide's title when several windows have one): from each guide's current step to its end. Not the guides
+--- after it, as Zygor does it: a leveling chain runs to the level cap, so nearly every quest would be "needed" later.
 ---@return table<integer, string>
 local function NeededQuests()
 	local needed = {}
-	local guide, step = Engine.Current()
-	if not guide then return needed end
-	for i = step and step.index or 1, #guide.steps do
-		local s = guide.steps[i]
-		local function mark(why) return function(id) needed[id] = needed[id] or ("step %d: %s"):format(i, why) end end
-		CondQuests(s.cond, mark("step condition"))
-		CondQuests(s.skip, mark("step skip"))
-		for _, list in ipairs({ s.goals, s.side }) do
-			local side = list == s.side and "side task " or ""
-			for _, g in ipairs(list) do
-				if g.quest then mark(side .. (REASONS[g.kind] or g.kind))(g.quest) end
-				CondQuests(g.cond, mark(side .. "line condition"))
+	local following = Engine.Following()
+	for _, at in ipairs(following) do
+		local guide, step = at.guide, at.step
+		local which = #following > 1 and (guide.title .. ", ") or ""
+		for i = step and step.index or 1, #guide.steps do
+			local s = guide.steps[i]
+			local function mark(why)
+				return function(id) needed[id] = needed[id] or ("%sstep %d: %s"):format(which, i, why) end
+			end
+			CondQuests(s.cond, mark("step condition"))
+			CondQuests(s.skip, mark("step skip"))
+			for _, list in ipairs({ s.goals, s.side }) do
+				local side = list == s.side and "side task " or ""
+				for _, g in ipairs(list) do
+					if g.quest then mark(side .. (REASONS[g.kind] or g.kind))(g.quest) end
+					CondQuests(g.cond, mark(side .. "line condition"))
+				end
 			end
 		end
 	end
@@ -129,7 +134,7 @@ local function Fill()
 	end
 	-- the quests the guide keeps, and the first step that needs each, to see why one isn't offered
 	if #kept > 0 then
-		Header("Kept for this guide")
+		Header(#Engine.Following() > 1 and "Kept for your guides" or "Kept for this guide")
 		for _, q in ipairs(kept) do
 			nNotes = nNotes + 1
 			local n = notes[nNotes]
@@ -198,7 +203,7 @@ local function Build()
 	intro:SetPoint("TOPLEFT", 16, -32)
 	intro:SetPoint("TOPRIGHT", -16, -32)
 	intro:SetJustifyH("LEFT")
-	intro:SetText("Quests the current guide doesn't need from here on. Untick the ones you want to keep.")
+	intro:SetText("Quests your guides don't need from here on. Untick the ones you want to keep.")
 
 	local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", 12, -60)
@@ -228,7 +233,7 @@ end
 
 --- Opens the cleanup window (or refreshes it).
 function ns.Cleanup()
-	if not Engine.Current() then ns.Print("pick a guide first: the cleanup keeps what the guide needs") return end
+	if #Engine.Following() == 0 then ns.Print("pick a guide first: the cleanup keeps what the guide needs") return end
 	if not frame then Build() end
 	---@cast frame Frame
 	if frame:IsShown() then Fill() else frame:Show() end
