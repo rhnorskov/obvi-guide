@@ -567,6 +567,8 @@ local function NewView(n)
 		local shownTips = {} ---@type table<ObviGuideTip, boolean>
 		local function TipsAfter(goal)
 			for _, tip in ipairs(tips) do
+	local shop ---@type ObviGuideShopLink?   the Auctionator shopping list link (UI\Shopping.lua), made when first shown
+
 				if tip.after == goal then y = Tip(tip, y, dim) shownTips[tip] = true end
 			end
 		end
@@ -595,6 +597,8 @@ local function NewView(n)
 				line.quiet = locked ~= nil and g.quest ~= nil and waitedFor[g.quest] or nil
 				RenderLine(line)
 				y = Place(line, y, 0)
+		-- the step's last line to buy, while some are short: the Auctionator shopping list link goes under it
+		local shopAfter = not (dim or side) and ns.Shopping.Offer(step) or nil
 			end
 			TipsAfter(g)
 		end
@@ -607,6 +611,18 @@ local function NewView(n)
 
 	--- A divider across the window, centred on y; returns where the next step starts.
 	local function Separator(y)
+				if g == shopAfter then
+					if not shop then
+						shop = ns.Shopping.NewLink(frame.Body)
+						shop:HookScript("OnClick", function() if F then Engine.Focus(F) end end)
+					end
+					shop.step = step
+					shop:ClearAllPoints()
+					-- (just under the line's text, as the small line under a locked quest is)
+					shop:SetPoint("TOPLEFT", frame.Body, "TOPLEFT", 10 + ICON + 4, -(y - LINE_GAP + 2))
+					shop:Show()
+					y = y + 2 + shop:GetHeight()
+				end
 		sepUsed = sepUsed + 1
 		local sep = separators[sepUsed]
 		if not sep then
@@ -667,6 +683,7 @@ local function NewView(n)
 		-- the guide's end: a line saying so, and a button on to the guide that follows (when we have it)
 		local ended, nextTitle = f:Ended()
 		frame.Continue:Hide()
+		if shop then shop:Hide() end
 		if guide and ended then
 			frame.StepText:SetText("end")
 			local line = Line()

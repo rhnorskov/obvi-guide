@@ -19,6 +19,7 @@ Travel.lua
 Action.lua
 Quests.lua
 Catchup.lua
+UI\Shopping.lua
 UI\Window.lua
 UI\Minimap.lua
 UI\WorldMap.lua

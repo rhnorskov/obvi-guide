@@ -36,6 +36,7 @@ local ADDON, ns = ...
 ---@field Catchup ObviGuideCatchup
 ---@field GuidePicker ObviGuidePicker
 ---@field Options ObviGuideOptions
+---@field Shopping ObviGuideShopping   Auctionator shopping lists of what a step's Collect lines are short of
 
 ---@class ObviGuideDB
 ---@field window? {point: string, relPoint?: string, x: number, y: number, width: number, height: number}   the first guide window's place
