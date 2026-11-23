@@ -205,6 +205,20 @@ local function Icon(line, goal, done)
 	elseif k == "turnin" then tex:SetAtlas("QuestTurnin")
 	elseif k == "talk" then tex:SetTexture("Interface\\GossipFrame\\GossipGossipIcon")
 	elseif k == "hearth" and goal.id then tex:SetTexture(C_Item.GetItemIconByID(goal.id))
+	-- use, equip and cast lines: the item's or spell's own icon, trimmed of its border (the cog of the game's
+	-- interact cursor while the icon isn't known yet)
+	elseif k == "use" or k == "equip" or k == "cast" then
+		local icon
+		if goal.id then
+			if k == "cast" then icon = C_Spell.GetSpellTexture(goal.id) else icon = C_Item.GetItemIconByID(goal.id) end
+		end
+		if icon then
+			tex:SetTexture(icon)
+			tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+			tex:SetSize(ICON - 2, ICON - 2)
+		else
+			tex:SetTexture("Interface\\Cursor\\Crosshair\\Interact")
+		end
 	-- kill lines: the attack cursor's sword (also a kill line without a quest, a text line with an enemy to target)
 	elseif k == "kill" or (k == "text" and goal.target and goal.target.enemy) then
 		tex:SetTexture("Interface\\Cursor\\Crosshair\\Attack")
