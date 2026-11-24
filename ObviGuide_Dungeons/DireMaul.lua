@@ -2,7 +2,9 @@
 -- Pusillin and the Elder Azj'Tordin, Lethtendris's Web, Elven Legends and The Madness Within; in the north wing Free
 -- Knot! (and, optional, The Gordok Ogre Suit) and Unfinished Gordok Business; the Libram of Rapidity, Focus and
 -- Protection, only when you have the libram. Alliance: Feathermoon Stronghold, and Fragments of the Past for those on
--- its chain (Starfall starts it); Horde: Camp Mojache. East first (Pusillin drops the Crescent Key that the other two
+-- its chain (Starfall starts it); Horde: Camp Mojache. Class quests, only for those on them (or with the book): the
+-- class books and Nostro's Compendium, the mages' Arcane Refreshment, and the dungeon parts of the paladins' Ancient
+-- Equine Spirit and the warlocks' Dreadsteed of Xoroth (ids from DungeonJournal, Attune and Zygor). East first (Pusillin drops the Crescent Key that the other two
 -- wings need), then North, then West. Quest list from Attune (CixiDelmont) and DungeonJournal (Exehn); quest, NPC,
 -- item and object ids and positions from Attune and QuestieDB's Forever data; where things are inside from
 -- DungeonJournal. See README.md.
@@ -35,6 +37,35 @@ local function libramLines(s, full)
 		local have = full and ("items " .. l[3] .. " >= 1 and " .. l[4]) or ("items " .. l[3] .. " >= 1")
 		s:Accept(l[1], l[2]):Only(have)
 		s:Turnin(l[1], l[2]):Only(have)
+	end
+end
+
+-- the class books: quest, title, the book (it drops in Dire Maul and starts the quest), who may take it, and the
+-- lorekeeper it goes back to (ids and lorekeepers from DungeonJournal)
+local BOOKS = {
+	{ 7506, "The Emerald Dream...",                     "The Emerald Dream",                           18364, "Druid",               "Lorekeeper Javon" },
+	{ 7503, "The Greatest Race of Hunters",             "The Greatest Race of Hunters",                18361, "Hunter",              "Lorekeeper Mykos" },
+	{ 7500, "The Arcanist's Cookbook",                  "The Arcanist's Cookbook",                     18358, "Mage",                "Lorekeeper Kildrath" },
+	{ 7501, "The Light and How To Swing It",            "The Light and How to Swing It",               18359, "Alliance and Paladin", "Lorekeeper Mykos" },
+	{ 7504, "Holy Bologna: What the Light Won't Tell You", "Holy Bologna: What the Light Won't Tell You", 18362, "Priest",            "Lorekeeper Javon" },
+	{ 7498, "Garona: A Study on Stealth and Treachery", "Garona: A Study on Stealth and Treachery",    18356, "Rogue",               "Lorekeeper Kildrath" },
+	{ 7505, "Frost Shock and You",                      "Frost Shock and You",                         18363, "Horde and Shaman",    "Lorekeeper Javon" },
+	{ 7502, "Harnessing Shadows",                       "Harnessing Shadows",                          18360, "Warlock",             "Lorekeeper Mykos" },
+	{ 7499, "Codex of Defense",                         "Codex of Defense",                            18357, "Warrior",             "Lorekeeper Kildrath" },
+}
+
+-- a side task for each class book, while you carry yours
+local function books(g)
+	for _, b in ipairs(BOOKS) do
+		local quest, title, book, item, who, keeper = b[1], b[2], b[3], b[4], b[5], b[6]
+		g:Side("out", function(s)
+			s.only = who .. " and (items " .. item .. " >= 1 or onquest " .. quest .. ") and not done " .. quest
+			s:Use(g.Item(book, item))
+			s:Accept(quest, title)
+			s:Talk(g.Npc(keeper))
+			s:Turnin(quest, title)
+			s:Note("In the Athenaeum.")
+		end)
 	end
 end
 
@@ -77,6 +108,8 @@ local function dungeon(g, web, elvenLegends)
 		s:Note("The east wing of the ruins in northern Feralas.")
 	end)
 
+	books(g)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Pusillin", 14354))
 		s:Collect(g.Item("Book of Incantations", 18261), { quest = 7441, objective = 1 })
@@ -87,6 +120,14 @@ local function dungeon(g, web, elvenLegends)
 		s:Kill(g.Mob("Lethtendris", 14327))
 		s:Collect(g.Item("Lethtendris's Web", 18426), { quest = web, objective = 1 })
 		s:Note("With her imp Pimgib, in the room before Alzzin.")
+	end)
+
+	-- mages on Arcane Refreshment (from Lydros, on an earlier run)
+	g:Step(function(s)
+		s.only = "onquest 7463"
+		s:Kill(g.Mob("Hydrospawn", 13280))
+		s:Collect(g.Item("Hydrospawn Essence", 18299), { quest = 7463, objective = 1 })
+		s:Note("In the pool below the bridge.")
 	end)
 
 	g:Step(function(s)
@@ -140,6 +181,16 @@ local function dungeon(g, web, elvenLegends)
 		s:Note("The door needs the Crescent Key from Pusillin, or a rogue to pick it.")
 	end)
 
+	-- paladins on Ancient Equine Spirit (the charger)
+	g:Step(function(s)
+		s.only = "onquest 7643 or done 7643"
+		s:Kill(g.Mob("Tendris Warpwood", 11489))
+		s:Talk(g.Npc("Ancient Equine Spirit", 14566))
+		s:Turnin(7643, "Ancient Equine Spirit")
+		s:Accept(7644, "Blessed Arcanite Barding")
+		s:Note("The treant in the Capital Gardens; the spirit appears when he dies.")
+	end)
+
 	g:Step(function(s)
 		s:Talk(g.Npc("Shen'dralar Ancient", 14358))
 		s:Accept(7461, "The Madness Within")
@@ -151,11 +202,32 @@ local function dungeon(g, web, elvenLegends)
 		s:Note("Kill the guardians at all five pylons first; that brings down the force field around his prison.")
 	end)
 
+	-- warlocks on Dreadsteed of Xoroth: the ritual in his prison
+	g:Step(function(s)
+		s.only = "onquest 7631"
+		s:Use(g.Item("J'eevee's Jar", 18663))
+		s:Note("In Immol'thar's prison once it's cleared. Dread Guards come in waves; when the Bell, Wheel or Candle tilts, fix it with the ", g.Item("Black Lodestone", 18629), " (a soul shard).")
+		s:Use(g.Item("Xorothian Glyphs", 18670))
+		s:Kill(g.Mob("Xorothian Dreadsteed", 14502))
+		s:Note("Lord Hel'nurath joins at half health.")
+		s:Talk(g.Npc("Dreadsteed Spirit", 14504))
+		s:Turnin(7631, "Dreadsteed of Xoroth")
+	end)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Prince Tortheldrin", 11486), { quest = 7461, objective = 2 })
 		s:Note("Through the door in the north-east of the prison (the key again), down in the Athenaeum.")
 		s:Collect(g.Item("Gauntlet of Gordok Might", 18336), { quest = 7703, objective = 1 }):Only("onquest 7703")
 		s:Note("In ", g.Object("The Prince's Chest"), ", near him.")
+	end)
+
+	-- Lydros: Nostro's Compendium (a rare drop, warriors and paladins) and the mages' Arcane Refreshment
+	g:Step(function(s)
+		s.only = "onquest 7507 or (Mage and level >= 60 and not done 7463)"
+		s:Talk(lydros)
+		s:Turnin(7507, "Nostro's Compendium"):Only("onquest 7507")
+		s:Accept(7463, "Arcane Refreshment"):Only("Mage and level >= 60")
+		s:Turnin(7463, "Arcane Refreshment"):Only("ready 7463")
 	end)
 
 	-- only on a later run: Lydros wants Elven Legends handed in first

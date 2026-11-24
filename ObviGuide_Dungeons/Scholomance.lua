@@ -1,7 +1,9 @@
 -- Scholomance (55-60): the dungeon quests Attune lists for each faction. Both: Leonid Barthalomew, Betina Bigglezink
 -- and Dawn's Gambit, Plagued Hatchlings and Healthy Dragon Scale, Doctor Theolen Krastinov, Krastinov's Bag of Horrors
 -- and Kirtonos the Herald, and The Lich, Ras Frostwhisper. Alliance: Barov Family Fortune and The Last Barov from
--- Weldon Barov; Horde: the same two from Alexi Barov. The way in needs the Skeleton Key, which has a guide of its own.
+-- Weldon Barov; Horde: the same two from Alexi Barov. Class quests, the dungeon part only and only for those on them:
+-- the warlocks' Imp Delivery, the paladins' Judgment and Redemption and the shamans' The Darkreaver Menace (ids from
+-- DungeonJournal, Attune and Zygor). The way in needs the Skeleton Key, which has a guide of its own.
 -- Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's Forever data, the entrance from DungeonJournal
 -- (Exehn). Eva Sarkhoff's three quests follow on from each other, and she stands just outside the door, so the route
 -- steps out to her twice in the same run. See README.md.
@@ -117,11 +119,32 @@ local function inside(g, n, barov)
 		s:Note("Downstairs in the Great Ossuary: drop through a hole in the floor. He drops the Viewing Room Key (one for the group is enough).")
 	end)
 
+	-- paladins on Judgment and Redemption (the charger), shamans on The Darkreaver Menace
+	g:Step(function(s)
+		s.only = "onquest 7647 or onquest 7668"
+		s:Use(g.Item("Divination Scryer", 18746))
+		s:Note("Where Rattlegore was, once it's cleared: spirits come in waves, then Darkreaver.")
+		s:Kill(g.Mob("Death Knight Darkreaver", 14516))
+		s:Collect(g.Item("Charger's Lost Soul", 18749), { quest = 7647, objective = 1 }):Only("onquest 7647")
+		s:Collect(g.Item("Darkreaver's Head", 18880), { quest = 7668, objective = 1 }):Only("onquest 7668")
+		s:Use(g.Item("Charger's Lost Soul", 18749)):Only("onquest 7647")
+		s:Talk(g.Npc("Darkreaver's Fallen Charger", 14568)):Only("onquest 7647")
+		s:Turnin(7647, "Judgment and Redemption"):Only("onquest 7647")
+	end)
+
 	g:Step(function(s)
 		s.only = "onquest 4771 or done 4771"
 		s:Use(g.Item("Dawn's Gambit", 12368))
 		s:Kill(g.Mob("Vectus", 10432), { quest = 4771, objective = 1 })
 		s:Note("In the Viewing Room: clear it first, then use the Gambit there and kill Vectus.")
+	end)
+
+	-- warlocks on Imp Delivery
+	g:Step(function(s)
+		s.only = "onquest 7629"
+		s:Use(g.Item("Imp in a Jar", 18688))
+		s:Quest(7629, 1, "Create the parchment.")
+		s:Note("At the alchemy lab as you come into the Laboratory, Ras Frostwhisper's room. Wait while the imp works.")
 	end)
 
 	g:Step(function(s)
