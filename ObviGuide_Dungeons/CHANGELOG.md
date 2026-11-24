@@ -4,6 +4,8 @@
 
 - New: The Drowned City, Alliance and Horde: the four tablets, the Saltseers for Krazek, the Ancient Gurubashi Idol,
   and for the Horde Kin'weelay's chain to the dungeon and The Only Good Brinescale...
+- The Temple of Atal'Hakkar: the level-50 class quests' parts in the temple, once you're on them: the Voodoo
+  Feathers, Morphaz's drops and the druids' Putrid Vine.
 - Blackfathom Deeps: shorter notes, only what the arrow can't show you. Paladins get the Kor Gem for their class
   weapon (Seeking the Kor Gem, Alliance and Horde), and warlocks the Soran'ruk Fragments, once on those quests.
 

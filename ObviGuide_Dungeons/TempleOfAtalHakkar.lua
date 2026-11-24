@@ -4,8 +4,10 @@
 -- Essence of Eranikus. Alliance: Into The Temple of Atal'Hakkar (Brohann Caskbelly), and Haze of Evil (Gregan
 -- Brewspewer, Feralas). Horde: Fel'Zerul's chain from Pool of Tears to The Temple of Atal'Hakkar, and Zapper Fuel (Liv
 -- Rizzlefix, Ratchet). Haze of Evil and Zapper Fuel need Muigin's or Larion's quests in Un'Goro Crater first, which are
--- only pointed at. The class quests are left out. Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's
--- Forever data, entrances from DungeonJournal (Exehn). Yeh'kinya's Ancient Egg has to reach Tanaris before the temple,
+-- only pointed at. The level-50 class quests only for a character already on them: the druids' Putrid Vine, the
+-- feathers for paladins, shamans, warlocks and warriors, and Morphaz's drops for hunters, mages, priests and rogues.
+-- Quest, NPC and item ids from Attune (CixiDelmont) and QuestieDB's Forever data, the class quests' objectives from
+-- Zygor's dungeon guides, entrances from DungeonJournal (Exehn). Yeh'kinya's Ancient Egg has to reach Tanaris before the temple,
 -- so the route crosses between Kalimdor and the Eastern Kingdoms twice. See README.md.
 
 local BARRENS, FERALAS, TANARIS, UNGORO = 1413, 1444, 1446, 1449
@@ -152,6 +154,20 @@ local function ungoroPointer(g, after, npc, title)
 	end)
 end
 
+-- class quests on the Voodoo Feathers (Forging the Mightstone, Da Voodoo, Trolls of a Feather, Voodoo Feathers):
+-- 2 of each colour, from the six troll guardians
+local function feathers(g, s)
+	local amber = g.Item("Amber Voodoo Feather", 20606)
+	local blue  = g.Item("Blue Voodoo Feather", 20607)
+	local green = g.Item("Green Voodoo Feather", 20608)
+	for _, quest in ipairs({ 8418, 8413, 8422, 8425 }) do
+		local only = "onquest " .. quest
+		s:Collect(amber, { count = 2, quest = quest, objective = 1 }):Only(only)
+		s:Collect(blue, { count = 2, quest = quest, objective = 2 }):Only(only)
+		s:Collect(green, { count = 2, quest = quest, objective = 3 }):Only(only)
+	end
+end
+
 -- the temple itself; `extra` adds the faction's own side tasks inside
 local function temple(g, extra)
 	g:Step(function(s)
@@ -165,6 +181,7 @@ local function temple(g, extra)
 
 	g:Step(function(s)
 		s:Kill(g.Mob("Atal'alarion", 8580))
+		s:Collect(g.Item("Putrid Vine", 22444), { quest = 9053, objective = 1 }):Only("onquest 9053")
 		s:Turnin(3446, "Into the Depths")
 		s:Turnin(3447, "Secret of the Circle")
 		s:Note("Left and down to the Hall of Serpents. Click the six serpent statues in the side rooms in this order: south, north, south-west, south-east, north-west, north-east. Atal'alarion rises in the pit; the ", g.Object("Altar of Hakkar"), " is at the top of its stairs and the ", g.Object("Idol of Hakkar"), " in its middle.")
@@ -173,7 +190,20 @@ local function temple(g, extra)
 	g:Step(function(s)
 		s:Kill(g.Mob("Jammal'an the Prophet", 5710))
 		s:Collect(g.Item("Head of Jammal'an", 6212), { quest = 1446, objective = 1 })
+		feathers(g, s)
 		s:Note("Up the stairs to the balconies around the Pit of Sacrifice: kill the six troll champions there to open his barrier, then drop into the pit and go south-east.")
+	end)
+
+	-- class quests on Morphaz's drops (The Green Drake, Destroy Morphaz, Blood of Morphaz, The Azure Key)
+	g:Step(function(s)
+		s.only = "onquest 8232 or onquest 8253 or onquest 8257 or onquest 8236"
+		s:Kill(g.Mob("Morphaz", 5719))
+		s:Kill(g.Mob("Hazzas", 5722))
+		s:Collect(g.Item("Tooth of Morphaz", 20019), { quest = 8232, objective = 1 }):Only("onquest 8232")
+		s:Collect(g.Item("Arcane Shard", 20085), { quest = 8253, objective = 1 }):Only("onquest 8253")
+		s:Collect(g.Item("Blood of Morphaz", 20025), { quest = 8257, objective = 1 }):Only("onquest 8257")
+		s:Collect(g.Item("Azure Key", 20022), { quest = 8236, objective = 1 }):Only("onquest 8236")
+		s:Note("The two green dragons among the dragonkin on the way to the Shade of Eranikus. Morphaz drops it.")
 	end)
 
 	g:Step(function(s)
