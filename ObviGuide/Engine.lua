@@ -640,7 +640,10 @@ function Engine.IsComplete(goal, step)
 	-- game can check (equipped, a skill, a quest) show what's true
 	if step and step.skip and goal.kind == "confirm" and Conditions.Eval(step.skip) then return true end
 	if goal.with then
-		for _, w in ipairs(goal.with) do if not Engine.IsComplete(w, step) then return false end end
+		-- (a line that isn't shown, as a turn-in only for those who have the quest, doesn't hold it up)
+		for _, w in ipairs(goal.with) do
+			if Engine.IsVisible(w) and not Engine.IsComplete(w, step) then return false end
+		end
 		return true
 	end
 	local k = goal.kind

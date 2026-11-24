@@ -538,6 +538,18 @@ local function BuildStep(lines, untilStep, ctx)
 		end
 	end
 
+	-- a "Talk to" line is done once the quest lines after it (up to the next one) are: with two NPCs in a step, the
+	-- first is ticked, and its action key let go, once you have his quests
+	local talk ---@type ObviGuideGoal?
+	for _, g in ipairs(step.goals) do
+		if g.kind == "talk" then
+			talk = g
+		elseif talk and g.quest and (g.kind == "accept" or g.kind == "turnin" or g.kind == "objective") then
+			talk.with = talk.with or {}
+			table.insert(talk.with, g)
+		end
+	end
+
 	-- a "Make …" line's profession and the skill it makes for: the step's skill line's (its window is opened by
 	-- casting the profession; only what the points left need is made)
 	for _, g in ipairs(step.goals) do

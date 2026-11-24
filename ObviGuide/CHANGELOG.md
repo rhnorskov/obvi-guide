@@ -17,6 +17,7 @@
 - When a step is done, the way to the next one is asked for while the step shows its "done" effect, so the arrow is
   ready when the guide moves on.
 - Use, equip and cast lines show the item's or spell's own icon.
+- A step with two NPCs ticks the first one's "Talk to" line once you have their quests, and lets go of its action key.
 - The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
   you have its buff) or done no longer shows there.
 

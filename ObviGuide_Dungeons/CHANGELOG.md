@@ -1,5 +1,9 @@
 # Obvi Guide: Dungeons
 
+## Unreleased
+
+- Blackfathom Deeps: shorter notes, only what the arrow can't show you.
+
 ## v0.5.0
 
 - WoW Forever only: retail is no longer supported.
