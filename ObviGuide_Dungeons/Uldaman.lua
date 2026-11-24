@@ -5,6 +5,7 @@
 -- to Agmond's Fate, and Talvash del Kissel's necklace from The Shattered Necklace that drops inside to Restoring the
 -- Necklace, which takes a second visit for the paladin's remains and the gems. Horde: the Necklace Recovery chain up
 -- to Find the Gems and Power Source, which takes three visits: the necklace, the paladin's remains, then the gems.
+-- Both: the Obsidian Power Source for the mages' Power in Uldaman.
 -- Quest, NPC, item and object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance,
 -- the outer caves and where the gems are from DungeonJournal (Exehn). See README.md.
 
@@ -94,6 +95,16 @@ local function powerSource(g, quest, objective, only)
 		s:Kill(g.Mob("Archaedas", 2748))
 		s:Collect(g.Item("Shattered Necklace Power Source", 7672), { quest = quest, objective = objective })
 		s:Note("The last boss.")
+	end)
+end
+
+-- mages on Power in Uldaman (ids from Zygor's Mage class guide)
+local function sentinel(g)
+	g:Side("out", function(s)
+		s.only = "onquest 1956"
+		s:Kill(g.Mob("Obsidian Sentinel", 7023))
+		s:Collect(g.Item("Obsidian Power Source", 8053), { quest = 1956, objective = 1 })
+		s:Note("Past Ironaya, near the back entrance.")
 	end)
 end
 
@@ -244,6 +255,8 @@ ObviGuide.Guide(function(g)
 	end)
 
 	-- inside
+	sentinel(g)
+
 	g:Side("out", function(s)
 		local shattered = g.Item("Shattered Necklace", 7666)
 		s:Use(shattered):Only("not onquest 2198 and not done 2198")
@@ -442,6 +455,8 @@ ObviGuide.Guide(function(g)
 		s:Goto(BADLANDS, 44.3, 12.0)
 		s:Do("Enter Uldaman with your group.")
 	end)
+
+	sentinel(g)
 
 	g:Side("out", function(s)
 		s:Kill(g.Mob("Stonevault Rockchewer", 4851))

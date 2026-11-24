@@ -1,9 +1,16 @@
 -- The Deadmines quests (Alliance): The Defias Brotherhood chain from Sentinel Hill to VanCleef, Red Silk Bandanas,
 -- Oh Brother... and Collecting Memories, Underground Assault, Alba Fairmoon's chain up to Destruction in Deadmines,
--- and The Unsent Letter that VanCleef carries. Quest, NPC and item ids and positions from QuestieDB's Forever data,
+-- and The Unsent Letter that VanCleef carries; for paladins (both factions) the Whitestone Oak Lumber. Quest, NPC and item ids and positions from QuestieDB's Forever data,
 -- the order of Alba's chain from Attune (CixiDelmont). See README.md.
 
 local STORMWIND, WESTFALL, REDRIDGE = 1453, 1436, 1433
+
+-- paladins: Whitestone Oak Lumber, for The Test of Righteousness (Alliance) or A Moon-Kissed Blade (Horde). Ids from
+-- Zygor (the Alliance Paladin class guide) and DungeonJournal (Exehn).
+local function lumber(g, s, quest, objective)
+	s:Kill(g.Mob("Goblin Woodcarver", 641))
+	s:Collect(g.Item("Whitestone Oak Lumber", 6994), objective and { quest = quest, objective = objective } or nil)
+end
 
 ObviGuide.Guide(function(g)
 	g.title = "The Deadmines: Quests"
@@ -260,6 +267,11 @@ ObviGuide.Guide(function(g)
 		s:Note("The Defias inside drop them.")
 	end)
 
+	g:Side("ship", function(s)
+		s.only = "onquest 1654"
+		lumber(g, s, 1654, 1)
+	end)
+
 	g:Step(function(s)
 		s:Kill(g.Mob("Sneed's Shredder", 642))
 		s:Collect(g.Item("Gnoam Sprecklesprocket", 7365), { quest = 2040, objective = 1 })
@@ -330,5 +342,26 @@ ObviGuide.Guide(function(g)
 		s:Talk(wilder)
 		s:Turnin(167, "Oh Brother...")
 		s:Turnin(168, "Collecting Memories")
+	end)
+end)
+
+-- Horde paladins on A Moon-Kissed Blade (Wolfsbane): only the Whitestone Oak Lumber
+ObviGuide.Guide(function(g)
+	g.title = "The Deadmines: Quests"
+	g.group = "Dungeons"
+	g.id    = "obvi-deadmines-horde"
+	g.only  = "Horde and Paladin"
+
+	g:Step(function(s)
+		s.only = "onquest 95036"
+		s.skip = "items 6994 >= 1"   -- (been inside already)
+		s:Goto(WESTFALL, 42.6, 71.8)
+		s:Do("Enter the Deadmines with your group.")
+		s:Note("Down the mine under the building.")
+	end)
+
+	g:Step(function(s)
+		s.only = "onquest 95036"
+		lumber(g, s)
 	end)
 end)

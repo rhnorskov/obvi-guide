@@ -2,7 +2,8 @@
 -- Anton and both Down the Scarlet Path quests up to In the Name of the Light, Mythology of the Titans, and Past Due
 -- (Magus Olvek, Dalaran), and for paladins Aeonas (A Brother In Need .. Aeonas the Vindicated). Horde: Into The Scarlet Monastery, Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal
 -- (after Going, Going, Guano! from Razorfen Kraul), and the Test of Faith, Endurance, Strength and Lore chain that ends
--- in the Library, then Final Passage back to Dorn Plainstalker. The Eye of Bhossca (rogues only) is left out. Quest,
+-- in the Library, then Final Passage back to Dorn Plainstalker. Both: the parts done here of the rogues' Eye of
+-- Bhossca and the mages' Rituals of Power (Zygor's Mage class guide). Quest,
 -- NPC, item and object ids and positions from Attune (CixiDelmont) and QuestieDB's Forever data; the entrance and the
 -- Forever quests from DungeonJournal (Exehn). See README.md.
 
@@ -16,6 +17,33 @@ local function wing(g, name, skip, note)
 		if skip then s.skip = skip end   -- (been inside already)
 		s:Do("Enter the ", name, " with your group.")
 		s:Note(note)
+	end)
+end
+
+-- rogues on The Eye of Bhossca (C's job, done alone): the Graveyard, then the Library. From DungeonJournal (Exehn).
+local function bhossca(g)
+	g:Side("out", function(s)
+		s.only = "onquest 78676"
+		local later = "items 210953 >= 1 or ready 78676"
+		s:Collect(g.Item("Scarlet Initiate's Uniform", 210955))
+		s:Note("Alone, outside a group. In the ", g.Object("Supply Locker"), " in the stables behind the monastery. Wear it in every wing: stealth or attacking takes it off.")
+		s:Collect(g.Item("Scryer's Key", 210963)):Done("items 210967 >= 1 or " .. later)
+		s:Note("Pick pocket a Scarlet Scryer in the Graveyard's first big room.")
+		s:Collect(g.Item("Reliquary Key", 210968)):Done(later)
+		s:Note("In the ", g.Object("Stone Coffer"), " in the mausoleum on the Graveyard's north side: sit on both benches between the two statues first.")
+		s:Collect(g.Item("Confidential Message", 210967)):Done(later)
+		s:Note("In the ", g.Object("Personal Letterbox"), " in Arcanist Doan's room in the Library.")
+		s:Collect(g.Item("Eye of Bhossca", 210953))
+		s:Note("In the ", g.Object("Padlocked Reliquary"), " in the Library's first small room on the left.")
+	end)
+end
+
+-- mages on Rituals of Power, in the Library
+local function rituals(g)
+	g:Step(function(s)
+		s.only = "onquest 1951"
+		s:Collect(g.Item("Rituals of Power", 7274), { quest = 1951, objective = 1 })
+		s:Note("Click the book on the bookshelf left of the Athenaeum's doorway.")
 	end)
 end
 
@@ -96,6 +124,8 @@ ObviGuide.Guide(function(g)
 		s:Note("At Dalaran. Then the long ride north to the monastery, in the far north-east of Tirisfal Glades.")
 	end)
 
+	bhossca(g)
+
 	-- the Library first: Loksey, the book, and the Scarlet Key for the last two wings
 	wing(g, "Library", "items 5536 >= 1 or done 1050", "The monastery building is in north-east Tirisfal; each wing has its own door inside.")
 
@@ -108,6 +138,8 @@ ObviGuide.Guide(function(g)
 		s:Collect(g.Item("Mythology of the Titans", 5536), { quest = 1050, objective = 1 })
 		s:Note("A book lying in the Library wing, on the way to Arcanist Doan: watch the floor.")
 	end)
+
+	rituals(g)
 
 	g:Step(function(s)
 		s.skip = "items 7146 >= 1"
@@ -341,6 +373,8 @@ ObviGuide.Guide(function(g)
 		s:Note("From the Scarlet Crusade in all four wings, and in the camps outside.")
 	end)
 
+	bhossca(g)
+
 	wing(g, "Graveyard", "onquest 1051 or done 1051", "The monastery building is in north-east Tirisfal; each wing has its own door inside.")
 
 	g:Step(function(s)
@@ -366,6 +400,8 @@ ObviGuide.Guide(function(g)
 		s:Collect(g.Item("Compendium of the Fallen", 5535), { quest = 1049, objective = 1 })
 		s:Note("On a bookcase along the left wall as you come into the Athenaeum.")
 	end)
+
+	rituals(g)
 
 	g:Step(function(s)
 		s.skip = "items 7146 >= 1"

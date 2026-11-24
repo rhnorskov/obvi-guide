@@ -3,7 +3,7 @@
 -- Tiara of the Deep, Troll Temper, and Scarab Shells with Tran'rek from Booty Bay (pointed at). Alliance: Nekrum's
 -- Medallion, The Brassbolts Brothers from Ironforge and The Witch Doctor's Head (Archmage Lan'dalock, Dalaran). Horde:
 -- Venom Bottles, Undamaged Venom Sac, Consult Master Gadrin, The Spider God and Zum'rah's Head (Mazu'kon, Mulgore).
--- A Lesson in Literacy (mages only) is left out. Quest, NPC, item and object ids and positions from Attune
+-- Class quests, the part done here: Tabetha's Task and A Lesson in Literacy (mages), The Talisman of Kazdor (rogues). Quest, NPC, item and object ids and positions from Attune
 -- (CixiDelmont) and QuestieDB's Forever data; the dungeon portal from QuestieDB, the bosses' places and the Forever
 -- quests from DungeonJournal (Exehn). Pick-ups go Hinterlands, Dustwallow, Thousand Needles, Tanaris and Feralas; the
 -- turn-ins run back the same way. See README.md.
@@ -44,6 +44,7 @@ local function pickups(g)
 	g:Step(function(s)
 		s:Goto(DUSTWALLOW, 46.1, 57.1)
 		s:Talk(g.Npc("Tabetha", 6546))
+		s:Turnin(2861, "Tabetha's Task"):Only("onquest 2861")
 		s:Accept(2846, "Tiara of the Deep")
 		s:Note("In her hut in the south-west of the marsh.")
 	end)
@@ -118,6 +119,21 @@ local function enter(g, skip)
 		s:Kill(g.Mob("Scarab", 7269))
 		s:Collect(g.Item("Uncracked Scarab Shell", 9238), { count = 5, quest = 2865, objective = 1 })
 		s:Note("Not every scarab drops one.")
+	end)
+
+	-- mages on A Lesson in Literacy (DungeonJournal, Exehn)
+	g:Side("out", function(s)
+		s.only = "onquest 82084"
+		s:Kill(g.Mob("Zul'Farrak Zombie"))
+		s:Collect(g.Item("Farraki Papyrus", 221360), { count = 8 })
+		s:Note("From the zombies that rise from the graves in the graveyard.")
+	end)
+
+	-- rogues on The Talisman of Kazdor (DungeonJournal, Exehn)
+	g:Side("out", function(s)
+		s.only = "onquest 80411"
+		s:Collect(g.Item("Talisman of Kazdor", 217609))
+		s:Note("Alone, outside a group.")
 	end)
 end
 

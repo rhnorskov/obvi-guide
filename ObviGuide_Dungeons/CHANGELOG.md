@@ -8,6 +8,10 @@
   Feathers, Morphaz's drops and the druids' Putrid Vine.
 - Dire Maul: the class books and Nostro's Compendium, Arcane Refreshment for mages, and the paladin and warlock mount
   quests' parts inside. Scholomance: Judgment and Redemption, The Darkreaver Menace and Imp Delivery.
+- The class quests' parts in The Deadmines, Shadowfang Keep, Scarlet Monastery, Uldaman and Zul'Farrak: the paladins'
+  weapon parts (now also a Deadmines guide for Horde paladins, and a Shadowfang Keep guide for Alliance paladins,
+  warlocks and rogues), the warlocks' Large Soran'ruk Fragment, the rogues' Horn of Xelthos, Eye of Bhossca and
+  Talisman of Kazdor, and the mages' Rituals of Power, Power in Uldaman and A Lesson in Literacy.
 - Blackfathom Deeps: shorter notes, only what the arrow can't show you. Paladins get the Kor Gem for their class
   weapon (Seeking the Kor Gem, Alliance and Horde), and warlocks the Soran'ruk Fragments, once on those quests.
 
