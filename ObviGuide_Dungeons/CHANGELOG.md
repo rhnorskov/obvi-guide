@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Blackfathom Deeps: shorter notes, only what the arrow can't show you.
+- Blackfathom Deeps: shorter notes, only what the arrow can't show you. Paladins get the Kor Gem for their class
+  weapon (Seeking the Kor Gem, Alliance and Horde), and warlocks the Soran'ruk Fragments, once on those quests.
 
 ## v0.5.0
 
