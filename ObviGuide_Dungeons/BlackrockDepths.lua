@@ -7,7 +7,7 @@
 -- of Hope and Jail Break!. Horde: Vivian Lagrave and the Lost Thunderbrew Recipe, The Last Element, The Rise of the
 -- Machines, the two KILL ON SIGHT bounties, Operation: Death to Angerforge (once Grark Lorkrub's escort is done),
 -- Disharmony of Flame up to The Princess Saved?, and Fragment of the Firelands from Mulgore. Attune also counts the
--- Shadowforge Key and the Molten Core attunement here; they have guides of their own. Quest list from Attune
+-- Shadowforge Key (a guide of its own) and the Molten Core attunement (not in WoW Forever yet). Quest list from Attune
 -- (CixiDelmont) and DungeonJournal (Exehn); quest, NPC and item ids from Attune and QuestieDB's Forever data, the
 -- entrance, boss order and where things are inside from DungeonJournal. Organised by hub: the Burning Steppes camps
 -- (Morgan's Vigil, Flame Crest) or Kargath, then the first run; the hand-ins that open the rest; the second run.
