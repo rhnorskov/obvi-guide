@@ -7,7 +7,7 @@ show in the guide list under **Dungeons** and **Dungeon keys**. Each dungeon gui
 
 One guide for each faction (A: Alliance, H: Horde), with the quests [Attune](https://www.curseforge.com/wow/addons/attune)
 and DungeonJournal list for the dungeon: picked up before going in, done inside, handed in afterwards. Class quests
-aren't in them yet.
+show their part in the dungeon once you're on them.
 
 | Level | Dungeon | |
 |---|---|---|
