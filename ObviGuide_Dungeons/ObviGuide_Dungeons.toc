@@ -21,6 +21,7 @@ RazorfenKraul.lua
 Gnomeregan.lua
 ScarletMonastery.lua
 RazorfenDowns.lua
+DrownedCity.lua
 Uldaman.lua
 ZulFarrak.lua
 Maraudon.lua

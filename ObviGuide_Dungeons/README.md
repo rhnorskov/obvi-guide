@@ -25,6 +25,7 @@ aren't in them yet.
 | 31-34 | Gnomeregan | A, H |
 | 31-42 | Scarlet Monastery | A, H |
 | 35-41 | Razorfen Downs | A, H |
+| 35-42 | The Drowned City | A, H |
 | 44-47 | Uldaman | A, H |
 | 45-48 | Zul'Farrak | A, H |
 | 48-51 | Maraudon | A, H |
@@ -36,8 +37,8 @@ aren't in them yet.
 | 58-60 | Scholomance | A, H |
 | 59-60 | Stratholme | A, H |
 
-The new dungeons that aren't open yet (The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold, The Shapers
-Terrace) get guides once there are quests to guide.
+The other new dungeons (Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold, The Shapers Terrace) get guides once there
+are quests to guide.
 
 ## Dungeon keys
 
