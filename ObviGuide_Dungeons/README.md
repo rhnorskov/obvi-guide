@@ -14,9 +14,9 @@ aren't in them yet.
 | 13-15 | The Hall of Thanes | A, H |
 | 13-16 | Ragefire Chasm | H |
 | 15-17 | Ruins of Lordaeron | A, H |
-| 18-21 | The Deadmines | A |
+| 18-21 | The Deadmines | A (H: paladins) |
 | 19-22 | Wailing Caverns | A, H |
-| 23-26 | Shadowfang Keep | H |
+| 23-26 | Shadowfang Keep | H (A: paladins, warlocks, rogues) |
 | 24-29 | Excavation Site | A, H |
 | 25-28 | Blackfathom Deeps | A, H |
 | 26-29 | The Stockade | A |
