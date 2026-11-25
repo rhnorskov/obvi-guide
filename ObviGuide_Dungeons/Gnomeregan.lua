@@ -39,27 +39,26 @@ local function insideSides(g, ringQuest)
 		s:Talk(g.Npc("Kernobee", 7850))
 		s:Accept(2904, "A Fine Mess")
 		s:Quest(2904, 1, "Escort Kernobee to the Clockwerk Run exit.")
-		s:Note("He's in a room on the north wall of the Dormitory. Clear around him first: he follows you and dies easily.")
+		s:Note("In the Dormitory. He dies easily.")
 	end)
 
-	-- the ring drops from the Dark Iron Agents; the Sparklematic 5200 cleans it
+	-- the ring drops from the Dark Iron Agents; the Sparklematic 5200 cleans it (shown once you have it)
 	g:Side("out", function(s)
 		local ring = g.Item("Grime-Encrusted Ring", 9326)
+		s.only = ("items 9326 >= 1 or onquest 2945 or (done 2945 and not onquest %d and not done %d)"):format(ringQuest, ringQuest)
 		s:Use(ring):Only("not onquest 2945 and not done 2945")
 		s:Accept(2945, "Grime-Encrusted Ring")
 		s:Turnin(2945, "Grime-Encrusted Ring")
 		s:Accept(ringQuest, "Return of the Ring")
-		s:Note("Only if a ", g.Mob("Dark Iron Agent", 6212), " drops the ", ring, ". Put it in The Sparklematic 5200 in the Clean Zone, early in the dungeon; it takes three silver coins.")
+		s:Note("The Sparklematic 5200 is in the Clean Zone. Three silver coins.")
 	end)
 
 	-- the same machine cleans a Grime-Encrusted Object; the quest has two twins (4601, 4602) and only one can be done
 	g:Side("out", function(s)
-		s.only = "not done 4601 and not done 4602"
-		local object = g.Item("Grime-Encrusted Object", 9308)
-		s:Collect(object):Done("done 2951")
+		s.only = "not done 4601 and not done 4602 and (items 9308 >= 1 or onquest 2951)"
 		s:Accept(2951, "The Sparklematic 5200!")
 		s:Turnin(2951, "The Sparklematic 5200!")
-		s:Note("Many of the creatures in and around Gnomeregan drop a ", object, ". Put it in The Sparklematic 5200 in the Clean Zone, with three silver coins, for a ", g.Item("Sparklematic-Wrapped Box", 9363), ".")
+		s:Note("Put the ", g.Item("Grime-Encrusted Object", 9308), " in The Sparklematic 5200 in the Clean Zone. Three silver coins.")
 	end)
 end
 
@@ -166,12 +165,11 @@ ObviGuide.Guide(function(g)
 		s:Kill(g.Mob("Mechano-Tank", 6225))
 		s:Kill(g.Mob("Mechanized Sentry", 6233))
 		s:Collect(g.Item("Robo-mechanical Guts", 9309), { count = 24, quest = 2928, objective = 1 })
-		s:Note("From the mechanical enemies throughout the dungeon.")
 	end)
 
 	g:Side("out", function(s)
 		s:Collect(g.Item("Essential Artificial", 9278), { count = 12, quest = 2924, objective = 1 })
-		s:Note("From the ", g.Object("Artificial Extrapolator"), " machines: square upright boxes all over the dungeon.")
+		s:Note("From the ", g.Object("Artificial Extrapolator"), " boxes.")
 	end)
 
 	insideSides(g, 2947)
@@ -182,13 +180,13 @@ ObviGuide.Guide(function(g)
 		local slime, lurker = g.Mob("Irradiated Slime", 6218), g.Mob("Corrosive Lurker", 6219)
 		s:Quest(2962, 1, "Fill the phial on an ", slime, " or ", lurker, ".")
 			:UseOn(g.Item("Heavy Leaden Collection Phial", 9364), slime, lurker)
-		s:Note("On a living one; it can take a few tries. The fallout soon collapses: get it late and go straight to Ozzie.")
+		s:Note("On a living one. The fallout soon collapses: get it late.")
 	end)
 
 	g:Step(function(s)
 		s.only = "onquest 2930"
 		s:Do("Put the yellow card in ", g.Object("Matrix Punchograph 3005-B"), "."):Done(hasCard(3))
-		s:Note("In the Dormitory, just past the Clean Zone.")
+		s:Note("In the Dormitory.")
 	end)
 
 	g:Step(function(s)

@@ -3,8 +3,9 @@
 ## Unreleased
 
 - Gnomeregan: the phials have a key for the troggs and slimes to use them on, the troggs and lepers that drop the
-  White Punch Card have keys, and each Matrix Punchograph is a line with the interact key. Stratholme: Egan's Blaster
-  the same way, with keys for the citizens and the Restless Soul.
+  White Punch Card have keys, and each Matrix Punchograph is a line with the interact key. The Grime-Encrusted Ring
+  and The Sparklematic 5200! show only once you have the ring or the object, and the notes are shorter. Stratholme:
+  Egan's Blaster the same way, with keys for the citizens and the Restless Soul.
 - New: The Drowned City, Alliance and Horde: the four tablets, the Saltseers for Krazek, the Ancient Gurubashi Idol,
   and for the Horde Kin'weelay's chain to the dungeon and The Only Good Brinescale...
 - The Temple of Atal'Hakkar: the level-50 class quests' parts in the temple, once you're on them: the Voodoo
