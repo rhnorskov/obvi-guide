@@ -1267,6 +1267,10 @@ function Follower:Step(dir)
 	-- at the guide's end: back shows its last step again, next goes on to the following guide
 	if self.ended then
 		if dir > 0 then self:Continue() return end
+		-- (the last step meant for this character: the guide's own last one may be for paladins only)
+		for i = #guide.steps, 1, -1 do
+			if Conditions.Eval(guide.steps[i].cond) and #guide.steps[i].goals > 0 then self.index = i break end
+		end
 		self.ended, self.paused = false, true
 		self:Changed()
 		return
