@@ -344,6 +344,9 @@ local KNOWN = {
 	[98190] = 98189,   -- A Friend of the Family, after Return the Statuette
 	[98191] = 98190,   -- A Friend of the Family, after A Friend of the Family
 	[98219] = 98191,   -- The Shamed Lieutenant, after A Friend of the Family
+	[79946] = 79945,   -- A Brother In Need, after Orders from the Grand Crusader (paladins, Katherine the Pure)
+	[79963] = 79946,   -- By The Light's Grace, after A Brother In Need
+	[79970] = 79963,   -- Aeonas the Vindicated, after By The Light's Grace
 }
 
 --- A quest's pre-quests: all of `all`, and one of `any` (if any); nil when nothing is known. The guide's word for it
