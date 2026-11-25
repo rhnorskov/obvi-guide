@@ -20,6 +20,10 @@
 - A step with two NPCs ticks the first one's "Talk to" line once you have their quests, and lets go of its action key.
 - The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
   you have its buff) or done no longer shows there.
+- **Auctionator shopping list**: with Auctionator, a step whose Collect lines are still short has a link under the
+  last of them. It makes an Auctionator shopping list of what's missing (the exact items, with how many), named after
+  the guide and replaced each time; at the auction house Auctionator searches it right away. Quest items and things
+  vendors sell are left out.
 - Going back from a guide's end shows its last step meant for you, not one for another class (Aeonas the Vindicated
   at the end of Scarlet Monastery is for paladins).
 
@@ -27,10 +31,6 @@
 
 - WoW Forever only: retail is no longer supported.
 - Waypoints (setting) has Auto, now the default: Shortest Path Forever shows the way when it's installed, else
-- **Auctionator shopping list**: with Auctionator, a step whose Collect lines are still short has a link under the
-  last of them. It makes an Auctionator shopping list of what's missing (the exact items, with how many), named after
-  the guide and replaced each time; at the auction house Auctionator searches it right away. Quest items and things
-  vendors sell are left out.
   Obvi Guide's arrow. If you never changed the setting you get Auto; pick Obvi Guide arrow to keep the arrow.
 - QuestieDB now comes with Obvi Guide in WoW Forever: the CurseForge app installs it as a required dependency, and
   `tools/install.ps1` installs and updates it.
