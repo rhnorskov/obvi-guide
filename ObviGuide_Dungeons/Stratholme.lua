@@ -269,9 +269,10 @@ local function stratholme(g, horde)
 	end)
 
 	g:Side("out2", function(s)
-		s:Use(blaster)
-		s:Quest(5282, 1, "Free 15 Restless Souls.")
-		s:Note("Use the blaster on a Spectral or Ghostly Citizen, then again on the Restless Soul that breaks free.")
+		local spectral, ghostly = g.Mob("Spectral Citizen"), g.Mob("Ghostly Citizen")
+		local soul = g.Npc("Restless Soul")
+		s:Quest(5282, 1, "Free 15 Restless Souls: a ", spectral, " or ", ghostly, ", then the ", soul, " that breaks free.")
+			:UseOn(blaster, spectral, ghostly, soul)
 	end)
 
 	g:Side("out", function(s)
