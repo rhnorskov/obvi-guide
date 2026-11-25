@@ -7,3 +7,5 @@
   ticks off once the game counts it as found. Start anywhere: the guide takes the shortest way from where you are
   through the areas left. Explore Eastern Kingdoms, Kalimdor and Azeroth list the parts still to finish, each opening
   its guide. Each of these challenges has a Guide button in the game's legacy challenges window.
+- **A Brother In Need** (Alliance paladins): Katherine the Pure's chain from the Strange Orb in Darkshore to Orders from
+  the Grand Crusader, which starts the Aeonas quests in Scarlet Monastery. Quest Catchup takes its steps from here.

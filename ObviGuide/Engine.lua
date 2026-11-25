@@ -344,7 +344,16 @@ local KNOWN = {
 	[98190] = 98189,   -- A Friend of the Family, after Return the Statuette
 	[98191] = 98190,   -- A Friend of the Family, after A Friend of the Family
 	[98219] = 98191,   -- The Shamed Lieutenant, after A Friend of the Family
-	[79946] = 79945,   -- A Brother In Need, after Orders from the Grand Crusader (paladins, Katherine the Pure)
+	-- the paladins' Katherine the Pure chain (DungeonJournal's list; Battle at the Mannoroc Coven can be skipped)
+	[78089] = 78088,   -- Advice From Stormwind, after A Strange Artifact
+	[78090] = 78089,   -- A Second Opinion
+	[78091] = 78090,   -- Earning Your Salt
+	[78092] = 78091,   -- It Must Be Destroyed
+	[78093] = 78092,   -- Return to Delgren
+	[79939] = 78093,   -- The Broken Hammer
+	[79940] = 79939,   -- A Lost Brother
+	[79945] = 79940,   -- Orders from the Grand Crusader
+	[79946] = 79945,   -- A Brother In Need, after Orders from the Grand Crusader
 	[79963] = 79946,   -- By The Light's Grace, after A Brother In Need
 	[79970] = 79963,   -- Aeonas the Vindicated, after By The Light's Grace
 }

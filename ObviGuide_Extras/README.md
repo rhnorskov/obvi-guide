@@ -5,6 +5,8 @@ list under **Extras**.
 
 - **Aqual Quintessence**: the Hydraxian Waterlords' quests up to the Aqual Quintessence, for dousing the runes in
   Molten Core.
+- **A Brother In Need** (Alliance paladins): Katherine the Pure's chain up to Orders from the Grand Crusader, the start
+  of the Aeonas quests in Scarlet Monastery.
 - **Cozy Sleeping Bag** (Alliance and Horde).
 - **Exploration**: a guide per exploration challenge ("Explore Alterac Mountains"), under **Legacy Challenges /
   Adventure / Eastern Kingdoms** and **Kalimdor**, as the game files them. A step per area, each ticking off once the
