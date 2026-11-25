@@ -131,19 +131,23 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s)
 		s:Goto(DUNMOROGH, 20.9, 36.0)
-		s:Use(g.Item("Empty Leaden Collection Phial", 9283))
-		s:Collect(g.Item("Full Leaden Collection Phial", 9284), { quest = 2926, objective = 1 })
-		s:Note("Use it on a living ", g.Mob("Irradiated Invader", 6213), " or ", g.Mob("Irradiated Pillager", 6329), ": the troggs in the tunnels before the portal, and inside near the start.")
+		local invader, pillager = g.Mob("Irradiated Invader", 6213), g.Mob("Irradiated Pillager", 6329)
+		s:Quest(2926, 1, "Fill the phial on an ", invader, " or ", pillager, ".")
+			:UseOn(g.Item("Empty Leaden Collection Phial", 9283), invader, pillager)
+		s:Note("On a living one.")
 	end)
 
 	-- Data Rescue: the first two punch cards are outside the dungeon
 	g:Step(function(s)
 		s.only = "onquest 2930"
 		s:Goto(DUNMOROGH, 22.0, 32.6)
+		s:Kill(g.Mob("Irradiated Invader", 6213))
+		s:Kill(g.Mob("Irradiated Pillager", 6329))
+		s:Kill(g.Mob("Addled Leper", 6221))
 		s:Collect(g.Item("White Punch Card", CARDS[1])):Done(hasCard(1))
-		s:Note("A chance drop from the troggs and the ", g.Mob("Addled Leper", 6221), "s outside the dungeon.")
-		s:Collect(g.Item("Yellow Punch Card", CARDS[2])):Done(hasCard(2))
-		s:Note("Put the white card in ", g.Object("Matrix Punchograph 3005-A"), ", on the raised platform in the Train Depot or by the Workshop entrance.")
+		s:Note("A chance drop.")
+		s:Do("Put the white card in ", g.Object("Matrix Punchograph 3005-A"), "."):Done(hasCard(2))
+		s:Note("On the raised platform in the Train Depot, or by the Workshop entrance.")
 	end)
 
 	-- Ozzie's next quest needs Gnogaine handed in, and is done inside: back to Kharanos once
@@ -175,15 +179,16 @@ ObviGuide.Guide(function(g)
 	-- the fallout collapses quickly, so it's worth getting late in the run
 	g:Side("out", function(s)
 		s.only = "onquest 2962"
-		s:Use(g.Item("Heavy Leaden Collection Phial", 9364))
-		s:Collect(g.Item("High Potency Radioactive Fallout", 9365), { quest = 2962, objective = 1 })
-		s:Note("Use the phial on a living ", g.Mob("Irradiated Slime", 6218), " or ", g.Mob("Corrosive Lurker", 6219), "; it can take a few tries. The fallout soon collapses: get it late in the run and go straight to Ozzie.")
+		local slime, lurker = g.Mob("Irradiated Slime", 6218), g.Mob("Corrosive Lurker", 6219)
+		s:Quest(2962, 1, "Fill the phial on an ", slime, " or ", lurker, ".")
+			:UseOn(g.Item("Heavy Leaden Collection Phial", 9364), slime, lurker)
+		s:Note("On a living one; it can take a few tries. The fallout soon collapses: get it late and go straight to Ozzie.")
 	end)
 
 	g:Step(function(s)
 		s.only = "onquest 2930"
-		s:Collect(g.Item("Blue Punch Card", CARDS[3])):Done(hasCard(3))
-		s:Note("Put the yellow card in ", g.Object("Matrix Punchograph 3005-B"), ", in the Dormitory just past the Clean Zone.")
+		s:Do("Put the yellow card in ", g.Object("Matrix Punchograph 3005-B"), "."):Done(hasCard(3))
+		s:Note("In the Dormitory, just past the Clean Zone.")
 	end)
 
 	g:Step(function(s)
@@ -194,14 +199,15 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s)
 		s.only = "onquest 2930"
-		s:Collect(g.Item("Red Punch Card", CARDS[4])):Done(hasCard(4))
-		s:Note("Put the blue card in ", g.Object("Matrix Punchograph 3005-C"), ", on the upper platform of the Launch Bay, where Electrocutioner 6000 is.")
+		s:Do("Put the blue card in ", g.Object("Matrix Punchograph 3005-C"), "."):Done(hasCard(4))
+		s:Note("On the upper platform of the Launch Bay, where Electrocutioner 6000 is.")
 	end)
 
 	g:Step(function(s)
 		s.only = "onquest 2930"
+		s:Do("Put the red card in ", g.Object("Matrix Punchograph 3005-D"), "."):Done(hasCard(5))
 		s:Collect(g.Item("Prismatic Punch Card", CARDS[5]), { quest = 2930, objective = 1 })
-		s:Note("Put the red card in ", g.Object("Matrix Punchograph 3005-D"), ": take the elevator down to the lower level of the Engineering Labs; it's in the first passage on the right, on the west side.")
+		s:Note("The elevator down to the lower level of the Engineering Labs, then the first passage on the right.")
 	end)
 
 	g:Step(function(s)

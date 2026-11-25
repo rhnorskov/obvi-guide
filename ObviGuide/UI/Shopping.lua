@@ -30,7 +30,12 @@ end
 ---@param g ObviGuideGoal
 ---@return boolean
 local function Buyable(g)
-	return g.kind == "collect" and g.id ~= nil and g.quest == nil and g.objective == nil and g.places == nil
+	if not (g.kind == "collect" and g.id ~= nil and g.quest == nil and g.objective == nil and g.places == nil) then
+		return false
+	end
+	-- nor what can't be on the auction house: bound when picked up, a quest's item (Gnomeregan's punch cards)
+	local _, _, _, _, _, _, _, _, _, _, _, classID, _, bindType = C_Item.GetItemInfo(g.id)
+	return not (bindType == 1 or bindType == 4 or classID == 12)
 end
 
 --- An item's name as the auction house has it (the game's, in the player's language), else as the guide writes it.
