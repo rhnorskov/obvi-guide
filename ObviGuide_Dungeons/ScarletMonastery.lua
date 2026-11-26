@@ -1,6 +1,6 @@
 -- Scarlet Monastery (28-40): the quests Attune and DungeonJournal (Exehn) list for each faction. Alliance: Brother
 -- Anton and both Down the Scarlet Path quests up to In the Name of the Light, Mythology of the Titans, and Past Due
--- (Magus Olvek, Dalaran), and for paladins Aeonas (A Brother In Need .. Aeonas the Vindicated). Horde: Into The Scarlet Monastery, Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal
+-- (Magus Olvek, Dalaran), and for paladins Katherine the Pure's chain from the Strange Orb to Aeonas the Vindicated. Horde: Into The Scarlet Monastery, Compendium of the Fallen, Vorrel's Revenge, Hearts of Zeal
 -- (after Going, Going, Guano! from Razorfen Kraul), and the Test of Faith, Endurance, Strength and Lore chain that ends
 -- in the Library, then Final Passage back to Dorn Plainstalker. Both: the parts done here of the rogues' Eye of
 -- Bhossca and the mages' Rituals of Power (Zygor's Mage class guide). Quest,
@@ -9,6 +9,7 @@
 
 local TIRISFAL, STORMWIND, IRONFORGE, DESOLACE, HILLSBRAD = 1420, 1453, 1455, 1443, 1424
 local UNDERCITY, THUNDERBLUFF, BARRENS, NEEDLES, STONETALON, ASHENVALE, ALTERAC = 1458, 1456, 1413, 1441, 1442, 1440, 1416
+local DARKSHORE, WETLANDS = 1439, 1437
 
 -- the monastery has four wings, each its own instance behind its own door in the same building
 local function wing(g, name, skip, note)
@@ -68,14 +69,122 @@ ObviGuide.Guide(function(g)
 		s:Note("In the Cathedral of Light. The Scarlet Path chain needs level 34.")
 	end)
 
-	-- Paladins: Aeonas, at the end of Katherine the Pure's chain (the Strange Orb from Darkshore, then her quests from
-	-- level 35, up to Orders from the Grand Crusader). From DungeonJournal (Exehn).
+	-- Paladins: Katherine the Pure's chain, from the Strange Orb in Darkshore to A Brother In Need, which leads to
+	-- Aeonas in the Cathedral. Each step goes once its quest is done. From DungeonJournal (Exehn); NPC ids and Stormwind
+	-- positions from QuestieDB's Forever data.
+	local delgren   = g.Npc("Delgren the Purifier", 3663)
+	local katherine = g.Npc("Katherine the Pure", 5492)
+	local ursula    = g.Npc("Ursula Deline", 5495)
+
 	g:Step(function(s)
-		s.only = "Paladin and done 79945"
+		s.only = "Paladin"
+		s:Goto(DARKSHORE, 56.2, 26.4)
+		s:Say("Click the ", g.Object("Strange Orb"), ".")
+		s:Accept(78088, "A Strange Artifact")
+		s:Note("On top of the Tower of Althalaxx.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(ASHENVALE, 26.2, 38.7)
+		s:Talk(delgren)
+		s:Turnin(78088, "A Strange Artifact")
+		s:Accept(78089, "Advice From Stormwind")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
 		s:Goto(STORMWIND, 48.5, 49.1)
-		s:Talk(g.Npc("Katherine the Pure"))
+		s:Talk(katherine)
+		s:Turnin(78089, "Advice From Stormwind")
+		s:Accept(78090, "A Second Opinion")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(STORMWIND, 39.3, 84.9)
+		s:Talk(ursula)
+		s:Turnin(78090, "A Second Opinion")
+		s:Accept(78091, "Earning Your Salt")
+		s:Note("In the Slaughtered Lamb's cellar.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Quest(78091, 1, "Collect 14 Summoner's Salt from the Blackrock orcs in Redridge Mountains.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(STORMWIND, 39.3, 84.9)
+		s:Talk(ursula)
+		s:Turnin(78091, "Earning Your Salt")
+		s:Accept(78092, "It Must Be Destroyed")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(ASHENVALE, 89.0, 77.0)
+		s:Quest(78092, 1, "Collect 12 Motes of Mannoroth from the demons.")
+		s:Say("Use the ", g.Object("Spear of Mannoroth"), ".")
+		s:Turnin(78092, "It Must Be Destroyed")
+		s:Say("Click the ", g.Object("Shattered Orb"), ".")
+		s:Accept(78093, "Return to Delgren")
+		s:Note("Demon Fall Canyon.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(ASHENVALE, 26.2, 38.7)
+		s:Talk(delgren)
+		s:Turnin(78093, "Return to Delgren")
+	end)
+
+	-- level 35 from here
+	g:Step(function(s)
+		s.only = "Paladin and not done 79939"
+		s:Goto(STORMWIND, 48.5, 49.1)
+		s:Talk(katherine)
+		s:Accept(96438, "Battle at the Mannoroc Coven")
+		s:Note("Needs level 35.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(DESOLACE, 52.7, 84.8)
+		s:Say("Click the ", g.Object("Broken Warhammer"), ".")
+		s:Turnin(96438, "Battle at the Mannoroc Coven"):Only("not done 79939")
+		s:Accept(79939, "The Broken Hammer")
+		s:Quest(79939, 1, "Find the Torn Letter.")
+		s:Note("From a ", g.Mob("Burning Blade Summoner"), ".")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(STORMWIND, 48.5, 49.1)
+		s:Talk(katherine)
+		s:Turnin(79939, "The Broken Hammer")
+		s:Accept(79940, "A Lost Brother")
+		s:Turnin(79940, "A Lost Brother")
+		s:Note("Let her finish talking.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(WETLANDS, 8.1, 58.5)
+		s:Do("Take the small boat south of the docks to Aeonas's hut, inspect the fallen Scarlet Crusader and kill the assassin.")
+			:Done("onquest 79945 or done 79945")
+		s:Accept(79945, "Orders from the Grand Crusader")
+		s:Note("The assassin is a level 40 elite. Use the orders it drops.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(STORMWIND, 48.5, 49.1)
+		s:Talk(katherine)
+		s:Turnin(79945, "Orders from the Grand Crusader")
 		s:Accept(79946, "A Brother In Need")
-		s:Note("Also in the Cathedral of Light. Let her finish talking about Aeonas before you leave: players report that skipping it can block the next step.")
+		s:Note("Let her finish talking about Aeonas.")
 	end)
 
 	g:Step(function(s)
