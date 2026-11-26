@@ -26,6 +26,8 @@
   vendors sell are left out.
 - Going back from a guide's end shows its last step meant for you, not one for another class (Aeonas the Vindicated
   at the end of Scarlet Monastery is for paladins).
+- Catch up isn't offered for a quest whose chain begins outside the guides (the paladins' Aeonas quests, after
+  Katherine the Pure's chain): the line says so instead.
 
 ## v0.5.0
 

@@ -286,8 +286,10 @@ local function RenderLine(line)
 				or ": not worth it"
 			if behind then worth = worth .. " |cff888888(you're behind the guide)|r" end
 		end
-		line.sub:SetText(("%s  |cff666666·|r  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)),
-			worth))
+		-- (a chain begun outside the guides: nothing to catch up with)
+		local stuck = g.quest and ns.Catchup.Stuck(g.quest)
+		line.sub:SetText(stuck and ("%s  |cff666666·|r  its chain begins outside the guides"):format((line.locked:gsub("^%l", string.upper)))
+			or ("%s  |cff666666·|r  |cffffd100Catch up|r%s"):format((line.locked:gsub("^%l", string.upper)), worth))
 		line.sub:SetTextColor(0.6, 0.6, 0.6)
 		line.sub:Show()
 	end

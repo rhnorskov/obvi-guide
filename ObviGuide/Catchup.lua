@@ -159,7 +159,38 @@ function Catchup.Worth(quest)
 	worth[quest], worthQuests[quest] = known and total or false, quests
 	return known and total or nil
 end
-local function Forget() worth, worthQuests, paces = {}, {}, {} rates = setmetatable({}, { __mode = "k" }) end
+
+--- A quest whose chain begins outside the guides (the paladins' Aeonas the Vindicated: Katherine the Pure's quests
+--- before it are in none): the first of its pre-quests not done that no guide for this character has, else nil.
+--- Catching up on it can't be done.
+local stuck = {} ---@type table<integer, integer|false>
+---@param quest integer
+---@return integer?
+function Catchup.Stuck(quest)
+	if stuck[quest] ~= nil then return stuck[quest] or nil end
+	local DB = _G["LibQuestieDB"] ---@type table?
+	if not (DB and DB.Quest) then return nil end
+	local need = {} ---@type table<integer, boolean>
+	local g = Engine.Current()
+	Missing(DB, quest, need, {}, 0, g and { g } or {})
+	local found = {}
+	if next(need) then
+		for _, other in ipairs(ns.guides) do
+			if other.name ~= NAME and ns.Conditions.Eval(other.cond) and Mentions(other, need) then
+				local read = ns.Ready(other)
+				for _, s in ipairs(read and read.steps or {}) do
+					for _, goal in ipairs(s.goals) do local q = QuestOf(goal) if q and need[q] then found[q] = true end end
+				end
+			end
+		end
+	end
+	local first
+	for q in pairs(need) do if not found[q] and (not first or q < first) then first = q end end
+	stuck[quest] = first or false
+	return first
+end
+
+local function Forget() worth, worthQuests, paces, stuck = {}, {}, {}, {} rates = setmetatable({}, { __mode = "k" }) end
 ns:On("QUEST_TURNED_IN", Forget)
 ns:On("QUEST_ACCEPTED", Forget)
 ns:On("PLAYER_LEVEL_UP", Forget)
@@ -341,6 +372,7 @@ end
 ---@param quest integer
 ---@return "worth"|"even"|"not"|nil, boolean? behind   (true: worth it because you're behind the guide's pace)
 function Catchup.Verdict(quest)
+	if Catchup.Stuck(quest) then return "not" end
 	local pace = Catchup.Pace(quest)
 	if not pace then return nil end
 	-- behind the guide's pace you'll need the XP anyway, and quests beat grinding: worth it
@@ -538,6 +570,11 @@ function Catchup.Start(quest)
 		---@cast quest integer
 		local name = QuestName(DB, quest)
 		if Done(quest) then ns.Print("Quest Catchup: you've done %s already.", name) return end
+		local out = Catchup.Stuck(quest)
+		if out then
+			ns.Print("Quest Catchup: %s's chain begins outside the guides: none has %s.", name, QuestName(DB, out))
+			return
+		end
 		Missing(DB, quest, needed, offered, 0, chain)
 		local later = false
 		for _, q in ipairs(ahead) do if q == quest then later = true end end
