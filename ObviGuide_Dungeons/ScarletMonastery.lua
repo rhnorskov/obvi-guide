@@ -114,7 +114,7 @@ ObviGuide.Guide(function(g)
 		s:Goto(STEPPES, 71.9, 85.7)
 		s:Kill(g.Mob("Blackrock Summoner", 4463))
 		s:Kill(g.Mob("Blackrock Champion", 435))
-		s:Quest(78091, 1, "Collect 14 Summoner's Salt.")
+		s:Collect(g.Item("Summoner's Salt"), { count = 14, quest = 78091, objective = 1 })
 	end)
 
 	g:Step(function(s)
