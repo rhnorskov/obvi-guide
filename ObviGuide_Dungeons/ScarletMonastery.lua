@@ -129,8 +129,10 @@ ObviGuide.Guide(function(g)
 		s.only = "Paladin"
 		s:Goto(ASHENVALE, 89.0, 77.0)
 		s:Kill(g.Mob("Mannoroc Lasher", 11697))
-		s:Kill(g.Mob("Searing Infernal"))
-		s:Collect(g.Item("Mote of Mannoroth"), { count = 12, quest = 78092, objective = 1 })
+		s:Kill(g.Mob("Searing Infernal", 6073))
+		s:Kill(g.Mob("Felguard", 6115))
+		s:Kill(g.Mob("Legion Hound", 6071))
+		s:Collect(g.Item("Mote of Mannoroth", 209779), { count = 12, quest = 78092, objective = 1 })
 		s:Note("From the demons in Demon Fall Canyon.")
 	end)
 
