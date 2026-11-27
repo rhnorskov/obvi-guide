@@ -9,7 +9,7 @@
 
 local TIRISFAL, STORMWIND, IRONFORGE, DESOLACE, HILLSBRAD = 1420, 1453, 1455, 1443, 1424
 local UNDERCITY, THUNDERBLUFF, BARRENS, NEEDLES, STONETALON, ASHENVALE, ALTERAC = 1458, 1456, 1413, 1441, 1442, 1440, 1416
-local DARKSHORE, WETLANDS = 1439, 1437
+local DARKSHORE, WETLANDS, REDRIDGE = 1439, 1437, 1433
 
 -- the monastery has four wings, each its own instance behind its own door in the same building
 local function wing(g, name, skip, note)
@@ -111,7 +111,11 @@ ObviGuide.Guide(function(g)
 
 	g:Step(function(s)
 		s.only = "Paladin"
-		s:Quest(78091, 1, "Collect 14 Summoner's Salt from the Blackrock orcs in Redridge Mountains.")
+		s:Goto(REDRIDGE, 69.9, 81.8)
+		s:Kill(g.Mob("Blackrock Grunt", 440))
+		s:Kill(g.Mob("Blackrock Outrunner", 485))
+		s:Kill(g.Mob("Blackrock Summoner", 4463))
+		s:Quest(78091, 1, "Collect 14 Summoner's Salt.")
 	end)
 
 	g:Step(function(s)
