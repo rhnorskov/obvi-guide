@@ -193,7 +193,12 @@ ObviGuide.Guide(function(g)
 		s:Talk(g.Npc("Harold Riggs", 3179))
 		s:Accept(96449, "Aeonas's Secret Refuge")
 		s:Note("Talk to him until he offers it.")
-		s:Quest(96449, 1, "Ride the ", g.Object("Old Dinghy"), ", south of the docks.")
+	end)
+
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(WETLANDS, 9.6, 62.1)
+		s:Quest(96449, 1, "Ride the ", g.Object("Old Dinghy"), ".")
 	end)
 
 	-- Newman's Landing, Aeonas's hut on Dun Morogh's west coast (Wowhead: the Slain Scarlet Crusader, then the assassin)

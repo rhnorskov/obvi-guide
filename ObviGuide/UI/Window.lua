@@ -231,7 +231,7 @@ local function Icon(line, goal, done)
 		tex:SetTexture("Interface\\MoneyFrame\\UI-GoldIcon")
 	-- a thing in the world to click ("Click the Broken Warhammer", "Put the card in Matrix Punchograph"): the cog of
 	-- the game's interact cursor, as the interact key has it
-	elseif (k == "text" or k == "confirm") and not goal.note and goal.text
+	elseif (k == "text" or k == "confirm" or k == "objective") and not goal.note and goal.text
 		and goal.text:find("|c" .. ns.Colors.PICK, 1, true) then
 		tex:SetTexture("Interface\\Cursor\\Crosshair\\Interact")
 	elseif k == "text" or k == nil then tex:SetTexture(nil)
