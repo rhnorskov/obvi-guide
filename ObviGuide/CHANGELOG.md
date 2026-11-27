@@ -28,6 +28,8 @@
   at the end of Scarlet Monastery is for paladins).
 - Catch up isn't offered for a quest whose chain begins outside the guides (the paladins' Aeonas quests, after
   Katherine the Pure's chain): the line says so instead.
+- Shortest Path Forever no longer stays on an old step's way: a journey it still guides to the stop Obvi Guide sent is
+  known as Obvi Guide's, so the next step replaces it. Clicking a line always sends the way.
 
 ## v0.5.0
 

@@ -447,7 +447,7 @@ local function NewView(n)
 			local place = Engine.NearestPlace(g)
 			if p == g.point then ns.Travel.To(p, g.text)
 			elseif place and p == place.point then ns.Travel.To(p, place.name or g.text)
-			else ns.Travel.Show(line.step) end
+			else ns.Travel.Show(line.step, true) end
 		end)
 		-- hovering a line says where clicking it sends you
 		b:SetScript("OnEnter", function(self)

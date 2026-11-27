@@ -61,6 +61,25 @@ local function SPF()
 	return api
 end
 
+local sent ---@type {map: integer, x: number, y: number, title?: string}?   the stop we last sent Shortest Path
+
+-- Whether the journey Shortest Path guides is ours: as we heard (above), or still guiding to the stop we last sent it.
+-- Its bookkeeping can drop our route while it keeps guiding there (an arrival held), and that journey must not then be
+-- taken for one the player planned: the guide would stay on an old step's way.
+---@param api table
+---@return boolean
+local function Ours(api)
+	if ourJourney then return true end
+	if not sent or type(api.Journey) ~= "function" then return false end
+	local ok, j = pcall(api.Journey)
+	if not (ok and type(j) == "table") then return false end
+	if j.owner == OWNER then return true end
+	local goal = j.goal
+	if type(goal) ~= "table" then return false end
+	if goal.title and goal.title == sent.title then return true end
+	return goal.map == sent.map and math.abs((goal.x or -1) - sent.x) < 0.002 and math.abs((goal.y or -1) - sent.y) < 0.002
+end
+
 ---@class ObviGuideTomTom
 ---@field AddWaypoint fun(self: ObviGuideTomTom, map: integer, x: number, y: number, opts: table): any
 ---@field RemoveWaypoint fun(self: ObviGuideTomTom, uid: any)
@@ -161,8 +180,8 @@ local function Place(p, title, step, info)
 		ns.Arrow.Set(p, title)
 	elseif kind == "spf" then
 		local api = SPF() --[[@as table]]
-		if not p then api.Cancel(OWNER) ourJourney = false return end
-		if step and api.Active() and not ourJourney then return end   -- the player's own journey: left alone
+		if not p then api.Cancel(OWNER) ourJourney, sent = false, nil return end
+		if step and api.Active() and not Ours(api) then return end   -- the player's own journey: left alone
 		-- Shortest Path plans no journey in combat (a step often moves on there, as the mob dies): again after it
 		if InCombatLockdown() then afterCombat = true return end
 		local stop = { map = p.map, x = p.x, y = p.y, title = Plain(title), hold = true, radius = p.radius }
@@ -173,6 +192,7 @@ local function Place(p, title, step, info)
 		if not stop.questIDs then stop.tooltip = title end
 		-- Sending the same place again (the step's line or quests changed) only relabels the stop: no new route search
 		ourJourney = api.NavigateRoute(OWNER, { stop }) ~= false
+		sent = ourJourney and stop or nil
 	elseif kind == "tomtom" then
 		ClearTomTom()
 		if not p then return end
@@ -269,13 +289,14 @@ local shownOpen = false   -- the shown step was seen not done (see Ahead)
 
 --- Shows the way to a step's destination, or clears ours when the step has none.
 ---@param step? ObviGuideStep
-function Travel.Show(step)
+---@param force? boolean   the player asked (clicked a line): over a journey of their own too
+function Travel.Show(step, force)
 	local dest = step and step.dest
 	local title = step and dest and Title(step) or nil
 	local info = step and dest and Info(step) or nil
 	if step ~= shownStep then shownOpen = false end
 	shownStep = step
-	Place(dest, title, true, info)
+	Place(dest, title, not force, info)
 	shownTitle, shownSig = title, info and Signature(title, info) or nil
 end
 
@@ -321,7 +342,7 @@ ns:On("OBVIGUIDE_UPDATE", function()
 	local kind = Travel.Provider()
 	if kind == "arrow" then
 		if titleChanged then ns.Arrow.Set(step.dest, title) end
-	elseif kind == "spf" and ourJourney then
+	elseif kind == "spf" and Ours(SPF() --[[@as table]]) then
 		-- (it takes no journey in combat: sent again once combat is over)
 		if InCombatLockdown() then afterCombat = true return end
 		Place(step.dest, title, true, info)
