@@ -9,7 +9,7 @@
 
 local TIRISFAL, STORMWIND, IRONFORGE, DESOLACE, HILLSBRAD = 1420, 1453, 1455, 1443, 1424
 local UNDERCITY, THUNDERBLUFF, BARRENS, NEEDLES, STONETALON, ASHENVALE, ALTERAC = 1458, 1456, 1413, 1441, 1442, 1440, 1416
-local DARKSHORE, WETLANDS, STEPPES = 1439, 1437, 1428
+local DARKSHORE, WETLANDS, STEPPES, EASTERN_KINGDOMS = 1439, 1437, 1428, 1415
 
 -- the monastery has four wings, each its own instance behind its own door in the same building
 local function wing(g, name, skip, note)
@@ -114,7 +114,7 @@ ObviGuide.Guide(function(g)
 		s:Goto(STEPPES, 71.9, 85.7)
 		s:Kill(g.Mob("Blackrock Summoner", 4463))
 		s:Kill(g.Mob("Blackrock Champion", 435))
-		s:Collect(g.Item("Summoner's Salt"), { count = 14, quest = 78091, objective = 1 })
+		s:Collect(g.Item("Summoner's Salt", 209778), { count = 14, quest = 78091, objective = 1 })
 	end)
 
 	g:Step(function(s)
@@ -174,7 +174,7 @@ ObviGuide.Guide(function(g)
 		s.only = "Paladin"
 		s:Goto(DESOLACE, 52.7, 84.8)
 		s:Kill(g.Mob("Burning Blade Summoner", 4668))
-		s:Collect(g.Item("Torn Letter"), { quest = 79939, objective = 1 })
+		s:Collect(g.Item("Torn Letter", 216956), { quest = 79939, objective = 1 })
 	end)
 
 	g:Step(function(s)
@@ -190,10 +190,24 @@ ObviGuide.Guide(function(g)
 	g:Step(function(s)
 		s.only = "Paladin"
 		s:Goto(WETLANDS, 8.1, 58.5)
-		s:Do("Inspect the fallen Scarlet Crusader, then kill the assassin."):Done("onquest 79945 or done 79945")
-		s:Note("At Aeonas's hut: the small boat south of Menethil's docks. The assassin is a level 40 elite.")
+		s:Talk(g.Npc("Harold Riggs", 3179))
+		s:Accept(96449, "Aeonas's Secret Refuge")
+		s:Note("Talk to him until he offers it.")
+		s:Quest(96449, 1, "Ride the ", g.Object("Old Dinghy"), ".")
+		s:Note("South of the docks.")
+	end)
+
+	-- Newman's Landing, Aeonas's hut on Dun Morogh's west coast (Wowhead: the Slain Scarlet Crusader, then the assassin)
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(EASTERN_KINGDOMS, 41.8, 58.8)
+		s:Talk(g.Npc("Slain Scarlet Crusader", 217957))
+		s:Turnin(96449, "Aeonas's Secret Refuge")
+		s:Kill(g.Mob("Scarlet Crusade Assassin"))
+		s:Note("A level 40 elite.")
+		local orders = g.Item("Orders from the Grand Crusader", 215468)
+		s:Use(orders):Only("not onquest 79945 and not done 79945")
 		s:Accept(79945, "Orders from the Grand Crusader")
-		s:Note("Use the orders it drops.")
 	end)
 
 	g:Step(function(s)
