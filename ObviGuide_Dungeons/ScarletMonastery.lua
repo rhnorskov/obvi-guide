@@ -212,6 +212,7 @@ ObviGuide.Guide(function(g)
 		local orders = g.Item("Orders from the Grand Crusader", 215468)
 		s:Use(orders):Only("not onquest 79945 and not done 79945")
 		s:Accept(79945, "Orders from the Grand Crusader")
+		s:Note("Back: the ", g.Object("Old Dinghy"), " on the north side of the landing's dock, or hearth.")
 	end)
 
 	g:Step(function(s)
