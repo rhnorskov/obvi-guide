@@ -113,6 +113,7 @@ ObviGuide.Guide(function(g)
 		s.only = "Paladin"
 		s:Goto(STEPPES, 71.9, 85.7)
 		s:Kill(g.Mob("Blackrock Summoner", 4463))
+		s:Kill(g.Mob("Blackrock Champion", 435))
 		s:Quest(78091, 1, "Collect 14 Summoner's Salt.")
 	end)
 
