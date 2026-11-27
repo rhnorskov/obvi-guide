@@ -212,7 +212,15 @@ ObviGuide.Guide(function(g)
 		local orders = g.Item("Orders from the Grand Crusader", 215468)
 		s:Use(orders):Only("not onquest 79945 and not done 79945")
 		s:Accept(79945, "Orders from the Grand Crusader")
-		s:Note("Back: the ", g.Object("Old Dinghy"), " on the north side of the landing's dock, or hearth.")
+	end)
+
+	-- back from the hut: the other dinghy (Wowhead has no place for it; players: the landing's dock, north side); done
+	-- once you're off the landing, by boat or hearth
+	g:Step(function(s)
+		s.only = "Paladin and onquest 79945"
+		s:Goto(EASTERN_KINGDOMS, 41.8, 58.8)
+		s:Do("Ride the ", g.Object("Old Dinghy"), " back."):Done("not map 1426 and not map 1415 and not nomap")
+		s:Note("On the north side of the dock. Or hearth.")
 	end)
 
 	g:Step(function(s)
