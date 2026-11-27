@@ -128,7 +128,7 @@ ObviGuide.Guide(function(g)
 	g:Step(function(s)
 		s.only = "Paladin"
 		s:Goto(ASHENVALE, 89.0, 77.0)
-		s:Quest(78092, 1, "Collect 12 Motes of Mannoroth from the demons.")
+		s:Collect(g.Item("Motes of Mannoroth"), { count = 12, quest = 78092, objective = 1 })
 		s:Say("Use the ", g.Object("Spear of Mannoroth"), ".")
 		s:Turnin(78092, "It Must Be Destroyed")
 		s:Say("Click the ", g.Object("Shattered Orb"), ".")

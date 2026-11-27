@@ -219,7 +219,7 @@ ObviGuide.Guide(function(g)
 	g:Step(function(s)
 		s.only = "onquest 95042"
 		kor(g, s)
-		s:Quest(95042, 1, "Get a Corrupted Kor Gem.")
+		s:Collect(g.Item("Corrupted Kor Gem"), { quest = 95042, objective = 1 })
 	end)
 
 	g:Step(function(s)
