@@ -72,7 +72,9 @@ local function Ours(api)
 	if ourJourney then return true end
 	if not sent or type(api.Journey) ~= "function" then return false end
 	local ok, j = pcall(api.Journey)
-	if not (ok and type(j) == "table") then return false end
+	-- (a journey still guided with no goal to read: what's left of ours after an arrival held, not one the player
+	-- picked, which always has its place)
+	if not (ok and type(j) == "table") then return true end
 	if j.owner == OWNER then return true end
 	local goal = j.goal
 	if type(goal) ~= "table" then return false end
