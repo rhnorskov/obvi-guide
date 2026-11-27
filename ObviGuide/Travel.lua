@@ -382,7 +382,22 @@ end)
 ---@return string
 function Travel.DebugObjective()
 	local api = SPF()
-	return ("waypoint: title %q, stop %s, ours %s, provider %s, spf active %s, our stop %s")
+	local line = ("waypoint: title %q, stop %s, ours %s, provider %s, spf active %s, our stop %s")
 		:format(tostring(shownTitle), tostring(shownSig), tostring(ourJourney), Travel.Provider(),
 			tostring(api and api.Active()), tostring(api and api.CurrentStop(OWNER)))
+	-- what Shortest Path says it guides, against what we last sent and showed: tells a journey taken for the player's
+	local function point(p)
+		return p and ("%s %.3f,%.3f %q"):format(tostring(p.map), p.x or -1, p.y or -1, tostring(p.title)) or "none"
+	end
+	local journey = "n/a"
+	if api and type(api.Journey) == "function" then
+		local ok, j, why = pcall(api.Journey)
+		journey = not ok and ("error " .. tostring(j))
+			or type(j) == "table" and ("owner %s, goal %s"):format(tostring(j.owner), point(j.goal))
+			or ("none (%s)"):format(tostring(why))
+	end
+	local _, cur = ns.Engine.Current()
+	return line .. ("\njourney: %s\nsent: %s\nplaced: %s, step dest: %s, counted ours: %s, in combat: %s, shown step %s, current step %s")
+		:format(journey, point(sent), point(placed), point(cur and cur.dest), tostring(api and Ours(api)),
+			tostring(InCombatLockdown()), tostring(shownStep and shownStep.index), tostring(cur and cur.index))
 end
