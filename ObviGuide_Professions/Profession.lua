@@ -68,7 +68,15 @@ local RANK = { [75] = "Apprentice", [150] = "Journeyman", [225] = "Expert", [300
 ---@field sold? ProfPlace[]   where the book is sold
 ---@field at? ProfPlace[]     someone other than the trainers who teaches it
 ---@field items? table<integer, integer>   what they ask for first (a quest's hand-in)
+---@field quest? ProfRankQuest   a quest of theirs whose turn-in trains it
 ---@field note? string
+
+---@class ProfRankQuest
+---@field id integer
+---@field title string
+---@field objective string   what it asks, as its line says it ("Save 15 patients")
+---@field use? integer       an item it gives, used on...
+---@field on? {[1]: string, [2]: integer}[]   ...these NPCs (name, id), most urgent first: a target key each, then the item's
 
 ---@class ProfGuide
 ---@field title string
@@ -412,7 +420,43 @@ function pack.Guide(def)
 			end
 			-- a rank the trainers don't teach: its book used, or at whoever teaches it (after what they ask for)
 			local rank = specials[i]
-			if rank then
+			local q = rank and rank.quest
+			if rank and q and rank.at then
+				-- a quest whose turn-in trains it: taken there, done in a step of its own (so its action key is the
+				-- first, not the NPC's), and turned in there
+				local trained = ("skillmax %s >= %d"):format(SKILL, rank.cap)
+				At(rank.at, function(s)
+					s.skip = trained
+					if rank.level then s:Level(rank.level) end
+					s:Accept(q.id, q.title)
+				end)
+				g:Step(function(s)
+					s.skip = trained
+					local p = rank.at[1]
+					s:Goto(p.map, p.x, p.y)
+					-- "Save 15 patients: A, then B, then C, with the X.": a key after each, and the item's at the end
+					local on, text = {}, { q.objective }
+					for k, n in ipairs(q.on or {}) do
+						local npc = g.Npc(n[1], n[2])
+						table.insert(on, npc)
+						table.insert(text, k == 1 and ": " or ", then ")
+						table.insert(text, npc)
+					end
+					if q.use then
+						table.insert(text, #on > 0 and ", with the " or " with the ")
+						table.insert(text, Item(q.use))
+					end
+					table.insert(text, ".")
+					local line = s:Quest(q.id, 1, unpack(text))
+					if q.use and #on > 0 then line:UseOn(Item(q.use), unpack(on)) end
+					if rank.note then s:Note(rank.note) end
+				end)
+				At(rank.at, function(s)
+					s.skip = trained
+					s:Turnin(q.id, q.title)
+					s:Train(SKILL, rank.cap)
+				end)
+			elseif rank then
 				local trained = ("skillmax %s >= %d"):format(SKILL, rank.cap)
 				local function build(s)
 					s.skip = trained

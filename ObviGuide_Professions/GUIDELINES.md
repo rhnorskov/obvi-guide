@@ -21,7 +21,9 @@ The data:
   `source` (a note: it drops). Taught by someone else: `at`. A trainer rank other than the one above its skill:
   `tier` (First Aid's trainers teach Silk Bandage).
 - **trainers** by the highest rank they train (75, 150, 225, 300); **ranks** (cap, skill, level; a rank the trainers
-  don't teach: `book` and `sold`, or `at`, with `items` to hand in and a `note`); **tools** to buy at the start; **buy**
+  don't teach: `book` and `sold`, or `at`, with `items` to hand in and a `note`, or the `quest` of theirs that trains
+  it: accepted there, done in a step of its own, turned in there; with `use` and `on`, a target key for each of those
+  NPCs, most urgent first, and one for the item: First Aid's Triage); **tools** to buy at the start; **buy**
   (reagents from vendors: where); **items** (the names of raw materials, tools and plans); `intro` (a note for the
   introduction, for what holds for every recipe).
 

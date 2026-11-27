@@ -4,6 +4,8 @@
 
 - Cooking is written as data too: a main dish per range (raw fish and recipes from vendors, clicked to the nearest
   seller), the site's other dishes as a choice; the Expert Cookbook and Dirge's Artisan quest made into steps.
+- First Aid's Triage quest is steps of its own: take it, save 15 patients, turn it in. The patients line has a
+  target key for each kind, most urgent first (critically injured, badly injured, injured), and one for the bandage.
 
 ## v0.5.0
 

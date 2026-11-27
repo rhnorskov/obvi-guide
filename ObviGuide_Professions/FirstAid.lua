@@ -4,7 +4,8 @@
 -- The site's Artisan part (225-300) was not tested on the Forever beta. The recipes' spells, the skill each is learned
 -- at and the manuals that teach them come from WhatsTraining's Forever recipe list (Forever's First Aid makes the
 -- healing potions); the bandages' reagents from Zygor's Forever recipe data, the potions' from the site; NPC ids and
--- positions from QuestieDB's and Zygor's Forever data. See README.md.
+-- positions from QuestieDB's and Zygor's Forever data, the Triage patients' from Wowhead's Forever database. See
+-- README.md.
 --
 -- Where this differs from the site: the trainer visits are worked out from when each recipe can be learned
 -- (Profession.lua), and the manuals sold with the Expert book are bought in the same visit.
@@ -34,8 +35,11 @@ pack.Guide({
 	ranks = {
 		{ cap = 150, skill = 50 },
 		{ cap = 225, skill = 125, book = 16084, sold = DENEB },
+		-- his Triage quest: a target key for each kind of patient, most urgent first, and one for the bandage
 		{ cap = 300, skill = 225, level = 35, at = DOCTOR,
-			note = "His Triage quest: save 15 patients with the bandages he gives, the critical ones first." },
+			quest = { id = 6624, title = "Triage", objective = "Save 15 patients", use = 16991,
+				on = { { "Critically Injured Alliance Soldier", 12937 }, { "Badly Injured Alliance Soldier", 12936 },
+					{ "Injured Alliance Soldier", 12938 } } } },
 	},
 
 	items = {
@@ -43,7 +47,7 @@ pack.Guide({
 		[14047] = "Runecloth", [8838] = "Sungrass", [13464] = "Golden Sansam", [3713] = "Soothing Spices",
 		[8925] = "Crystal Vial", [16084] = "Expert First Aid - Under Wraps", [16112] = "Manual: Heavy Silk Bandage",
 		[16113] = "Manual: Mageweave Bandage", [255725] = "Manual: Superior Healing Potion",
-		[255729] = "Manual: Major Healing Potion",
+		[255729] = "Manual: Major Healing Potion", [16991] = "Triage Bandage",
 	},
 
 	recipes = {
