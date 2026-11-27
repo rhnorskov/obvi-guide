@@ -456,6 +456,27 @@ function Engine.CanTake(q, g)
 	return false
 end
 
+--- Whether an accept line's quest before it is in your log and its step turns that one in first: Katherine the Pure
+--- takes The Broken Hammer, then gives A Lost Brother. Such an accept isn't waiting on anything (the game may not call
+--- the quest before it ready to turn in yet, as for one whose last objective is to come back).
+---@param goal ObviGuideGoal
+---@param g? ObviGuideGuide
+---@return boolean
+local function TurnedInFirst(goal, g)
+	local pre = PreOf(goal.quest, g)
+	local at = g and Engine.StepOf(goal, g)
+	local step = g and at and g.steps[at]
+	if not (step and pre) then return false end
+	for _, s in ipairs(step.goals) do
+		if s == goal then break end
+		if s.kind == "turnin" and s.quest and C_QuestLog.IsOnQuest(s.quest)
+			and (tContains(pre.all, s.quest) or tContains(pre.any, s.quest)) then
+			return true
+		end
+	end
+	return false
+end
+
 --- For an accept line left out because the quest can't be taken yet: what it waits for, so the window can show the
 --- line greyed out with it: "needs Blessed Arm", or "finish The Night Watch first" when that one is in the log (then
 --- also true: its step isn't skipped, you're on the way). A turn-in line left out because the quest isn't in your log
@@ -473,7 +494,7 @@ function Engine.Locked(goal)
 		return "not in your quest log", false
 	end
 	if goal.kind ~= "accept" then return nil end
-	if Engine.CanTake(goal.quest, g) then return nil end
+	if Engine.CanTake(goal.quest, g) or TurnedInFirst(goal, g) then return nil end
 	local pre = PreOf(goal.quest, g)
 	local names = {}
 	local function add(p) names[#names + 1] = Engine.QuestLabel(p) end
@@ -547,9 +568,9 @@ function Engine.IsVisible(goal)
 	-- (the "Skip hearthstone steps" setting: hearth and set-hearth lines left out, so a step with nothing else is
 	-- skipped)
 	if (goal.kind == "hearth" or goal.kind == "home") and ns.db and ns.db.skipHearth then return false end
-	if goal.kind == "accept" and goal.quest and not Had(goal.quest)
-		and not Engine.CanTake(goal.quest, Engine.GuideOf(nil, goal)) then
-		return false
+	if goal.kind == "accept" and goal.quest and not Had(goal.quest) then
+		local g = Engine.GuideOf(nil, goal)
+		if not (Engine.CanTake(goal.quest, g) or TurnedInFirst(goal, g)) then return false end
 	end
 	if goal.quest and (goal.kind == "objective" or goal.kind == "kill" or (goal.kind == "collect" and goal.objective)) then
 		-- hidden for a quest you haven't got; one already turned in still counts (as done), so its step is a step
