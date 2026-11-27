@@ -229,6 +229,11 @@ local function Icon(line, goal, done)
 	-- sell lines: a gold coin
 	elseif k == "sell" then
 		tex:SetTexture("Interface\\MoneyFrame\\UI-GoldIcon")
+	-- a thing in the world to click ("Click the Broken Warhammer", "Put the card in Matrix Punchograph"): the cog of
+	-- the game's interact cursor, as the interact key has it
+	elseif (k == "text" or k == "confirm") and not goal.note and goal.text
+		and goal.text:find("|c" .. ns.Colors.PICK, 1, true) then
+		tex:SetTexture("Interface\\Cursor\\Crosshair\\Interact")
 	elseif k == "text" or k == nil then tex:SetTexture(nil)
 	else line.dash:SetTextColor(line.text:GetTextColor()) line.dash:Show() end
 end
