@@ -128,12 +128,19 @@ ObviGuide.Guide(function(g)
 	g:Step(function(s)
 		s.only = "Paladin"
 		s:Goto(ASHENVALE, 89.0, 77.0)
+		s:Kill(g.Mob("Mannoroc Lasher", 11697))
 		s:Collect(g.Item("Motes of Mannoroth"), { count = 12, quest = 78092, objective = 1 })
-		s:Say("Use the ", g.Object("Spear of Mannoroth"), ".")
+		s:Note("From the demons in Demon Fall Canyon.")
+	end)
+
+	-- the spear takes the motes and the orb; the orb's fragments stay behind
+	g:Step(function(s)
+		s.only = "Paladin"
+		s:Goto(ASHENVALE, 89.0, 77.0)
+		s:Say("Click the ", g.Object("Spear of Mannoroth"), ".")
 		s:Turnin(78092, "It Must Be Destroyed")
 		s:Say("Click the ", g.Object("Shattered Orb"), ".")
 		s:Accept(78093, "Return to Delgren")
-		s:Note("Demon Fall Canyon.")
 	end)
 
 	g:Step(function(s)
