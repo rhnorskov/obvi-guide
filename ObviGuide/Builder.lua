@@ -253,6 +253,14 @@ function LineMT.__index:CraftsUpTo(recipe, item, count, profession)
 	self.craftSkill = profession
 	return self
 end
+function LineMT.__index:UseOn(item, ...)
+	self.useOn = Need(item, "item", "UseOn")
+	if not self.useOn.id then error("UseOn needs the item's id: g.Item(name, id)", 2) end
+	self.useTargets = {}
+	for k = 1, select("#", ...) do table.insert(self.useTargets, Need((select(k, ...)), "npc", "UseOn")) end
+	if #self.useTargets == 0 then error("UseOn needs who to use it on", 2) end
+	return self
+end
 
 ---@class ObviGuideLinesImpl
 ---@field only? any
@@ -515,6 +523,13 @@ local function BuildStep(lines, untilStep, ctx)
 				firstTalk = firstTalk or goal.target
 			end
 			if (goal.kind == "objective" or goal.kind == "collect") and l.mob then goal.target = TargetOf(l.mob, true) end
+			-- a line that uses an item on someone (UseOn): a target key for each of them, in order, then the item's;
+			-- clicking the line targets the first of them found
+			if l.useOn then
+				goal.use, goal.targets = l.useOn.id, {}
+				for _, m in ipairs(l.useTargets) do table.insert(goal.targets, TargetOf(m, m.kind == "mob")) end
+				goal.target = goal.targets[1]
+			end
 			table.insert(step.goals, goal)
 			last = goal
 			-- (a line with its own done condition counts too, as the engine has it: a Use line ticked once the recipe is known)

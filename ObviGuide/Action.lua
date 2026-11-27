@@ -20,6 +20,8 @@ local COUNT = 4
 ---@field goal? ObviGuideGoal   the line the action belongs to (for the key hint)
 ---@field value string|integer|string[]   a target: one name, or several (any of them)
 ---@field enemy? boolean       a target to attack (else to talk to)
+---@field cycle? boolean       only targets (UseOn's: the item has a key of its own): never Interact; pressed while one
+---                            is targeted, it goes on to the next one of that name (past one just saved), corpses passed over
 
 ---@class ObviGuideActionSlot
 ---@field button Button
@@ -65,19 +67,24 @@ local function Pick()
 	local _, step = Engine.Current()
 	if not step then return {} end
 	local list, seen = {}, {}
-	local function add(kind, value, goal, enemy)
+	local function add(kind, value, goal, enemy, cycle)
 		local key = kind .. ":" .. (type(value) == "table" and table.concat(value, ",") or tostring(value))
 		if seen[key] or #list >= COUNT then return end
 		seen[key] = true
 		-- a mob already in an action for several mobs gets no second action of its own (e.g. a "collect" line
 		-- whose target is one of the mobs a kill line names)
 		if type(value) == "table" then for _, n in ipairs(value) do seen[kind .. ":" .. n] = true end end
-		table.insert(list, { kind = kind, value = value, goal = goal, enemy = enemy })
+		table.insert(list, { kind = kind, value = value, goal = goal, enemy = enemy, cycle = cycle })
 	end
 	local function open(g) return Engine.IsVisible(g) and not Engine.IsComplete(g, step) end
 	-- a line's targets: an action for each when it names several mobs ("Kill Raging Reef Crawler, Encrusted Tide
-	-- Crawler"), as Zygor's action buttons do; the window shows each key after its mob's name
+	-- Crawler"), as Zygor's action buttons do; the window shows each key after its mob's name. A line that uses an item
+	-- on them (UseOn): an action for each that only targets, in order, then one that uses the item
 	local function targets(g) return g.targets or { g.target } end
+	local function addTargets(g)
+		for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy, g.use ~= nil or nil) end
+		if g.use then add("item", g.use, g) end
+	end
 	-- items to use first, but only ones in the bags: an item still to be got ("Use Dark Iron Map", looted from the mobs
 	-- the step kills) goes after the targets, so the key for what you do first comes first
 	local later = {} ---@type ObviGuideGoal[]
@@ -109,17 +116,15 @@ local function Pick()
 		end
 		if finished and not line then
 			-- (nothing: the step's target was its line's, and that line is done)
-		elseif line and line.targets and #line.targets > 1 then
+		elseif line and ((line.targets and #line.targets > 1) or line.use) then
 			-- its line names several mobs: their actions in the line's order (so the first mob isn't added twice)
-			for _, t in ipairs(targets(line)) do add("target", t.name, line, t.enemy) end
+			addTargets(line)
 		else
 			add("target", step.target.name, line, step.target.enemy)
 		end
 	end
 	for _, g in ipairs(step.goals) do
-		if g.target and open(g) then
-			for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy) end
-		end
+		if g.target and open(g) then addTargets(g) end
 	end
 	for _, g in ipairs(later) do add("item", g.id, g) end
 	-- a thing in the world to click ("Click the Box of Scrolls"): the key is the game's own Interact, which uses the
@@ -131,9 +136,7 @@ local function Pick()
 	-- then the side tasks
 	for _, g in ipairs(step.side) do
 		if g.kind == "use" and g.id and Engine.IsVisible(g) then add("item", g.id, g)
-		elseif g.target and open(g) then
-			for _, t in ipairs(targets(g)) do add("target", t.name, g, t.enemy) end
-		end
+		elseif g.target and open(g) then addTargets(g) end
 	end
 	return list
 end
@@ -198,6 +201,8 @@ local function TargetMatch(a)
 			same = name == v
 		end
 		if not same then return nil end
+		-- (a target that's only targeted: its next press goes on to the next one, as from a tagged mob)
+		if a.cycle then return "tagged" end
 		return a.enemy and UnitIsTapDenied("target") and "tagged" or "ours"
 	end)
 	return ok and match or nil
@@ -215,7 +220,7 @@ function SetMacro(slot)
 	if not (a and a.kind == "target") then slot.keep = nil return end
 	slot.keep = TargetMatch(a) == "tagged"
 	local v = a.value
-	slot.button:SetAttribute("macrotext", ns.TargetMacro(type(v) == "table" and v or tostring(v), a.enemy, slot.keep))
+	slot.button:SetAttribute("macrotext", ns.TargetMacro(type(v) == "table" and v or tostring(v), a.enemy, slot.keep, a.cycle))
 end
 
 -- an NPC's dialogue or quest window is open: the key isn't "Interact with Target" meanwhile, since the game takes
@@ -301,7 +306,8 @@ function Action.Hints(goal)
 		-- (while the key trains, it shows on the line it trains only)
 		if a and key and not slot.training then
 			local verb = a.kind == "interact" and "interact" or (a.enemy and "attack" or "talk")
-			local hint = slot.interacting and (key .. ": " .. verb) or (slot.keep and (key .. ": tagged, next") or key)
+			local hint = slot.interacting and (key .. ": " .. verb)
+				or (slot.keep and (key .. (a.cycle and ": next" or ": tagged, next")) or key)
 			if slot.gossip then hint = key end   -- (the key picks the dialogue option now; that line says so)
 			-- a target's key goes after its name in the line's text (several mobs: one key after each)
 			local v = a.value

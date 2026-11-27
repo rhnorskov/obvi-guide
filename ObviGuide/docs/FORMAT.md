@@ -94,6 +94,9 @@ you no longer need stays in the list, ticked, where `:Only` would hide it); any 
 step is done once its other lines are, and the optional one shows its own state. `:Crafts(recipe, count, from)` makes a
 line ("Make 25 Bronze Tube") make its recipe when clicked or with its action key, opening the profession first;
 with `from` (where its skill range starts) it makes only what the points left to the step's `Skill` line need.
+`:UseOn(item, who...)` makes a line use an item on someone: an action key for each of them, in the order given, then
+one for the item. Their keys only target (pressed again: the next one of that name), so name them in the line's text,
+where each key shows after its name ("Save 15 patients" with the Triage Bandage, critically injured first).
 
 ## Markers
 

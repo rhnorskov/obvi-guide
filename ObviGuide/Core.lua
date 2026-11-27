@@ -28,7 +28,7 @@ local ADDON, ns = ...
 ---@field Debug fun(fmt: string, ...: any)
 ---@field FindGuide fun(title: string): ObviGuideGuide?
 ---@field Ready fun(g: ObviGuideGuide): ObviGuideGuide?
----@field TargetMacro fun(name: string|string[], enemy?: boolean, keep?: boolean): string
+---@field TargetMacro fun(name: string|string[], enemy?: boolean, keep?: boolean, alive?: boolean): string
 ---@field CanPing fun(): boolean
 ---@field Copy fun(title: string, text: string)   shows text in a window to copy it from
 ---@field Cleanup fun()   the quest log cleanup window
@@ -193,6 +193,8 @@ local ADDON, ns = ...
 ---@field what? string           what the progress counts, when the text doesn't say it ("Abandoned Belongings")
 ---@field target? ObviGuideTarget  who clicking the line (or its action key) targets
 ---@field targets? ObviGuideTarget[]  all of them, in order, when the line names several
+---@field use? integer           an item used on its targets (UseOn): an action key for it after theirs, which only
+---                              target (pressed again: the next one of that name)
 ---@field box? ObviGuideGoal[]   a side task's line: all the lines of its side box (shown or hidden together)
 ---@field note? boolean         a note shown as a line of its own (it looks like the step's notes)
 ---                                (target is the first)
@@ -360,11 +362,13 @@ end
 --- sees it as well. Each is a setting (marker, ping).
 --- keep: the target (one of these names) is tagged by someone else, so the macro doesn't let go of it first: targeting
 --- the same name again goes on to the next one, as it does from a corpse.
+--- alive: corpses are passed over, as for enemies (UseOn's patients, some of whom die).
 ---@param name string|string[]
 ---@param enemy? boolean
 ---@param keep? boolean
+---@param alive? boolean
 ---@return string
-function ns.TargetMacro(name, enemy, keep)
+function ns.TargetMacro(name, enemy, keep, alive)
 	local clear = keep and "" or "/cleartarget\n"
 	local db = ns.db or {}
 	local mark = ""
@@ -378,7 +382,7 @@ function ns.TargetMacro(name, enemy, keep)
 		local target = clear
 		for i, n in ipairs(name) do
 			target = target .. (i == 1 and "/targetexact %s\n" or "/targetexact [noexists] %s\n"):format(n)
-			if enemy then target = target .. ("/targetexact [dead] %s\n/cleartarget [dead]\n"):format(n) end
+			if enemy or alive then target = target .. ("/targetexact [dead] %s\n/cleartarget [dead]\n"):format(n) end
 		end
 		return target .. mark
 	end
@@ -392,6 +396,8 @@ function ns.TargetMacro(name, enemy, keep)
 		local stem = #name > 6 and name:sub(1, -3) or name
 		target = target .. ("/targetexact [dead] %s\n/target [noexists] %s\n/target [dead] %s\n/cleartarget [dead]\n")
 			:format(name, stem, stem)
+	elseif alive then
+		target = target .. ("/targetexact [dead] %s\n/cleartarget [dead]\n"):format(name)
 	end
 	return target .. mark
 end

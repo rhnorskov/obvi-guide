@@ -140,7 +140,7 @@ local function ClickAction(b, line)
 		end
 	elseif target then
 		b:SetAttribute("type", "macro")
-		b:SetAttribute("macrotext", ns.TargetMacro(target, enemy))
+		b:SetAttribute("macrotext", ns.TargetMacro(target, enemy, nil, g.use ~= nil))   -- (UseOn's: corpses passed over)
 	end
 	if b:GetAttribute("type") then
 		ns.Debug("line '%s': %s %s", g.text, b:GetAttribute("type"),
@@ -254,7 +254,19 @@ local function RenderLine(line)
 	for _, h in ipairs(dim and {} or ns.Action.Hints(g)) do
 		local tag = " |cff4fc3f7[" .. h.hint .. "]|r"
 		local s, e = nil, nil
-		if h.name then s, e = text:find(h.name, 1, true) end
+		-- (a coloured name of its own before a bare match: "Injured Alliance Soldier", not the end of "Badly Injured
+		-- Alliance Soldier")
+		if h.name then
+			local from = 1
+			repeat
+				s, e = text:find(h.name, from, true)
+				if s and s > 10 and text:sub(s - 10, s - 1):match("^|c%x%x%x%x%x%x%x%x$") and text:sub(e + 1, e + 2) == "|r" then
+					break
+				end
+				from = s and s + 1
+			until not s
+			if not s then s, e = text:find(h.name, 1, true) end
+		end
 		if s and e then
 			if text:sub(e + 1, e + 2) == "|r" then e = e + 2 end   -- after the name's colour ends
 			text = text:sub(1, e) .. tag .. text:sub(e + 1)
@@ -576,6 +588,8 @@ local function NewView(n)
 		return Place(line, y, 0)   -- no extra indent: its text lines up with the text of the lines around it
 	end
 
+	local shop ---@type ObviGuideShopLink?   the Auctionator shopping list link (UI\Shopping.lua), made when first shown
+
 	--- The goal lines, with the step's notes (if given) each right after the line it follows in the guide.
 	---@param step ObviGuideStep
 	---@param goals ObviGuideGoal[]
@@ -588,8 +602,6 @@ local function NewView(n)
 		local shownTips = {} ---@type table<ObviGuideTip, boolean>
 		local function TipsAfter(goal)
 			for _, tip in ipairs(tips) do
-	local shop ---@type ObviGuideShopLink?   the Auctionator shopping list link (UI\Shopping.lua), made when first shown
-
 				if tip.after == goal then y = Tip(tip, y, dim) shownTips[tip] = true end
 			end
 		end
@@ -606,6 +618,8 @@ local function NewView(n)
 			end
 		end
 		local box   -- the side box of the last line shown: a gap before the next box's lines sets the tasks apart
+		-- the step's last line to buy, while some are short: the Auctionator shopping list link goes under it
+		local shopAfter = not (dim or side) and ns.Shopping.Offer(step) or nil
 		for _, g in ipairs(goals) do
 			-- a quest you can't take yet (its chain began in a guide you skipped) shows greyed out, with what it waits for
 			local locked = not Engine.IsVisible(g) and Engine.Locked(g) or nil
@@ -618,20 +632,6 @@ local function NewView(n)
 				line.quiet = locked ~= nil and g.quest ~= nil and waitedFor[g.quest] or nil
 				RenderLine(line)
 				y = Place(line, y, 0)
-		-- the step's last line to buy, while some are short: the Auctionator shopping list link goes under it
-		local shopAfter = not (dim or side) and ns.Shopping.Offer(step) or nil
-			end
-			TipsAfter(g)
-		end
-		-- notes whose line was folded away go last
-		for _, tip in ipairs(tips) do if not shownTips[tip] then y = Tip(tip, y, dim) end end
-		return y
-	end
-
-	local separators, sepUsed = {}, 0 ---@type Texture[], integer
-
-	--- A divider across the window, centred on y; returns where the next step starts.
-	local function Separator(y)
 				if g == shopAfter then
 					if not shop then
 						shop = ns.Shopping.NewLink(frame.Body)
@@ -644,6 +644,18 @@ local function NewView(n)
 					shop:Show()
 					y = y + 2 + shop:GetHeight()
 				end
+			end
+			TipsAfter(g)
+		end
+		-- notes whose line was folded away go last
+		for _, tip in ipairs(tips) do if not shownTips[tip] then y = Tip(tip, y, dim) end end
+		return y
+	end
+
+	local separators, sepUsed = {}, 0 ---@type Texture[], integer
+
+	--- A divider across the window, centred on y; returns where the next step starts.
+	local function Separator(y)
 		sepUsed = sepUsed + 1
 		local sep = separators[sepUsed]
 		if not sep then
@@ -692,6 +704,7 @@ local function NewView(n)
 			frame.FwdGlow:SetAlpha(0)
 		end
 		used, sepUsed = 0, 0
+		if shop then shop:Hide() end
 		frame.SideHeader:Hide()
 		if frame.collapsed then
 			frame.Body:Hide()
@@ -704,7 +717,6 @@ local function NewView(n)
 		-- the guide's end: a line saying so, and a button on to the guide that follows (when we have it)
 		local ended, nextTitle = f:Ended()
 		frame.Continue:Hide()
-		if shop then shop:Hide() end
 		if guide and ended then
 			frame.StepText:SetText("end")
 			local line = Line()

@@ -19,6 +19,11 @@
 - Use, equip and cast lines show the item's or spell's own icon, and lines about a thing to click ("Click the Broken
   Warhammer") the interact cog.
 - A step with two NPCs ticks the first one's "Talk to" line once you have their quests, and lets go of its action key.
+- A line can use an item on someone (`:UseOn`): an action key that targets each of them, in order, then one that
+  uses the item. Pressed again, a target key goes on to the next one of that name, so it gets past one just dealt
+  with who's still standing there.
+- A key after a name in a line goes after that name on its own, not inside a longer one ("Injured Alliance Soldier"
+  in "Badly Injured Alliance Soldier").
 - The text under the arrow follows the step as it changes: a line that's gone (Use Draught of Water Breathing once
   you have its buff) or done no longer shows there.
 - **Auctionator shopping list**: with Auctionator, a step whose Collect lines are still short has a link under the

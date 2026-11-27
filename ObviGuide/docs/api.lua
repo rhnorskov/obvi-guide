@@ -196,6 +196,16 @@ function Line:Crafts(recipe, count, from) end
 ---@return ObviGuideLine
 function Line:CraftsUpTo(recipe, item, count, profession) end
 
+--- The line uses an item on someone: an action key for each of them, in the order given, then one for the item (used
+--- on your target). Their keys only target: pressed while one of that name is targeted, the next one (past one just
+--- dealt with), corpses passed over. Clicking the line targets the first of them found. Name them in the line's text:
+--- each key shows after its name. E.g. the most urgent patient first:
+--- `s:Quest(6624, 1, "Save 15 patients: ", critical, ", then ", badly, ...):UseOn(g.Item("Triage Bandage", 16991), critical, badly, injured)`.
+---@param item ObviGuideMarker   g.Item, with its id
+---@param ... ObviGuideMarker|string   who to use it on (g.Npc or g.Mob), most urgent first
+---@return ObviGuideLine
+function Line:UseOn(item, ...) end
+
 --- The step's destination. Done when you come within `radius` yards (default 10).
 ---@param map integer      uiMapID
 ---@param x number         0-100, as the map shows it
